@@ -1,0 +1,7 @@
+#
+# build files
+#
+**.o
+**/**.o
+**.iso
+**.bin
