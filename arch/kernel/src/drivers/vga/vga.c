@@ -33,13 +33,23 @@ void putc(char c){
         VGA[row*80+col] = entry(c, current_color);
         col++;
     }
-
+    
     if(col >= 80){
         col = 0;
         row++;
     }
 
     if(row >= 25){
+        for (int r = 1; r < 25; r++) {
+            for (int c = 0; c < 80; c++) {
+                VGA[(r - 1) * 80 + c] = VGA[r * 80 + c];
+            }
+        }
+        uint16_t blank = entry(' ', current_color);
+        for (int c = 0; c < 80; c++) {
+            VGA[24 * 80 + c] = blank;
+        }
+        
         row = 24;
     }
 
