@@ -1,18 +1,24 @@
 #include <stdint.h>
-#include <kernel/vga.h>
+#include <kernel/vga/vga.h>
+#include <kernel/vga/colors.h>
 
 static volatile uint16_t* const VGA = (uint16_t*)0xB8000;
 
 static int row = 0;
 static int col = 0;
+static uint8_t current_color = 0x07;
 
-static uint16_t entry(char c) {
-    return (uint16_t)c | (0x07 << 8);
+static inline uint16_t entry(char c, uint8_t color) {
+    return (uint16_t)c | ((uint16_t)color << 8);
+}
+
+void vga_set_color(uint8_t fg, uint8_t bg) {
+    current_color = vga_entry_color(fg, bg);
 }
 
 void vga_clear(void) {
     for(int i=0;i<80*25;i++)
-        VGA[i] = entry(' ');
+        VGA[i] = entry(' ', current_color);
 
     row = 0;
     col = 0;
@@ -25,7 +31,7 @@ static void putc(char c) {
         return;
     }
 
-    VGA[row*80+col] = entry(c);
+    VGA[row*80+col] = entry(c, current_color);
     col++;
 
     if(col>=80){
