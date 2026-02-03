@@ -5,5 +5,6 @@
 void vga_clear(void);
 void vga_write(const char* s);
 void vga_set_color(uint8_t fg, uint8_t bg);
+void putc(char c);
 
 #endif

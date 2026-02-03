@@ -7,6 +7,12 @@ LDFLAGS=-T linker.ld -nostdlib
 
 SRC=\
 kernel/src/arch/x86/boot.s \
+kernel/src/arch/x86/idt_load.s \
+kernel/src/arch/x86/idt.c \
+kernel/src/drivers/keyboard/keyboard.c \
+kernel/src/arch/x86/isr.s \
+kernel/src/arch/x86/pic.c \
+kernel/src/arch/x86/io.c \
 kernel/src/drivers/vga/vga.c \
 kernel/src/drivers/vga/cursor.c \
 kernel/src/kernel/main.c \

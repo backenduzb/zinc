@@ -25,7 +25,7 @@ void vga_clear(void) {
     col = 0;
 } 
 
-static void putc(char c){
+void putc(char c){
     if(c=='\n'){
         col = 0;
         row++;
