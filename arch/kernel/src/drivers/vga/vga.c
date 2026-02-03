@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <kernel/vga/vga.h>
 #include <kernel/vga/colors.h>
+#include <kernel/vga/cursor.h>
 
 static volatile uint16_t* const VGA = (uint16_t*)0xB8000;
 
@@ -24,25 +25,27 @@ void vga_clear(void) {
     col = 0;
 } 
 
-static void putc(char c) {
+static void putc(char c){
     if(c=='\n'){
-        col=0;
+        col = 0;
         row++;
-        return;
+    } else {
+        VGA[row*80+col] = entry(c, current_color);
+        col++;
     }
 
-    VGA[row*80+col] = entry(c, current_color);
-    col++;
-
-    if(col>=80){
-        col=0;
+    if(col >= 80){
+        col = 0;
         row++;
     }
 
-    if(row>=25){
-        row=0;  
+    if(row >= 25){
+        row = 24;
     }
+
+    vga_set_cursor(row, col);
 }
+
 
 void vga_write(const char* s){
     for(int i=0;s[i];i++)

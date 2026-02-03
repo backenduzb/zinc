@@ -8,6 +8,7 @@ LDFLAGS=-T linker.ld -nostdlib
 SRC=\
 kernel/src/arch/x86/boot.s \
 kernel/src/drivers/vga/vga.c \
+kernel/src/drivers/vga/cursor.c \
 kernel/src/kernel/main.c \
 
 OBJ=$(SRC:.c=.o)
