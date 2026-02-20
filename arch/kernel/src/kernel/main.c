@@ -14,8 +14,14 @@ extern volatile uint8_t kbd_has_data;
 
 void kernel_main(void) {
   vga_clear();
-  vga_write("Zinc OS boot...\n");
-
+  vga_set_color(VGA_CYAN, VGA_BLACK);
+  vga_write("                 Welcome to");
+  vga_set_color(VGA_DARK_GREY, VGA_BLACK);
+  vga_write(" Zinc");
+  vga_set_color(VGA_CYAN, VGA_BLACK);
+  vga_write(" OS!\n");
+  vga_set_color(VGA_LIGHT_GREY, VGA_BLACK);
+  
   idt_init();
   pic_remap();
 
