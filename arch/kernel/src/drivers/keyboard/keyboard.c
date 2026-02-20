@@ -3,6 +3,7 @@
 #include <kernel/vga/vga.h>
 #include <kernel/pic.h>
 #include <stdint.h>
+#include <kernel/vga/cursor.h>
 
 volatile uint8_t last_scancode = 0;
 volatile uint8_t kbd_has_data = 0;
@@ -14,7 +15,7 @@ void keyboard_handler(){
         pic_send_eoi(1);
         return;
     }
-
+    
     last_scancode = sc;
     kbd_has_data = 1;
 

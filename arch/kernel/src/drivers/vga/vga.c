@@ -23,7 +23,7 @@ void vga_clear(void) {
 
     row = 0;
     col = 0;
-} 
+}
 
 void putc(char c){
     if(c=='\n'){
@@ -33,7 +33,7 @@ void putc(char c){
         VGA[row*80+col] = entry(c, current_color);
         col++;
     }
-    
+
     if(col >= 80){
         col = 0;
         row++;
@@ -49,7 +49,7 @@ void putc(char c){
         for (int c = 0; c < 80; c++) {
             VGA[24 * 80 + c] = blank;
         }
-        
+
         row = 24;
     }
 
@@ -60,4 +60,26 @@ void putc(char c){
 void vga_write(const char* s){
     for(int i=0;s[i];i++)
         putc(s[i]);
+}
+
+void vga_backspace(void){
+    if(col > 0){
+        col--;
+    } else if(row > 0){
+        row--;
+        col = 79;
+    }
+
+    VGA[row*80+col] = entry(' ', current_color);
+    vga_set_cursor(row, col);
+}
+
+void vga_top(void){
+    if(row > 0){
+        row--;
+    } else return;
+    
+
+    VGA[row*80+col] = entry(' ', current_color);
+    vga_set_cursor(row, col);
 }
