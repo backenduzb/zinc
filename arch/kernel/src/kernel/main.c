@@ -2,10 +2,8 @@
 #include <kernel/io.h>
 #include <kernel/keyboard/keyreader.h>
 #include <kernel/pic.h>
-#include <kernel/string/str.h>
 #include <kernel/vga/colors.h>
 #include <kernel/vga/vga.h>
-#include <string.h>
 
 static inline void enable_interrupts(void) { __asm__ volatile("sti"); }
 
@@ -21,7 +19,7 @@ void kernel_main(void) {
   vga_set_color(VGA_CYAN, VGA_BLACK);
   vga_write(" OS!\n");
   vga_set_color(VGA_LIGHT_GREY, VGA_BLACK);
-  
+
   idt_init();
   pic_remap();
 
@@ -33,32 +31,5 @@ void kernel_main(void) {
 
   while (1) {
     __asm__ volatile("hlt");
-
-    if (kbd_has_data) {
-      kbd_has_data = 0;
-
-      char hex[] = "0123456789ABCDEF";
-      char s[3];
-      s[0] = hex[(last_scancode >> 4) & 0xF];
-      s[1] = hex[last_scancode & 0xF];
-      s[2] = 0;
-
-      if (!strcmp(s, "4D")) {
-        vga_write(" ");
-      } else if (!strcmp(s, "4B")) {
-        vga_backspace();
-      } else if (!strcmp(s, "48")) {
-        vga_top();
-      } else if (!strcmp(s, "50")) {
-        vga_write("\n");
-      } else {
-          unsigned char s = inb(0x60);
-          char stra = scancode_to_char(s);
-        if (stra != 0) {
-          char buf[2] = {stra, '\0'};
-          vga_write(buf);
-        }
-      }
-    }
   }
 }

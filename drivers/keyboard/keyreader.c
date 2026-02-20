@@ -1,21 +1,14 @@
 #include <kernel/keyboard/keyreader.h>
 
+int shift_pressed = 0;
+
+void update_shift(unsigned char scancode) {
+    if (scancode == 0x2A || scancode == 0x36) shift_pressed = 1;       
+    else if (scancode == 0xAA || scancode == 0xB6) shift_pressed = 0;  
+}
+
 char scancode_to_char(unsigned char scancode) {
-
-    if (scancode & 0x80) return 0;
-
-    // switch(scancode) {
-    //     case 0x02: return shift_pressed ? '!' : '1';
-    //     case 0x03: return shift_pressed ? '@' : '2';
-    //     case 0x04: return shift_pressed ? '#' : '3';
-    //     case 0x05: return shift_pressed ? '$' : '4';
-    //     case 0x06: return shift_pressed ? '%' : '5';
-    //     case 0x07: return shift_pressed ? '^' : '6';
-    //     case 0x08: return shift_pressed ? '&' : '7';
-    //     case 0x09: return shift_pressed ? '*' : '8';
-    //     case 0x0A: return shift_pressed ? '(' : '9';
-    //     case 0x0B: return shift_pressed ? ')' : '0';
-    // }
+    if (scancode & 0x80) return 0; 
 
     char c = 0;
 
@@ -34,11 +27,19 @@ char scancode_to_char(unsigned char scancode) {
         case 0x11: c='w'; break; case 0x2D: c='x'; break;
         case 0x15: c='y'; break; case 0x2C: c='z'; break;
 
+        case 0x02: c='1'; break; case 0x03: c='2'; break;
+        case 0x04: c='3'; break; case 0x05: c='4'; break;
+        case 0x06: c='5'; break; case 0x07: c='6'; break;
+        case 0x08: c='7'; break; case 0x09: c='8'; break;
+        case 0x0A: c='9'; break; case 0x0B: c='0'; break;
+
         case 0x39: return ' ';
         case 0x1C: return '\n';
-        case 0x0E: return 8;
+        case 0x0E: return 8;  
         default: return 0;
     }
+
+    if (shift_pressed && c >= 'a' && c <= 'z') c -= 32; 
 
     return c;
 }
