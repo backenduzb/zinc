@@ -61,7 +61,19 @@ void vga_write(const char *s) {
     putc(s[i]);
 }
 
-void vga_backspace(void) {
+void vga_backspace(void){
+    if (col > 0){
+        col --;
+    }
+    else{
+        row--;
+        col=80;
+    }
+    VGA[row * 80 + col] = entry(' ', current_color);
+    vga_set_cursor(row, col);
+}
+
+void vga_left(void) {
   if (col > 0) {
     col--;
   } else if (row > 0) {

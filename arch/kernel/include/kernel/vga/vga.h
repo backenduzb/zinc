@@ -6,10 +6,11 @@ void vga_clear(void);
 void vga_write(const char* s);
 void vga_set_color(uint8_t fg, uint8_t bg);
 void putc(char c);
-void vga_backspace(void);
+void vga_left(void);
 void vga_top(void);
 void vga_right(void);
 void vga_bottom(void);
+void vga_backspace(void);
 
 static int row;
 static int col;

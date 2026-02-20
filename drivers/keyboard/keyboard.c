@@ -24,12 +24,15 @@ void keyboard_handler() {
     if (sc == 0x4D) {
         vga_right();
     } else if (sc == 0x4B) {
-        vga_backspace();
+        vga_left();
     } else if (sc == 0x48) {
         vga_top();
     } else if (sc == 0x50) {
         vga_bottom();
-    } else {
+    }else if(sc == 0x0E){
+        vga_backspace();
+    }
+    else {
         char c = scancode_to_char(sc);
         if (c) {
             char buf[2] = {c, 0};
