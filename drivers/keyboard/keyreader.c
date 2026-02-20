@@ -1,16 +1,22 @@
 #include <kernel/keyboard/keyreader.h>
+#include <kernel/vga/vga.h>
 
 int shift_pressed = 0;
 
-void update_shift(unsigned char scancode) {
-    if (scancode == 0x2A || scancode == 0x36) shift_pressed = 1;       
-    else if (scancode == 0xAA || scancode == 0xB6) shift_pressed = 0;  
-}
-
 char scancode_to_char(unsigned char scancode) {
-    if (scancode & 0x80) return 0; 
-
+    if (scancode == 0x2A || scancode == 0x36) {
+        shift_pressed = 1;
+        return 0;
+    }
+    
+    if (scancode == 0xAA || scancode == 0xB6) {
+        shift_pressed = 0;
+        return 0;
+    }
+    char buf[2] = {scancode, 0};
+    
     char c = 0;
+    if (scancode & 0x80) return 0;
 
     switch(scancode) {
         case 0x1E: c='a'; break; case 0x30: c='b'; break;
@@ -27,19 +33,18 @@ char scancode_to_char(unsigned char scancode) {
         case 0x11: c='w'; break; case 0x2D: c='x'; break;
         case 0x15: c='y'; break; case 0x2C: c='z'; break;
 
-        case 0x02: c='1'; break; case 0x03: c='2'; break;
-        case 0x04: c='3'; break; case 0x05: c='4'; break;
-        case 0x06: c='5'; break; case 0x07: c='6'; break;
-        case 0x08: c='7'; break; case 0x09: c='8'; break;
-        case 0x0A: c='9'; break; case 0x0B: c='0'; break;
+        case 0x02: c=shift_pressed ? '!' : '1'; break; case 0x03: c=shift_pressed ? '@' : '2'; break;
+        case 0x04: c=shift_pressed ? '#' : '3'; break; case 0x05: c=shift_pressed ? '$' : '4'; break;
+        case 0x06: c=shift_pressed ? '%' : '5'; break; case 0x07: c=shift_pressed ? '^' : '6'; break;
+        case 0x08: c=shift_pressed ? '&' : '7'; break; case 0x09: c=shift_pressed ? '*' : '8'; break;
+        case 0x0A: c=shift_pressed ? '(' : '9'; break; case 0x0B: c=shift_pressed ? ')' : '0'; break;
 
         case 0x39: return ' ';
         case 0x1C: return '\n';
-        case 0x0E: return 8;  
         default: return 0;
     }
 
-    if (shift_pressed && c >= 'a' && c <= 'z') c -= 32; 
+    if (shift_pressed && c >= 'a' && c <= 'z') c -= 32;
 
     return c;
 }
