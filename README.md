@@ -1,1 +1,0 @@
-![header](https://capsule-render.vercel.app/api?type=waving&color=0:1a1b27,100:2483b6&height=200&section=header&text=ZINC%20OS&fontSize=60&fontColor=70a5fd&animation=fadeIn)
