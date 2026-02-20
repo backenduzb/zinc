@@ -15,6 +15,8 @@ kernel/src/arch/x86/pic.c \
 kernel/src/arch/x86/io.c \
 kernel/src/drivers/vga/vga.c \
 kernel/src/drivers/vga/cursor.c \
+kernel/src/drivers/keyboard/keyreader.c \
+kernel/src/utils/string.c \
 kernel/src/kernel/main.c \
 
 OBJ=$(SRC:.c=.o)

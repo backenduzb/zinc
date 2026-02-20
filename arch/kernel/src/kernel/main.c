@@ -1,6 +1,8 @@
 #include <kernel/idt.h>
 #include <kernel/io.h>
+#include <kernel/keyboard/keyreader.h>
 #include <kernel/pic.h>
+#include <kernel/string/str.h>
 #include <kernel/vga/colors.h>
 #include <kernel/vga/vga.h>
 #include <string.h>
@@ -9,14 +11,6 @@ static inline void enable_interrupts(void) { __asm__ volatile("sti"); }
 
 extern volatile uint8_t last_scancode;
 extern volatile uint8_t kbd_has_data;
-
-int strcmp(const char *a, const char *b) {
-  while (*a && (*a == *b)) {
-    a++;
-    b++;
-  }
-  return *a - *b;
-}
 
 void kernel_main(void) {
   vga_clear();
@@ -44,19 +38,20 @@ void kernel_main(void) {
       s[2] = 0;
 
       if (!strcmp(s, "4D")) {
-          vga_write(" ");
-      } else if(!strcmp(s, "4B")){
-          vga_backspace();
-      } else if(!strcmp(s, "48")){
-          vga_top();
-      } else if(!strcmp(s, "50")){
-          vga_write("\n");
-      }
-      else {
-
-        vga_write("Key ");
-        vga_write(s);
+        vga_write(" ");
+      } else if (!strcmp(s, "4B")) {
+        vga_backspace();
+      } else if (!strcmp(s, "48")) {
+        vga_top();
+      } else if (!strcmp(s, "50")) {
         vga_write("\n");
+      } else {
+          unsigned char s = inb(0x60);
+          char stra = scancode_to_char(s);
+        if (stra != 0) {
+          char buf[2] = {stra, '\0'};
+          vga_write(buf);
+        }
       }
     }
   }
