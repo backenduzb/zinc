@@ -1,0 +1,10 @@
+version: "3.9"
+
+services:
+  osdev:
+    build: .
+    container_name: zinc_os
+    volumes:
+      - .:/workspace
+    working_dir: /workspace
+    tty: true
