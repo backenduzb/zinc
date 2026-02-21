@@ -45,7 +45,6 @@ Command commands[] = {
 static int command_count = sizeof(commands) / sizeof(Command);
 
 Command* find_command(const char *input) {
-    vga_write(input);
 
     if (input[0] == '\0' || strcmp(input, "\n") == 0) {
         return 0; 
