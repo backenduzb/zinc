@@ -2,6 +2,20 @@
 
 Building Zinc OS from the ground up: 32-bit, x86, with custom keyboard drivers, VGA output, and a minimal shell. A playground for OS enthusiasts and low-level coding fans.
 
+# Installation
+- Clone repository
+```bash
+git clone https://github.com/backenduzb/zinc.git
+```
+- Build os
+```bash
+make iso
+```
+- You can test this os with qemu or other virtual managers
+```bash
+make run
+```
+
 # Zinc OS ToDo
 - [x] CPU controlling
 - [x] Keyboard driver
