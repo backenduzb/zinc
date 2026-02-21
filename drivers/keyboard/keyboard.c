@@ -16,7 +16,9 @@ char key_counter[256];
 
 void keyboard_handler() {
     uint8_t sc = inb(0x60);
-
+    
+    
+    
     if (sc == 0x1C) {
         key_counter[key_idx] = '\0';   
 
@@ -25,8 +27,8 @@ void keyboard_handler() {
             cmd->func();
         }
         key_idx = 0;
+        vga_write("\n/root%zinc > ");
         pic_send_eoi(1);
-        vga_write("\n /root%zinc > ");
         return;
     }
 
@@ -38,6 +40,7 @@ void keyboard_handler() {
         pic_send_eoi(1);
         return;
     }
+    
 
     char c = scancode_to_char(sc);
 

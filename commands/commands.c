@@ -2,6 +2,7 @@
 #include <kernel/vga/vga.h>
 #include <kernel/vga/colors.h>
 #include <kernel/string/str.h>
+#include <commands/power.h>
 
 #define REGISTER_COMMAND(name, func) {name, func}
 
@@ -37,17 +38,25 @@ Command commands[] = {
     REGISTER_COMMAND("help", help),
     REGISTER_COMMAND("clear", vga_clear),
     REGISTER_COMMAND("hahaha", kernel_lol),
+    REGISTER_COMMAND("reboot", reboot),
+    REGISTER_COMMAND("mdown", shutdown),
 };
 
 static int command_count = sizeof(commands) / sizeof(Command);
 
 Command* find_command(const char *input) {
-    for (int i = 0; i < command_count; i++) {       
-        if (strcmp(input, commands[i].name) == 0){
-            return &commands[i];
+    vga_write(input);
+
+    if (input[0] == '\0' || strcmp(input, "\n") == 0) {
+        return 0; 
+    } else {
+        for (int i = 0; i < command_count; i++) {       
+            if (strcmp(input, commands[i].name) == 0){
+                return &commands[i];
+            }
         }
+        write_wrong_command(input); 
+        vga_write("\n/root%zinc > ");
+        return 0;
     }
-    
-    write_wrong_command(input);
-    return 0;
 }
