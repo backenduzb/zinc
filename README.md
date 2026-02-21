@@ -21,6 +21,7 @@ make run
 - [x] Keyboard driver
 - [x] VGA output
 - [x] Create commmands 
+- [ ] Disk controlling
 - [ ] Timer / sleep_ms
 - [ ] Command history
 - [ ] Tab autocomplete
