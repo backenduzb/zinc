@@ -8,7 +8,8 @@ RUN pacman -Syu --noconfirm && \
         grub \
         xorriso \
         make \
-        cmake
+        cmake \
+        qemu \
 
 WORKDIR /workspace
 CMD ["bash"]
