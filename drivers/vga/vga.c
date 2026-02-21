@@ -23,6 +23,7 @@ void vga_clear(void) {
 
   row = 0;
   col = 0;
+  vga_set_cursor(row, col);
 }
 
 void putc(char c) {

@@ -1,16 +1,29 @@
 #include <commands/commands.h>
 #include <kernel/vga/vga.h>
+#include <kernel/vga/colors.h>
 #include <kernel/string/str.h>
 
 #define REGISTER_COMMAND(name, func) {name, func}
 
 void help(){
-    vga_write("Zinc OS help for help clear for clear screen.");
+    vga_write("Zinc OS help for help clear for clear screen. \n");
+    vga_set_color(VGA_LIGHT_GREEN, VGA_BLACK);
+    vga_write("You can laught with kernel, you need enter hahaha.");
+    vga_set_color(VGA_LIGHT_GREY, VGA_BLACK);
+    vga_write("\n");
+}
+
+void kernel_lol(){
+    vga_set_color(VGA_MANAGENTA, VGA_BLACK);
+    vga_write("VAXAXAXAXAXAXAXA!");
+    vga_set_color(VGA_LIGHT_GREY, VGA_BLACK);
+    vga_write("\n");
 }
 
 Command commands[] = {
     REGISTER_COMMAND("help", help),
     REGISTER_COMMAND("clear", vga_clear),
+    REGISTER_COMMAND("hahaha", kernel_lol),
 };
 
 static int command_count = sizeof(commands) / sizeof(Command);
@@ -21,8 +34,10 @@ Command* find_command(const char *input) {
             return &commands[i];
         }
     }
-
+    vga_set_color(VGA_RED, VGA_BLACK);
     vga_write(input);
-    vga_write(" Command not found!\n");
+    vga_write(" command not found!\n");
+    vga_set_color(VGA_LIGHT_GREY, VGA_BLACK);
+    
     return 0;
 }
