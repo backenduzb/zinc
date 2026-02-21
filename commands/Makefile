@@ -25,11 +25,8 @@ $(error Compiler '$(CC)' not found. Install clang or $(ARCH)-gcc, or run make CC
 endif
 
 SRC = \
-	keyboard/keyboard.c \
-	keyboard/keyreader.c \
-	vga/vga.c \
-	vga/cursor.c \
-	
+	commands.c
+
 OBJ = $(SRC:.c=.o)
 
 .PHONY: all clean

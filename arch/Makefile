@@ -46,7 +46,8 @@ SRC = \
 	../drivers/keyboard/keyboard.c \
 	../drivers/keyboard/keyreader.c \
 	../drivers/vga/vga.c \
-	../drivers/vga/cursor.c
+	../drivers/vga/cursor.c \
+	../commands/commands.c
 
 OBJ = $(SRC:.c=.o)
 OBJ := $(OBJ:.s=.o)
