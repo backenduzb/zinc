@@ -2,7 +2,7 @@
 .set MB_FLAGS, 0x00000003
 .set MB_CHECKSUM, -(MB_MAGIC + MB_FLAGS)
 
-.section .multiboot
+.section .multiboot,"a"
 .align 4
 .long MB_MAGIC
 .long MB_FLAGS

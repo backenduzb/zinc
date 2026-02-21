@@ -11,8 +11,8 @@ void vga_top(void);
 void vga_right(void);
 void vga_bottom(void);
 void vga_backspace(void);
-
-static int row;
-static int col;
+void vga_write_soat(int row, int col, const char *sz);
+int vga_get_row(void);
+int vga_get_col(void);
 
 #endif

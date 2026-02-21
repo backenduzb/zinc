@@ -56,10 +56,26 @@ void putc(char c) {
 
   vga_set_cursor(row, col);
 }
+void vga_write_soat(int r, int c, const char *sz) {
+  if (r < 0 || r >= 25 || c < 0 || c >= 80)
+    return;
+  for (int i = 0; sz[i] && (c + i) < 80; i++) {
+    VGA[r * 80 + c + i] = entry(sz[i], current_color);
+  }
+  vga_set_cursor(row, col);
+}
 
 void vga_write(const char *s) {
   for (int i = 0; s[i]; i++)
     putc(s[i]);
+}
+
+int vga_get_row(void) {
+  return row;
+}
+
+int vga_get_col(void) {
+  return col;
 }
 
 void vga_backspace(void){

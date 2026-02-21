@@ -6,6 +6,7 @@
 #include <kernel/vga/vga.h>
 #include <commands/commands.h>
 #include <kernel/vga/cursor.h>
+#include <kernel/time/btime.h>
 #include <stdint.h>
 
 volatile uint8_t last_scancode = 0;
@@ -28,6 +29,7 @@ void keyboard_handler() {
         }
         key_idx = 0;
         vga_write("\n/root%zinc > ");
+        get_time();
         pic_send_eoi(1);
         return;
     }

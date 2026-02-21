@@ -47,6 +47,7 @@ SRC = \
 	../drivers/keyboard/keyreader.c \
 	../drivers/vga/vga.c \
 	../drivers/vga/cursor.c \
+	../drivers/time/btime.c \
 	../commands/commands.c \
 	../commands/power.c \
 
