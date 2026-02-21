@@ -9,7 +9,7 @@ RUN pacman -Syu --noconfirm && \
         xorriso \
         make \
         cmake \
-        qemu \
+        qemu 
 
 WORKDIR /workspace
 CMD ["bash"]

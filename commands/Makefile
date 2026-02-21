@@ -11,11 +11,15 @@ undefine ASFLAGS
 endif
 
 ifneq ($(shell command -v $(ARCH)-gcc 2>/dev/null),)
-CC ?= $(ARCH)-gcc
+ifneq ($(origin CC), command line)
+CC := $(ARCH)-gcc
+endif
 CFLAGS ?= -ffreestanding -O2 -Wall -Wextra -nostdlib -I../arch/kernel/include
 ASFLAGS ?=
 else
-CC ?= clang
+ifneq ($(origin CC), command line)
+CC := clang
+endif
 CFLAGS ?= -target $(ARCH) -ffreestanding -O2 -Wall -Wextra -nostdlib -I../arch/kernel/include
 ASFLAGS ?= -target $(ARCH)
 endif
@@ -25,7 +29,8 @@ $(error Compiler '$(CC)' not found. Install clang or $(ARCH)-gcc, or run make CC
 endif
 
 SRC = \
-	commands.c
+	commands.c \
+	power.c
 
 OBJ = $(SRC:.c=.o)
 
