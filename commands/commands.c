@@ -5,6 +5,19 @@
 
 #define REGISTER_COMMAND(name, func) {name, func}
 
+void write_wrong_command(char *command){
+    vga_set_color(VGA_LIGHT_GREEN, VGA_BLACK);
+    vga_write("\n bash: ");
+    vga_set_color(VGA_LIGHT_GREY, VGA_BLACK);
+    vga_write("command");
+    vga_set_color(VGA_LIGHT_RED, VGA_BLACK);
+    vga_write(" NOT ");
+    vga_set_color(VGA_LIGHT_GREY, VGA_BLACK);
+    vga_write("not found: '");
+    vga_write(command);
+    vga_write("'\n");
+}
+
 void help(){
     vga_write("\nZinc OS help for help clear for clear screen. \n");
     vga_set_color(VGA_LIGHT_GREEN, VGA_BLACK);
@@ -34,11 +47,7 @@ Command* find_command(const char *input) {
             return &commands[i];
         }
     }
-    vga_set_color(VGA_RED, VGA_BLACK);
-    vga_write("\n");
-    vga_write(input);
-    vga_write(" command not found!\n");
-    vga_set_color(VGA_LIGHT_GREY, VGA_BLACK);
     
+    write_wrong_command(input);
     return 0;
 }
