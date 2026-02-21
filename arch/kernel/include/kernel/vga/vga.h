@@ -2,6 +2,9 @@
 #define KERNEL_VGA_H
 #include <stdint.h>
 
+extern const int VGA_WIDTH; 
+extern const int VGA_HEIGH; 
+
 void vga_clear(void);
 void vga_write(const char* s);
 void vga_set_color(uint8_t fg, uint8_t bg);

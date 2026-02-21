@@ -5,6 +5,9 @@
 
 static volatile uint16_t *const VGA = (uint16_t *)0xB8000;
 
+const int VGA_WIDTH = 80;
+const int VGA_HEIGH = 25;
+
 static int row = 0;
 static int col = 0;
 static uint8_t current_color = 0x07;
@@ -18,7 +21,7 @@ void vga_set_color(uint8_t fg, uint8_t bg) {
 }
 
 void vga_clear(void) {
-  for (int i = 0; i < 80 * 25; i++)
+  for (int i = 0; i < VGA_WIDTH *VGA_HEIGH; i++)
     VGA[i] = entry(' ', current_color);
 
   row = 0;
@@ -31,24 +34,24 @@ void putc(char c) {
     col = 0;
     row++;
   } else {
-    VGA[row * 80 + col] = entry(c, current_color);
+    VGA[row * VGA_WIDTH + col] = entry(c, current_color);
     col++;
   }
 
-  if (col >= 80) {
+  if (col >= VGA_WIDTH) {
     col = 0;
     row++;
   }
 
-  if (row >= 25) {
-    for (int r = 1; r < 25; r++) {
-      for (int c = 0; c < 80; c++) {
-        VGA[(r - 1) * 80 + c] = VGA[r * 80 + c];
+  if (row >=VGA_HEIGH) {
+    for (int r = 1; r <VGA_HEIGH; r++) {
+      for (int c = 0; c < VGA_WIDTH; c++) {
+          VGA[(r - 1) * VGA_WIDTH + c] = VGA[r * VGA_WIDTH + c];
       }
     }
     uint16_t blank = entry(' ', current_color);
-    for (int c = 0; c < 80; c++) {
-      VGA[24 * 80 + c] = blank;
+    for (int c = 0; c < VGA_WIDTH; c++) {
+      VGA[24 * VGA_WIDTH + c] = blank;
     }
 
     row = 24;
@@ -57,10 +60,10 @@ void putc(char c) {
   vga_set_cursor(row, col);
 }
 void vga_write_soat(int r, int c, const char *sz) {
-  if (r < 0 || r >= 25 || c < 0 || c >= 80)
+  if (r < 0 || r >= VGA_HEIGH || c < 0 || c >= VGA_WIDTH)
     return;
-  for (int i = 0; sz[i] && (c + i) < 80; i++) {
-    VGA[r * 80 + c + i] = entry(sz[i], current_color);
+  for (int i = 0; sz[i] && (c + i) < VGA_WIDTH; i++) {
+      VGA[r * VGA_WIDTH + c + i] = entry(sz[i], current_color);
   }
   vga_set_cursor(row, col);
 }
@@ -84,9 +87,9 @@ void vga_backspace(void){
     }
     else{
         row--;
-        col=80;
+        col=VGA_WIDTH;
     }
-    VGA[row * 80 + col] = entry(' ', current_color);
+    VGA[row * VGA_WIDTH + col] = entry(' ', current_color);
     vga_set_cursor(row, col);
 }
 
@@ -105,7 +108,8 @@ void vga_right(void) {
     col++;
   } else if (row > 0) {
     row++;
-    col = 79;
+    col = VGA_WIDTH -1;
+    
   }
   vga_set_cursor(row, col);
 }
