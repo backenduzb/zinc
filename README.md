@@ -2,7 +2,6 @@
 
 
 # Zinc architecture
-󰣇 ~/OS/zinc   main  !+ ❯ tree                                                                                                                                                        10:35
 .
 ├── arch
 │   ├── kernel
