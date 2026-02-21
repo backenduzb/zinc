@@ -6,7 +6,7 @@
 #define REGISTER_COMMAND(name, func) {name, func}
 
 void help(){
-    vga_write("Zinc OS help for help clear for clear screen. \n");
+    vga_write("\nZinc OS help for help clear for clear screen. \n");
     vga_set_color(VGA_LIGHT_GREEN, VGA_BLACK);
     vga_write("You can laught with kernel, you need enter hahaha.");
     vga_set_color(VGA_LIGHT_GREY, VGA_BLACK);
@@ -15,7 +15,7 @@ void help(){
 
 void kernel_lol(){
     vga_set_color(VGA_MANAGENTA, VGA_BLACK);
-    vga_write("VAXAXAXAXAXAXAXA!");
+    vga_write("\nVAXAXAXAXAXAXAXA!");
     vga_set_color(VGA_LIGHT_GREY, VGA_BLACK);
     vga_write("\n");
 }
@@ -35,6 +35,7 @@ Command* find_command(const char *input) {
         }
     }
     vga_set_color(VGA_RED, VGA_BLACK);
+    vga_write("\n");
     vga_write(input);
     vga_write(" command not found!\n");
     vga_set_color(VGA_LIGHT_GREY, VGA_BLACK);

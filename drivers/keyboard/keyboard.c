@@ -19,7 +19,6 @@ void keyboard_handler() {
 
     if (sc == 0x1C) {
         key_counter[key_idx] = '\0';   
-        vga_write("\n");
 
         Command* cmd = find_command(key_counter);
         if (cmd) {
@@ -27,6 +26,7 @@ void keyboard_handler() {
         }
         key_idx = 0;
         pic_send_eoi(1);
+        vga_write("\n /root%zinc > ");
         return;
     }
 

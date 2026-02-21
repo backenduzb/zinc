@@ -19,7 +19,7 @@ void kernel_main(void) {
   vga_set_color(VGA_CYAN, VGA_BLACK);
   vga_write(" OS!\n");
   vga_set_color(VGA_LIGHT_GREY, VGA_BLACK);
-
+  
   idt_init();
   pic_remap();
 
@@ -27,7 +27,7 @@ void kernel_main(void) {
   outb(0xA1, 0xFF);
 
   __asm__ volatile("sti");
-  vga_write("Keyboard ready. Press keys...\n");
+  vga_write("/root%zinc > ");
 
   while (1) {
     __asm__ volatile("hlt");
