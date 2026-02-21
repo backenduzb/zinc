@@ -29,7 +29,7 @@ void keyboard_handler() {
         }
         key_idx = 0;
         vga_write("\n/root%zinc > ");
-        get_time();
+        write_time();
         pic_send_eoi(1);
         return;
     }

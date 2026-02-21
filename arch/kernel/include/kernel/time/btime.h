@@ -1,6 +1,6 @@
 #ifndef BTIME_H
 #define BTIME_H
 
-void get_time();
+void write_time();
 
 #endif

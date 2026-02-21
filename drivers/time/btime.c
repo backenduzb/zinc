@@ -18,7 +18,7 @@ void itoa2(uint8_t val, char *buf) {
     buf[2] = 0;
 }
 
-void get_time() {
+void write_time() {
     uint8_t sec = bcd_to_dec(rtc_read(0x00));
     uint8_t min = bcd_to_dec(rtc_read(0x02));
     uint8_t hour = bcd_to_dec(rtc_read(0x04));
