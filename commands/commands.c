@@ -6,6 +6,12 @@
 
 #define REGISTER_COMMAND(name, func) {name, func}
 
+void clear_cmd(int argc, char **argv){
+    (void)argc;
+    (void)argv;
+    vga_clear();
+}
+
 void write_wrong_command(char *command){
     vga_set_color(VGA_LIGHT_GREEN, VGA_BLACK);
     vga_write("\n bash: ");
@@ -19,15 +25,22 @@ void write_wrong_command(char *command){
     vga_write("'\n");
 }
 
-void help(){
+void help(int argc, char **argv){
     vga_write("\nZinc OS help for help clear for clear screen. \n");
     vga_set_color(VGA_LIGHT_GREEN, VGA_BLACK);
     vga_write("You can laught with kernel, you need enter hahaha.");
     vga_set_color(VGA_LIGHT_GREY, VGA_BLACK);
     vga_write("\n");
+    if(argc > 1){
+        vga_write("Argument: ");
+        vga_write(argv[1]);
+        vga_write("\n");
+    }
 }
 
-void kernel_lol(){
+void kernel_lol(int argc, char **argv){
+    (void)argc;
+        (void)argv;
     vga_set_color(VGA_MANAGENTA, VGA_BLACK);
     vga_write("\nVAXAXAXAXAXAXAXA!");
     vga_set_color(VGA_LIGHT_GREY, VGA_BLACK);
@@ -36,7 +49,7 @@ void kernel_lol(){
 
 Command commands[] = {
     REGISTER_COMMAND("help", help),
-    REGISTER_COMMAND("clear", vga_clear),
+    REGISTER_COMMAND("clear", clear_cmd),
     REGISTER_COMMAND("hahaha", kernel_lol),
     REGISTER_COMMAND("reboot", reboot),
     REGISTER_COMMAND("mdown", shutdown),
@@ -44,18 +57,40 @@ Command commands[] = {
 
 static int command_count = sizeof(commands) / sizeof(Command);
 
+int parse_input(char *input, char **argv){
+    int argc = 0;
+
+    while(*input){
+        while(*input == ' ') input++;
+        if(*input == 0) break;
+
+        argv[argc++] = input;
+
+        while(*input && *input != ' ') input++;
+        if(*input){
+            *input = 0;
+            input++;
+        }
+    }
+
+    return argc;
+}
+
 Command* find_command(const char *input) {
 
-    if (input[0] == '\0' || strcmp(input, "\n") == 0) {
-        return 0; 
-    } else {
-        for (int i = 0; i < command_count; i++) {       
-            if (strcmp(input, commands[i].name) == 0){
-                return &commands[i];
-            }
-        }
-        write_wrong_command(input); 
-        vga_write("\n/root%zinc > ");
+    char *argv[10];
+    int argc = parse_input(input, argv);
+
+    if(argc == 0)
         return 0;
+
+    for(int i = 0; i < command_count; i++){
+        if(strcmp(argv[0], commands[i].name) == 0){
+            commands[i].func(argc, argv);
+            return &commands[i];
+        }
     }
+
+    write_wrong_command(argv[0]);
+    return 0;
 }

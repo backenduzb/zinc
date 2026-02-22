@@ -3,6 +3,8 @@
 #include <kernel/vga/colors.h>
 #include <stdint.h>
 
+
+
 uint8_t rtc_read(uint8_t reg){
     outb(0x70, reg);
     return inb(0x71);
