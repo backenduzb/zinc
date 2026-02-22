@@ -2,13 +2,17 @@
 #include <kernel/vga/vga.h>
 
 int shift_pressed = 0;
+int caps_on = 0;
 
 char scancode_to_char(unsigned char scancode) {
     if (scancode == 0x2A || scancode == 0x36) {
         shift_pressed = 1;
         return 0;
     }
-    
+    if (scancode == 0x3A){
+        if (caps_on==0) caps_on=1;
+        else caps_on=0;
+    }
     if (scancode == 0xAA || scancode == 0xB6) {
         shift_pressed = 0;
         return 0;
@@ -45,6 +49,6 @@ char scancode_to_char(unsigned char scancode) {
     }
 
     if (shift_pressed && c >= 'a' && c <= 'z') c -= 32;
-
+    else if (caps_on) c -= 32;
     return c;
 }

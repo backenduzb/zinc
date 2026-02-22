@@ -12,4 +12,7 @@ RUN pacman -Syu --noconfirm && \
         qemu 
 
 WORKDIR /workspace
+
+COPY . .
+
 CMD ["bash"]
