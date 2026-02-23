@@ -1,74 +1,43 @@
-ARCH ?= i686-elf
+SUBDIRS = kernel arch iso
 
-ifneq ($(origin LD), command line)
-ifneq ($(shell command -v $(ARCH)-ld 2>/dev/null),)
-LD := $(ARCH)-ld
-else ifneq ($(shell command -v ld.lld 2>/dev/null),)
-LD := ld.lld
-else
-LD := ld
-endif
-endif
+TARGET = kernel.elf
+ISO_DIR = iso
+ISO_BOOT = $(ISO_DIR)/boot
+ISO_LIMINE = $(ISO_BOOT)/limine
+ISO_EFI = $(ISO_DIR)/EFI/BOOT
+ISO_KERNEL = $(ISO_BOOT)/kernel.elf
+ISO_IMAGE = zinc.iso
 
-LDFLAGS ?= -T arch/linker.ld -nostdlib -m elf_i386
+LD = x86_64-elf-ld
+LDFLAGS = -nostdlib -T linker.ld
 
-ifeq ($(shell command -v $(LD) 2>/dev/null),)
-$(error Linker '$(LD)' not found. Install llvm or $(ARCH)-binutils, or run make LD=...)
-endif
+LIMINE_DIR = limine
+LIMINE_CONF = limine.conf
+LIMINE_UEFI_CD = $(LIMINE_DIR)/bin/limine-uefi-cd.bin
+LIMINE_EFI = $(LIMINE_DIR)/bin/BOOTX64.EFI
 
-KERNEL_BIN := arch/kernel.bin
+all: $(ISO_IMAGE)
 
-ARCH_OBJ = \
-	arch/kernel/src/arch/x86/boot.o \
-	arch/kernel/src/arch/x86/idt_load.o \
-	arch/kernel/src/arch/x86/isr.o \
-	arch/kernel/src/arch/x86/idt.o \
-	arch/kernel/src/arch/x86/pic.o \
-	arch/kernel/src/arch/x86/io.o \
-	arch/kernel/src/kernel/main.o \
-	arch/kernel/src/utils/string.o \
+$(TARGET):
+	for dir in $(SUBDIRS); do \
+		$(MAKE) -C $$dir; \
+	done
+	$(LD) $(LDFLAGS) arch/x86/boot.o kernel/*.o -o $(TARGET)
 
-DRIVERS_OBJ = \
-	drivers/keyboard/keyboard.o \
-	drivers/keyboard/keyreader.o \
-	drivers/vga/vga.o \
-	drivers/vga/cursor.o \
-	drivers/time/btime.o \
-
-COMMANDS_OBJ = \
-	commands/commands.o \
-	commands/power.o
-
-ALL_OBJ := $(ARCH_OBJ) $(DRIVERS_OBJ) $(COMMANDS_OBJ)
-
-.PHONY: all iso run clean drivers commands arch
-
-all: $(KERNEL_BIN)
-
-drivers:
-	$(MAKE) -C drivers all ARCH=$(ARCH)
-
-commands:
-	$(MAKE) -C commands all ARCH=$(ARCH)
-
-arch:
-	$(MAKE) -C arch all ARCH=$(ARCH)
-
-$(KERNEL_BIN): drivers commands arch
-	$(LD) $(LDFLAGS) $(ALL_OBJ) -o $@
-
-iso: $(KERNEL_BIN)
-	mkdir -p arch/iso/boot/grub
-	cp $(KERNEL_BIN) arch/iso/boot/kernel.bin
-	cp arch/kernel/grub/grub.cfg arch/iso/boot/grub/grub.cfg
-	grub-mkrescue -o zinc.iso arch/iso
-
-run: iso
-	qemu-system-x86_64 -cdrom ./zinc.iso -m 512M -serial stdio
+$(ISO_IMAGE): $(TARGET)
+	mkdir -p $(ISO_BOOT) $(ISO_LIMINE) $(ISO_EFI)
+	cp $(TARGET) $(ISO_KERNEL)
+	cp $(LIMINE_CONF) $(ISO_LIMINE)/limine.conf
+	cp $(LIMINE_UEFI_CD) $(ISO_LIMINE)/
+	cp $(LIMINE_EFI) $(ISO_EFI)/
+	xorriso -as mkisofs -R -r -J -hfsplus -apm-block-size 2048 \
+		--efi-boot boot/limine/limine-uefi-cd.bin \
+		-efi-boot-part --efi-boot-image --protective-msdos-label \
+		$(ISO_DIR) -o $(ISO_IMAGE)
 
 clean:
-	$(MAKE) -C arch clean ARCH=$(ARCH)
-	$(MAKE) -C drivers clean ARCH=$(ARCH)
-	$(MAKE) -C commands clean ARCH=$(ARCH)
-	rm -f $(KERNEL_BIN) zinc.iso
-	rm -f arch/iso/boot/kernel.bin
+	for dir in $(SUBDIRS); do \
+		$(MAKE) -C $$dir clean; \
+	done
+	rm -f $(TARGET)
+	rm -f $(ISO_IMAGE)
