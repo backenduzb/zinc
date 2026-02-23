@@ -30,6 +30,10 @@ void help(int argc, char **argv){
     vga_write("\nZinc OS help for help clear for clear screen. \n");
     vga_set_color(VGA_LIGHT_GREEN, VGA_BLACK);
     vga_write("You can laught with kernel, you need enter hahaha.");
+    vga_write("\nmdown: this command for shutdown os");
+    vga_write("\nreboot: this command for reboot os");
+    vga_write("\nset-timezone <ZONE>: this command set timezone");
+    
     vga_set_color(VGA_LIGHT_GREY, VGA_BLACK);
     vga_write("\n");
     if(argc > 1){
