@@ -42,7 +42,11 @@ char scancode_to_char(unsigned char scancode) {
         case 0x06: c=shift_pressed ? '%' : '5'; break; case 0x07: c=shift_pressed ? '^' : '6'; break;
         case 0x08: c=shift_pressed ? '&' : '7'; break; case 0x09: c=shift_pressed ? '*' : '8'; break;
         case 0x0A: c=shift_pressed ? '(' : '9'; break; case 0x0B: c=shift_pressed ? ')' : '0'; break;
-
+        case 0x0C: c=shift_pressed ? '_' : '-'; break; 
+        case 0x33: c=shift_pressed ? '<' : ','; break; 
+        case 0x34: c=shift_pressed ? '>' : '.'; break; 
+        case 0x35: c=shift_pressed ? '?' : '/'; break; 
+        
         case 0x39: return ' ';
         case 0x1C: return '\n';
         default: return 0;

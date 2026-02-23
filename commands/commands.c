@@ -3,6 +3,7 @@
 #include <kernel/vga/colors.h>
 #include <kernel/string/str.h>
 #include <commands/power.h>
+#include <kernel/time/btime.h>
 
 #define REGISTER_COMMAND(name, func) {name, func}
 
@@ -40,7 +41,7 @@ void help(int argc, char **argv){
 
 void kernel_lol(int argc, char **argv){
     (void)argc;
-        (void)argv;
+    (void)argv;
     vga_set_color(VGA_MANAGENTA, VGA_BLACK);
     vga_write("\nVAXAXAXAXAXAXAXA!");
     vga_set_color(VGA_LIGHT_GREY, VGA_BLACK);
@@ -53,6 +54,7 @@ Command commands[] = {
     REGISTER_COMMAND("hahaha", kernel_lol),
     REGISTER_COMMAND("reboot", reboot),
     REGISTER_COMMAND("mdown", shutdown),
+    REGISTER_COMMAND("set-timezone", set_timezone),
 };
 
 static int command_count = sizeof(commands) / sizeof(Command);
