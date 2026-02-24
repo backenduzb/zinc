@@ -2,6 +2,8 @@
 #include <zinc/video/framebuffer.h>
 #include <stdint.h>
 #include <stddef.h>
+#include <zinc/string/string.h>
+
 
 __attribute__((used, section(".limine_requests_start_marker")))
 volatile uint64_t limine_requests_start_marker[] = LIMINE_REQUESTS_START_MARKER;
@@ -16,8 +18,8 @@ volatile struct limine_framebuffer_request limine_framebuffer_request = {
 };
 
 const char font8x8_basic[128][8] = {
-    { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},   // U+0000 (nul)
-    { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},   // U+0001
+    { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},   
+    { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},   
     { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},   // U+0002
     { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},   // U+0003
     { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},   // U+0004
@@ -252,4 +254,11 @@ void framebuffer_init(void) {
     fb_width  = fb->width;
     fb_height = fb->height;
     fb_bpp    = fb->bpp;
+    char height[32];
+    char width[32];
+    utoa(fb_height, height);
+    utoa(fb_width, width);
+    
+    draw_string_scaled(0, 16, height, 0xFFFFFF, 2);
+    draw_string_scaled(0, 16, width, 0xFFFFFF, 2);
 }

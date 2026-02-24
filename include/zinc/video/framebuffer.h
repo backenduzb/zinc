@@ -12,4 +12,5 @@ void framebuffer_init(void);
 
 uint64_t framebuffer_width(void);
 uint64_t framebuffer_height(void);
+
 extern const char font8x8_basic[128][8]; 
