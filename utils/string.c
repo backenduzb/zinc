@@ -43,3 +43,11 @@ size_t len(const char *str) {
     }
     return count;
 }
+
+int strcmp(const char *a, const char *b) {
+  while (*a && (*a == *b)) {
+    a++;
+    b++;
+  }
+  return *a - *b;
+}

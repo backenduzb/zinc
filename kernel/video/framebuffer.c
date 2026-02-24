@@ -231,8 +231,17 @@ void draw_string_center(const char *str, uint32_t color) {
         else 
             break;
     }
-    current_row = old_row + 8;
     current_col = old_col;
+}
+
+void draw_console_time(const char *time, uint32_t color){
+    size_t col = fb_width - 64;              
+
+    while (*time) {
+        draw_char(col, current_row, *time, color);
+        col += 8; 
+        time++;
+    }
 }
 
 void framebuffer_init(void) {
@@ -256,9 +265,10 @@ void framebuffer_init(void) {
     utoa(fb_height, height);
     utoa(fb_width, width);
     
-    draw_string(height, 0xFFFFFF);
-    draw_string(" ", 0xFFFFFF);
-    draw_string(width, 0xFFFFFF);
-    draw_string(" ", 0xFFFFFF);
+    // draw_string(height, 0xFFFFFF);
+    // draw_string(" ", 0xFFFFFF);
+    // draw_string(width, 0xFFFFFF);
+    // draw_string(" ", 0xFFFFFF);
     
 }
+

@@ -1,13 +1,18 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <zinc/video/framebuffer.h>
+#include <zinc/time/btime.h>
+
 
 void kernel_main(void) {
     framebuffer_init();
     uint32_t white = 0xFFFFFF;
+    uint32_t cyan = 0x00FFFF;
     uint32_t gray = 0x8D8D8D;
-    draw_string_center("WELCOME! to ZINC OS", white);
-    draw_string("#-#-##-#-##-#-##-#-##-#-##-#-##-#-##-#-##-#-##-#-##-#-##-#-##-#-##-#-##-#-##-#-##-#-##-#-##-#-##-#-##-#-##-#-##-#-##-#-##-#-##-#-##-#-##-#-##-#-##-#-##-#-##-#-##-#-##-#-##-#-##-#-##-#-##-#-#", white);
+    draw_string_center("Welcome to ZINC OS!", cyan);
+    
+    draw_string("/root%zinc >", white);
+    write_time();
     while (1) {
         __asm__ volatile ("hlt");
     }
