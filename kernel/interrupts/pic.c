@@ -7,7 +7,6 @@
 #define PIC2_DATA    0xA1
 #define PIC_EOI      0x20
 
-// IMCR (if present): 0 = route through PIC, 1 = route through APIC
 void pic_set_imcr(uint8_t mode) {
     outb(0x22, 0x70);
     outb(0x23, mode & 0x01);
