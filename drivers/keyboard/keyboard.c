@@ -17,37 +17,6 @@ static size_t kbd_col = 0;
 static size_t kbd_row = 0;
 static volatile uint64_t kbd_irq_cnt = 0;
 
-static void kbd_putc(char c, uint32_t color) {
-    uint64_t width = framebuffer_width();
-    uint64_t height = framebuffer_height();
-
-    if (c == '\n') {
-        kbd_row += 8;
-        kbd_col = 0;
-        return;
-    }
-    if (c == '\b') {
-        if (kbd_col >= 8) {
-            kbd_col -= 8;
-        }
-        draw_char(kbd_col, kbd_row, ' ', color);
-        return;
-    }
-    if (c == '\t') {
-        kbd_col += 32;
-    } else {
-        draw_char(kbd_col, kbd_row, c, color);
-        kbd_col += 8;
-    }
-
-    if (width && kbd_col + 8 > width) {
-        kbd_row += 8;
-        kbd_col = 0;
-    }
-    if (height && kbd_row + 8 > height) {
-        kbd_row = 0;
-    }
-}
 
 static void handle_scancode(uint8_t sc) {
     if (sc & 0x80) {
@@ -58,9 +27,11 @@ static void handle_scancode(uint8_t sc) {
     if (sc < sizeof(scancode_set1)) {
         c = scancode_set1[sc];
     }
-
+    char buff[2];
+    buff[0] = c;
+    buff[1] = '\0';
     if (c) {
-        kbd_putc(c, 0xFFFFFF);
+        draw_string(buff, 0xFFFFFF);
     }
 }
 

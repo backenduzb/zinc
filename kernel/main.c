@@ -13,7 +13,7 @@ void kernel_main(void) {
     uint32_t gray = 0x8D8D8D;
     draw_string_center("Welcome to ZINC OS!", cyan);
     
-    draw_string("/root%zinc >", white);
+    draw_string("\n/root%zinc > ", white);
     write_time();
     interrupts_init();
     interrupts_enable();
