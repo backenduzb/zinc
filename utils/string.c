@@ -25,3 +25,21 @@ size_t utoa(uint64_t value, char* buffer) {
     buffer[len] = '\0';
     return len;
 }
+
+size_t count(const char *str, const char sep) {
+    size_t count = 0;
+    while (*str) {
+        if (*str == sep) count++;
+        str++;
+    }
+    return count;
+}
+
+size_t len(const char *str) {
+    size_t count = 0;
+    while (*str) {
+        count++;
+        str++;
+    }
+    return count;
+}

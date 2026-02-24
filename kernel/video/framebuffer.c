@@ -192,17 +192,47 @@ void draw_char(size_t x, size_t y, char c, uint32_t color) {
     }
 }
 
-
 void draw_string(const char *str, uint32_t color) {
     while (*str) {
-        if (current_col > fb_width) {
-            current_row += 9;
-            current_col = 0;  
+        if (*str == '\n') {         
+            current_row += 8;       
+            current_col = 0;        
+        } else {
+            if (current_col + 8 > fb_width) { 
+                current_row += 8;
+                current_col = 0;
+            }
+            draw_char(current_col, current_row, *str, color);
+            current_col += 8;
         }
-        current_col += 8;
         str++;
-        draw_char(current_col, current_row, *str, color); 
     }
+}
+
+void draw_string_center(const char *str, uint32_t color) {
+    const char *line_start = str;
+    const size_t old_row = current_row;
+    const size_t old_col = current_col;
+    while (*line_start) {
+        const char *line_end = line_start;
+        while (*line_end && *line_end != '\n') line_end++;
+
+        size_t line_len = line_end - line_start;   
+        current_col = fb_width / 2 - (line_len * 8) / 2;
+
+        for (const char *p = line_start; p < line_end; p++) {
+            draw_char(current_col, current_row, *p, color);
+            current_col += 8;
+        }
+
+        current_row += 8; 
+        if (*line_end == '\n') 
+            line_start = line_end + 1; 
+        else 
+            break;
+    }
+    current_row = old_row + 8;
+    current_col = old_col;
 }
 
 void framebuffer_init(void) {
