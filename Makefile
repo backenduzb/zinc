@@ -22,7 +22,7 @@ $(TARGET):
 	for dir in $(SUBDIRS); do \
 		$(MAKE) -C $$dir; \
 	done
-	$(LD) $(LDFLAGS) arch/x86/boot.o kernel/*.o -o $(TARGET)
+	$(LD) $(LDFLAGS) arch/x86_64/boot.o kernel/*.o kernel/video/framebuffer.o -o $(TARGET)
 
 $(ISO_IMAGE): $(TARGET)
 	mkdir -p $(ISO_BOOT) $(ISO_LIMINE) $(ISO_EFI)

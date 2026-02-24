@@ -1,7 +1,8 @@
 CC = x86_64-elf-gcc
 CFLAGS = -O2 -ffreestanding -fno-pie -no-pie -mno-red-zone -mcmodel=kernel -I../include
 
-SRC = main.c
+SRC = main.c\
+	  video/framebuffer.c
 OBJ = $(SRC:.c=.o)
 
 all: $(OBJ)

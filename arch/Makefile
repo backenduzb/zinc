@@ -1,7 +1,7 @@
 AS = x86_64-elf-as
 
-SRC = x86/boot.s
-OBJ = x86/boot.o
+SRC = x86_64/boot.s
+OBJ = x86_64/boot.o
 
 all: $(OBJ)
 
