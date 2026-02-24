@@ -2,6 +2,8 @@
 #include <stddef.h>
 #include <zinc/video/framebuffer.h>
 #include <zinc/time/btime.h>
+#include <zinc/interrupts/interrupts.h>
+#include <zinc/interrupts/keyboard.h>
 
 
 void kernel_main(void) {
@@ -13,6 +15,8 @@ void kernel_main(void) {
     
     draw_string("/root%zinc >", white);
     write_time();
+    interrupts_init();
+    interrupts_enable();
     while (1) {
         __asm__ volatile ("hlt");
     }

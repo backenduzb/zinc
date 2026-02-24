@@ -4,8 +4,8 @@
 #include <stddef.h>
 #include <zinc/string/string.h>
 
-size_t current_col = 0;
-size_t current_row = 0;
+size_t current_col = 8;
+size_t current_row = 8;
 
 __attribute__((used, section(".limine_requests_start_marker")))
 volatile uint64_t limine_requests_start_marker[] = LIMINE_REQUESTS_START_MARKER;
@@ -244,6 +244,27 @@ void draw_console_time(const char *time, uint32_t color){
     }
 }
 
+void console_putc(char c, uint32_t color) {
+    if (c == '\n') {
+        current_row += 8;
+        current_col = 0;
+        return;
+    }
+    if (c == '\b') {
+        if (current_col >= 8) {
+            current_col -= 8;
+        }
+        draw_char(current_col, current_row, ' ', color);
+        return;
+    }
+    if (current_col + 8 > fb_width) {
+        current_row += 8;
+        current_col = 0;
+    }
+    draw_char(current_col, current_row, c, color);
+    current_col += 8;
+}
+
 void framebuffer_init(void) {
     struct limine_framebuffer_response *fb_resp =
         limine_framebuffer_request.response;
@@ -272,3 +293,10 @@ void framebuffer_init(void) {
     
 }
 
+uint64_t framebuffer_width(void) {
+    return fb_width;
+}
+
+uint64_t framebuffer_height(void) {
+    return fb_height;
+}

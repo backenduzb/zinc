@@ -10,6 +10,7 @@ void draw_border(uint32_t color, size_t thickness);
 void framebuffer_init(void);
 void draw_string_center(const char *str, uint32_t color);
 void draw_console_time(const char *time, uint32_t color);
+void console_putc(char c, uint32_t color);
 
 uint64_t framebuffer_width(void);
 uint64_t framebuffer_height(void);
