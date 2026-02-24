@@ -4,6 +4,8 @@
 #include <stddef.h>
 #include <zinc/string/string.h>
 
+size_t current_col = 0;
+size_t current_row = 0;
 
 __attribute__((used, section(".limine_requests_start_marker")))
 volatile uint64_t limine_requests_start_marker[] = LIMINE_REQUESTS_START_MARKER;
@@ -190,54 +192,18 @@ void draw_char(size_t x, size_t y, char c, uint32_t color) {
     }
 }
 
-void draw_char_scaled(size_t x, size_t y, char c, uint32_t color, size_t scale) {
-    for (size_t i = 0; i < 8; i++) {
-        uint8_t row = font8x8_basic[(uint8_t)c][i];
-        for (size_t j = 0; j < 8; j++) {
-            if (row & (1 << j)) {
-                for (size_t dy = 0; dy < scale; dy++) {
-                    for (size_t dx = 0; dx < scale; dx++) {
-                        put_pixel(x + j*scale + dx, y + i*scale + dy, color);
-                    }
-                }
-            }
-        }
-    }
-}
 
-void draw_string_scaled(size_t x, size_t y, const char *str, uint32_t color, size_t scale) {
-    size_t px = x;
+void draw_string(const char *str, uint32_t color) {
     while (*str) {
-        draw_char_scaled(px, y, *str, color, scale);
-        px += 8 * scale;
-        str++;
-    }
-}
-
-void draw_string(size_t x, size_t y, const char *str, uint32_t color) {
-    size_t px = x;
-    while (*str) {
-        draw_char(px, y, *str, color); 
-        px += 8;
-        str++;
-    }
-}
-
-void draw_rectangle(size_t x, size_t y, size_t width, size_t height, uint32_t color) {
-    for (size_t i = 0; i < height; i++) {
-        for (size_t j = 0; j < width; j++) {
-            put_pixel(x + j, y + i, color);
+        if (current_col > fb_width) {
+            current_row += 9;
+            current_col = 0;  
         }
+        current_col += 8;
+        str++;
+        draw_char(current_col, current_row, *str, color); 
     }
 }
-
-void draw_border(uint32_t color, size_t thickness) {
-    draw_rectangle(0, 0, fb_width, thickness, color);
-    draw_rectangle(0, fb_height - thickness, fb_width, thickness, color);
-    draw_rectangle(0, 0, thickness, fb_height, color);
-    draw_rectangle(fb_width - thickness, 0, thickness, fb_height, color);
-}
-
 
 void framebuffer_init(void) {
     struct limine_framebuffer_response *fb_resp =
@@ -256,9 +222,13 @@ void framebuffer_init(void) {
     fb_bpp    = fb->bpp;
     char height[32];
     char width[32];
+    
     utoa(fb_height, height);
     utoa(fb_width, width);
     
-    draw_string_scaled(0, 16, height, 0xFFFFFF, 2);
-    draw_string_scaled(0, 16, width, 0xFFFFFF, 2);
+    draw_string(height, 0xFFFFFF);
+    draw_string(" ", 0xFFFFFF);
+    draw_string(width, 0xFFFFFF);
+    draw_string(" ", 0xFFFFFF);
+    
 }

@@ -5,8 +5,7 @@
 void framebuffer_init(void);
 void put_pixel(size_t x, size_t y, uint32_t color);
 void draw_char(size_t x, size_t y, char c, uint32_t color);
-void draw_string(size_t x, size_t y, const char *str, uint32_t color);
-void draw_string_scaled(size_t x, size_t y, const char *str, uint32_t color, size_t scale);
+void draw_string(const char *str, uint32_t color);
 void draw_border(uint32_t color, size_t thickness);
 void framebuffer_init(void);
 
