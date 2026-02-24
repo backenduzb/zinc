@@ -1,0 +1,11 @@
+#
+# build files
+#
+**.o
+**/**.o
+**.iso
+**.bin
+**.log
+.archive
+**4m.fd
+**.elf
