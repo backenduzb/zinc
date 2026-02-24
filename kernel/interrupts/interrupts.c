@@ -25,9 +25,9 @@ static void wrmsr(uint32_t msr, uint64_t val) {
 static void disable_apic_if_present(void) {
     uint32_t a, b, c, d;
     cpuid(1, &a, &b, &c, &d);
-    if ((d & (1u << 5)) && (d & (1u << 9))) { // MSR + APIC
-        uint64_t apic = rdmsr(0x1B); // IA32_APIC_BASE
-        apic &= ~(1ULL << 11); // disable local APIC
+    if ((d & (1u << 5)) && (d & (1u << 9))) { 
+        uint64_t apic = rdmsr(0x1B); 
+        apic &= ~(1ULL << 11); 
         wrmsr(0x1B, apic);
     }
 }
@@ -35,13 +35,12 @@ static void disable_apic_if_present(void) {
 void interrupts_init(void) {
     idt_init();
     disable_apic_if_present();
-    pic_set_imcr(0); // route legacy IRQs through PIC if IMCR is present
+    pic_set_imcr(0); 
     pic_remap(0x20, 0x28);
-    // Mask all IRQs first to avoid unexpected vectors (e.g., PIT) before handlers exist.
     for (uint8_t i = 0; i < 16; i++) {
         pic_set_mask(i);
     }
-    pic_clear_mask(1); // keyboard IRQ only
+    pic_clear_mask(1); 
     keyboard_init();
 }
 
