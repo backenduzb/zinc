@@ -15,6 +15,8 @@ uint32_t pci_config_read(uint8_t bus, uint8_t slot, uint8_t func, uint8_t offset
         return inl(0xCFC); 
 }
 
+uint8_t xhci_bus, xhci_slot, xhci_func;
+
 void pci_scan_for_xhci(void)
 {
     for (uint16_t bus = 0; bus < 256; bus++) {
