@@ -17,7 +17,6 @@ static size_t kbd_col = 0;
 static size_t kbd_row = 0;
 static volatile uint64_t kbd_irq_cnt = 0;
 
-
 static void handle_scancode(uint8_t sc) {
     if (sc & 0x80) {
         return;
@@ -69,7 +68,18 @@ void keyboard_init(void) {
     while (inb(0x64) & 0x01) {
         (void)inb(0x60);
     }
-
+    kbd_write_cmd(0xAA);
+    uint8_t resp = kbd_read_data();
+    
+    if (resp != 0x55) {
+        draw_string("NO 8042", 0xFF0000);
+    }
+    kbd_write_data(0xF4);
+    uint8_t ack = kbd_read_data();
+    
+    if (ack != 0xFA) {
+        draw_string("NO ACK", 0xFF0000);
+    }
     kbd_write_cmd(0x20);
     uint8_t cmd = kbd_read_data();
     cmd |= 0x01;  

@@ -22,7 +22,7 @@ $(TARGET):
 	for dir in $(SUBDIRS); do \
 		$(MAKE) -C $$dir; \
 	done
-	$(LD) $(LDFLAGS) arch/x86_64/boot.o kernel/*.o kernel/interrupts/*.o kernel/video/framebuffer.o utils/string.o drivers/time/btime.o drivers/keyboard/keyboard.o -o $(TARGET)
+	$(LD) $(LDFLAGS) arch/x86_64/boot.o kernel/*.o kernel/interrupts/*.o kernel/video/framebuffer.o utils/string.o drivers/time/btime.o drivers/keyboard/keyboard.o drivers/pci/pci.o -o $(TARGET)
 
 $(ISO_IMAGE): $(TARGET)
 	mkdir -p $(ISO_BOOT) $(ISO_LIMINE) $(ISO_EFI)
