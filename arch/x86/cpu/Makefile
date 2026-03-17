@@ -1,7 +1,7 @@
 ASM = nasm
 ASMFLAGS = -f elf64
 
-OBJ = gdt.o paging.o
+OBJ = gdt.o paging.o idt.o isr.o
 
 all: $(OBJ)
 

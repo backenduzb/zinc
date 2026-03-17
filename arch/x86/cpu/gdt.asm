@@ -18,7 +18,7 @@ gdt64_end:
 
 gdt64_ptr:
     dw gdt64_end - gdt64 - 1
-    dd gdt64
+    dq gdt64
 
 CODE_SEG equ gdt64_code - gdt64
 DATA_SEG equ gdt64_data - gdt64
