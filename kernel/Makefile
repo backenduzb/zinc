@@ -1,10 +1,13 @@
 CC = gcc
-CFLAGS = -ffreestanding -m64 -mno-red-zone -fno-pie -fno-pic -I../include
+CFLAGS = -ffreestanding -m64 -mno-red-zone -fno-pie -fno-pic -fno-stack-protector -I../include
 
-all: main.o
+SRCS = $(wildcard *.c)
+OBJS = $(SRCS:.c=.o)
 
-main.o: main.c
+all: $(OBJS)
+
+%.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -f main.o
+	rm -f $(OBJS)
