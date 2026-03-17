@@ -10,7 +10,11 @@ void draw_line(void) {
         framebuffer[200 * (pitch / 4) + x] = 0x00FF0000;
     }
 }
-
+void draw_line_white(void) {
+    for (int x = 100; x < 700; x++) {
+        framebuffer[200 * (pitch / 4) + x] = 0x00FFFFFF;
+    }
+}
 void init_framebuffer(uint64_t mbi_addr) {
 
     const struct multiboot_tag *tag =
