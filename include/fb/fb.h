@@ -31,3 +31,4 @@ extern uint32_t height;
 void init_framebuffer(uint64_t mbi_addr);
 void draw_line(void);
 void draw_line_white(void);
+void write(const char *text, uint32_t color); 

@@ -8,12 +8,13 @@ arch:
 drivers:
 	$(MAKE) -C drivers/fb
 	$(MAKE) -C drivers/timer
+	$(MAKE) -C drivers/time
 
 kernel:
 	$(MAKE) -C kernel
 
 kernel.bin: arch kernel drivers linker.ld
-	ld -m elf_x86_64 -n -o kernel.bin -T linker.ld arch/x86/arch.o kernel/main.o kernel/idt.o drivers/fb/fb.o drivers/timer/pic.o drivers/timer/pit.o
+	ld -m elf_x86_64 -n -o kernel.bin -T linker.ld arch/x86/arch.o kernel/main.o kernel/idt.o drivers/fb/fb.o drivers/timer/pic.o drivers/timer/pit.o drivers/time/time.o
 
 iso: kernel.bin
 	mv kernel.bin iso/boot/kernel.bin

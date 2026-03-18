@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <fb/drawer.h>
 #include <fb/fb.h>
 #include <idt.h>
 #include <pic.h>
@@ -16,11 +17,13 @@ void kernel_main(uint64_t magic, uint64_t mbi_addr) {
     __asm__ volatile("sti");
 
     init_framebuffer(mbi_addr);
-
+    show_splash_screen();
+    write_center("Welcome to ZINC !", 0x00FFFFFF);
     while (1) {
-        draw_line();
+        draw_screen_border(0x00FFFFFF);
         sleep(500);
-        draw_line_white();
+        draw_screen_border(0x0000FFF0);
         sleep(500);
+        __asm__ volatile("hlt");
     }
 }
