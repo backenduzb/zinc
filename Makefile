@@ -1,4 +1,4 @@
-.PHONY: all arch drivers kernel iso run clean
+.PHONY: all arch drivers kernel iso run clean utils
 
 all: iso
 
@@ -13,8 +13,11 @@ drivers:
 kernel:
 	$(MAKE) -C kernel
 
-kernel.bin: arch kernel drivers linker.ld
-	ld -m elf_x86_64 -n -o kernel.bin -T linker.ld arch/x86/arch.o kernel/main.o kernel/idt.o drivers/fb/fb.o drivers/timer/pic.o drivers/timer/pit.o drivers/time/time.o
+utils:
+	$(MAKE) -C utils
+
+kernel.bin: arch kernel drivers utils linker.ld
+	ld -m elf_x86_64 -n -o kernel.bin -T linker.ld arch/x86/arch.o kernel/main.o kernel/idt.o drivers/fb/fb.o drivers/timer/pic.o drivers/timer/pit.o drivers/time/time.o utils/utils.o
 
 iso: kernel.bin
 	mv kernel.bin iso/boot/kernel.bin
@@ -30,5 +33,6 @@ clean:
 	$(MAKE) -C kernel clean
 	$(MAKE) -C drivers/fb clean
 	$(MAKE) -C drivers/timer clean
+	$(MAKE) -C utils clean
 	rm -f kernel.bin os.iso
 	rm -f *.o

@@ -1,6 +1,9 @@
 #pragma once
 #include <stdint.h>
 
+extern uint32_t row;
+extern uint32_t col;
+
 void draw_line_white(void);
 void draw_line(void);
 void write(const char *text, uint32_t color);

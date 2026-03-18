@@ -3,7 +3,7 @@ LD = ld
 
 CFLAGS = -ffreestanding -m64 -mno-red-zone -fno-pie -fno-pic -fno-stack-protector -I../../include
 
-SRCS = initalizer.c utils.c drawers.c
+SRCS = initalizer.c utils.c drawers.c splash.c
 OBJS = $(SRCS:.c=.o)
 
 all: fb.o

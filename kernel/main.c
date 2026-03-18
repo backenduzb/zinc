@@ -15,7 +15,7 @@ void kernel_main(uint64_t magic, uint64_t mbi_addr) {
     pic_set_mask(0, 0);
     pit_init(1000);
     __asm__ volatile("sti");
-
+    
     init_framebuffer(mbi_addr);
     show_splash_screen();
     write_center("Welcome to ZINC !", 0x00FFFFFF);
