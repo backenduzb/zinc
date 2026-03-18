@@ -1,8 +1,7 @@
 #include <stdint.h>
 #include <fb/drawer.h>
+#include <font/psf1.h>
 #include <utils/string.h>
-#include <font/font8x8.h>
-#include <timer/pit.h>
 
 uint32_t *framebuffer = 0;
 uint32_t pitch = 0;
@@ -36,59 +35,77 @@ void draw_line_white(void) {
     }
 }
 
-static void draw_glyph(uint32_t x, uint32_t y, const glyph8x8_t *glyph, uint32_t color) {
-    for (int d_row = 0; d_row < 8; d_row ++) {
-        uint8_t bits = (*glyph)[d_row];
-        for (int d_col = 0; d_col < 8; d_col ++) {
-            if (bits & (1 << (7 - d_col))) {
-                uint32_t px = x + d_col;
-                uint32_t py = y + d_row;
-                framebuffer[py * (pitch / 4) + px] = color;
-            }
-        }
-    }
-}
+#define GLYPH_WIDTH 8
 
-static const glyph8x8_t *lookup_char(char c) {
-    if (c >= '0' && c <= '9') return (const glyph8x8_t *)&font8x8_digits[c - '0'];
-    if (c >= 'a' && c <= 'z') return (const glyph8x8_t *)&font8x8_lowercase[c - 'a'];
-    if (c >= 'A' && c <= 'Z') return (const glyph8x8_t *)&font8x8_uppercase[c - 'A'];
-    return font8x8_symbol_for(c);
+static uint32_t font_height(void) {
+    return psf1_get_height();
 }
 
 void write(const char *text, uint32_t color) {
+    uint32_t glyph_h = font_height();
+    if (glyph_h == 0) {
+        return;
+    }
+
     while (*text) {
         if (*text == '\n') {
-            row += 8;
+            row += glyph_h;
             col = 0;
             text++;
             continue;
         }
-        if (col + 8 >= width) {
+        if (col + GLYPH_WIDTH >= width) {
             col = 0;
-            row += 8;
+            row += glyph_h;
         }
-        if (row + 8 >= height) return;
-        const glyph8x8_t *glyph = lookup_char(*text++);
-        if (glyph) {
-            draw_glyph(col, row, glyph, color);
-        }
-        col += 8;
+        if (row + glyph_h >= height) return;
+        draw_char((int)col, (int)row, *text++, color);
+        col += GLYPH_WIDTH;
     }
 }
 
 void write_center(const char *text, uint32_t color) {
+    uint32_t glyph_h = font_height();
+    if (glyph_h == 0) {
+        return;
+    }
+
     uint32_t len = strlen(text);
-    uint32_t text_width = len * 8;
+    uint32_t text_width = len * GLYPH_WIDTH;
+    uint32_t text_height = glyph_h;
 
     uint32_t x = (width - text_width) / 2;
-    uint32_t y = (height - 8) / 2;
+    uint32_t y = (height - text_height) / 2;
 
     while (*text) {
-        const glyph8x8_t *glyph = lookup_char(*text++);
-        if (glyph) {
-            draw_glyph(x, y, glyph, color);
+        draw_char((int)x, (int)y, *text++, color);
+        x += GLYPH_WIDTH;
+    }
+}
+
+void write_at(const char *text, uint32_t x, uint32_t y, uint32_t color) {
+    uint32_t glyph_h = font_height();
+    if (glyph_h == 0) {
+        return;
+    }
+
+    uint32_t original_x = x;
+    uint32_t original_y = y;
+    
+    while (*text) {
+        if (*text == '\n') {
+            y += glyph_h;
+            x = original_x;
+            text++;
+            continue;
         }
-        x += 8;
+        if (x + GLYPH_WIDTH >= width) {
+            x = original_x;
+            y += glyph_h;
+        }
+        if (y + glyph_h >= height) return;
+        
+        draw_char((int)x, (int)y, *text++, color);
+        x += GLYPH_WIDTH;
     }
 }

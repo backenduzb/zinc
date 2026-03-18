@@ -1,4 +1,5 @@
 #include <io.h>
+#include <time/time.h>
 #include <stdint.h>
 
 uint8_t get_time_bcd(uint8_t reg) {
@@ -16,7 +17,7 @@ void get_string(uint8_t val, char *buf) {
     buf[2] = 0;
 }
 
-void get_time() {
+void get_time(char *buff) {
     uint8_t sec = bcd_decoder(get_time_bcd(0x00));
     uint8_t min = bcd_decoder(get_time_bcd(0x02));
     uint8_t hour = bcd_decoder(get_time_bcd(0x04));
@@ -25,7 +26,6 @@ void get_time() {
 
     if (hour < 0) hour += 24;
 
-    char buff[9];
     char tmp[3];
 
     get_string(hour, tmp); buff[0] = tmp[0]; buff[1] = tmp[1]; buff[2] = ':';
