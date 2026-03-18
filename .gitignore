@@ -1,5 +1,7 @@
 # Build files
 **.iso
+**.bin
+**/**.bin
 
 # Zed files
 .zed
