@@ -17,6 +17,7 @@ void init_framebuffer(uint64_t mbi_addr) {
             framebuffer = (uint32_t *)(uintptr_t)fb_tag->fb_addr;
             pitch = fb_tag->fb_pitch;
             width = fb_tag->fb_width;
+            height = fb_tag->fb_height;
 
             break;
         }
