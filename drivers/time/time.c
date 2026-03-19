@@ -22,7 +22,7 @@ void get_time(char *buff) {
     uint8_t min = bcd_decoder(get_time_bcd(0x02));
     uint8_t hour = bcd_decoder(get_time_bcd(0x04));
 
-    hour = hour % 24;
+    hour = (hour + 5) % 24;
 
     if (hour < 0) hour += 24;
 

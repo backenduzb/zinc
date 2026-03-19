@@ -24,15 +24,22 @@ void kernel_main(uint64_t magic, uint64_t mbi_addr) {
     psf1_init(_binary_font_psf_start);
     
     show_splash_screen();
-    write("Welcome to ZINC os nice to meet you!@#$%^&*", 0x00FFFFFF);
+    write_center_with_duration("Welcome to ZINC OS !", 0x00FFFFFF, 100);
+    sleep(1000);
+    write_center_with_duration("Welcome to ZINC OS !", 0x00000000, 100);
+    
+    write_center_with_duration("On this time we have only clock XD", 0x00FFFFFF, 100);
+    sleep(1000);
+    write_center_with_duration("On this time we have only clock XD", 0x00000000, 100);
+    
+    write_center_with_duration("Others news coming soon", 0x00FFFFFF, 100);
+    sleep(1000);
+    write_center_with_duration("Others news coming soon", 0x00000000, 100);
+    
     while (1) {
         char time_b[9];
         get_time(time_b);
         write_center(time_b, 0x00FFFFFF);
-        // draw_screen_border(0x00FFFFFF);
-        // sleep(500);
-        // draw_screen_border(0x0000FFF0);
-        // sleep(500);
         sleep(1000);
         write_center(time_b, 0x00000000);
         __asm__ volatile("hlt");

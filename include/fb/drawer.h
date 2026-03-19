@@ -15,3 +15,4 @@ void draw_spinner(uint32_t x, uint32_t y, uint32_t step, uint32_t color);
 void draw_gradient_background(void);
 void draw_os_name_animated(uint32_t step);
 void show_splash_screen(void);
+void write_center_with_duration(const char *text, uint32_t color, uint32_t duration);

@@ -5,7 +5,7 @@
 #include <timer/pit.h>
 
 #define SPLASH_STEPS 50
-#define SPLASH_DELAY_MS 5 
+#define SPLASH_DELAY_MS 2 
 
 static inline uint32_t scale_intensity(uint32_t intensity, uint32_t step) {
     if (SPLASH_STEPS == 0) {
@@ -19,7 +19,7 @@ static inline uint32_t scale_intensity(uint32_t intensity, uint32_t step) {
 
 static void render_gradient(uint32_t brightness_step) {
     for (uint32_t y = 0; y < height; ++y) {
-        uint32_t intensity = 255 - ((y * 255) / height);
+        uint32_t intensity = 255;
         uint32_t scaled = scale_intensity(intensity, brightness_step);
         uint32_t color = (scaled << 16) | (scaled << 8) | scaled;
         uint32_t row_start = y * (pitch / 4);

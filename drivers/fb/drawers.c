@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <fb/drawer.h>
 #include <font/psf1.h>
+#include <timer/pit.h>
 #include <utils/string.h>
 
 uint32_t *framebuffer = 0;
@@ -83,29 +84,22 @@ void write_center(const char *text, uint32_t color) {
     }
 }
 
-void write_at(const char *text, uint32_t x, uint32_t y, uint32_t color) {
+void write_center_with_duration(const char *text, uint32_t color, uint32_t duration) {
     uint32_t glyph_h = font_height();
     if (glyph_h == 0) {
         return;
     }
 
-    uint32_t original_x = x;
-    uint32_t original_y = y;
-    
+    uint32_t len = strlen(text);
+    uint32_t text_width = len * GLYPH_WIDTH;
+    uint32_t text_height = glyph_h;
+
+    uint32_t x = (width - text_width) / 2;
+    uint32_t y = (height - text_height) / 2;
+
     while (*text) {
-        if (*text == '\n') {
-            y += glyph_h;
-            x = original_x;
-            text++;
-            continue;
-        }
-        if (x + GLYPH_WIDTH >= width) {
-            x = original_x;
-            y += glyph_h;
-        }
-        if (y + glyph_h >= height) return;
-        
         draw_char((int)x, (int)y, *text++, color);
         x += GLYPH_WIDTH;
+        sleep(duration);
     }
 }
