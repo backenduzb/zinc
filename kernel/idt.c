@@ -3,6 +3,7 @@
 
 extern void idt_load(struct idt_ptr *idtr);
 extern void isr_timer(void);
+extern void isr_keyboard(void);
 
 static struct idt_entry idt[256];
 
@@ -30,6 +31,7 @@ void idt_init(void) {
     }
 
     idt_set_gate(32, isr_timer);
+    idt_set_gate(33, isr_keyboard);
 
     struct idt_ptr idtr;
     idtr.limit = (uint16_t)(sizeof(idt) - 1);
