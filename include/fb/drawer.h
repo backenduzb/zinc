@@ -16,3 +16,5 @@ void draw_gradient_background(void);
 void draw_os_name_animated(uint32_t step);
 void show_splash_screen(void);
 void write_center_with_duration(const char *text, uint32_t color, uint32_t duration);
+void draw_background(void);
+void draw_resolution(void);

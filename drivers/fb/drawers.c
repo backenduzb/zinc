@@ -3,6 +3,7 @@
 #include <font/psf1.h>
 #include <timer/pit.h>
 #include <utils/string.h>
+#include <bg/img.h>
 
 uint32_t *framebuffer = 0;
 uint32_t pitch = 0;
@@ -101,5 +102,22 @@ void write_center_with_duration(const char *text, uint32_t color, uint32_t durat
         draw_char((int)x, (int)y, *text++, color);
         x += GLYPH_WIDTH;
         sleep(duration);
+    }
+}
+void draw_resolution(void) {
+    char text[16];
+    uitoa(width, text);
+    write(text, 0x00FFFFFF);
+
+    uitoa(height, text);
+    write("x", 0x00FFFFFF);
+    write(text, 0x00FFFFFF);
+}
+
+void draw_background(){ 
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+            framebuffer[y * (pitch/4) +x] = img[y * width + x];
+        }
     }
 }

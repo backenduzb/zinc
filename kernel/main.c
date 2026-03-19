@@ -24,18 +24,20 @@ void kernel_main(uint64_t magic, uint64_t mbi_addr) {
     psf1_init(_binary_font_psf_start);
     
     show_splash_screen();
+    draw_resolution();
     write_center_with_duration("Welcome to ZINC OS !", 0x00FFFFFF, 100);
     sleep(1000);
     write_center_with_duration("Welcome to ZINC OS !", 0x00000000, 100);
-    
-    write_center_with_duration("On this time we have only clock XD", 0x00FFFFFF, 100);
     sleep(1000);
-    write_center_with_duration("On this time we have only clock XD", 0x00000000, 100);
+    // write_center_with_duration("On this time we have only clock XD", 0x00FFFFFF, 100);
+    // sleep(1000);
+    // write_center_with_duration("On this time we have only clock XD", 0x00000000, 100);
     
-    write_center_with_duration("Others news coming soon", 0x00FFFFFF, 100);
-    sleep(1000);
-    write_center_with_duration("Others news coming soon", 0x00000000, 100);
+    // write_center_with_duration("Others news coming soon", 0x00FFFFFF, 100);
+    // sleep(1000);
+    // write_center_with_duration("Others news coming soon", 0x00000000, 100);
     
+    draw_background();
     while (1) {
         char time_b[9];
         get_time(time_b);
