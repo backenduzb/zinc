@@ -14,7 +14,7 @@ void kernel_main(uint64_t magic, uint64_t mbi_addr) {
     if (magic != MULTIBOOT2_BOOTLOADER_MAGIC) {
         while (1) { }
     }
-
+    
     idt_init();
     pic_remap(0x20, 0x28);
     pic_set_mask(0, 0);
@@ -26,21 +26,20 @@ void kernel_main(uint64_t magic, uint64_t mbi_addr) {
     keyboard_init();
     pic_set_mask(1, 0);
     
-    __asm__ volatile("sti");
     
+    __asm__ volatile("sti");
     show_splash_screen();
     draw_resolution();
-    write_center_with_duration("Welcome to ZINC OS !", 0x00FFFFFF, 100);
-    sleep(1000);
-    write_center_with_duration("Welcome to ZINC OS !", 0x00000000, 100);
-    sleep(1000);
+    rtc_init();
+    
     
     while (1) {
-        // char time_b[9];
-        // get_time(time_b);
-        // write_center(time_b, 0x00FFFFFF);
-        // sleep(1000);
-        // write_center(time_b, 0x00000000);
+        update_time();
+        char time_bufer[9];
+        get_time(time_bufer);
+        write_center(time_bufer, 0x00FFFFFF);
+        sleep(50);
+        write_center(time_bufer, 0x00000000);
         __asm__ volatile("hlt");
     }
 }
