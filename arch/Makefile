@@ -3,7 +3,7 @@
 SUBDIRS := $(wildcard */)
 SUBDIR_OBJS := $(foreach d,$(SUBDIRS),$(d)$(patsubst %/,%.o,$(d)))
 
-OUT = x86.o
+OUT = arch.o
 
 all: $(OUT)
 
@@ -14,5 +14,5 @@ $(SUBDIR_OBJS):
 	$(MAKE) -C $(dir $@)
 
 clean:
-	for dir in $(SUBDIRS); do $(MAKE) -C $$dir clean; done
 	rm -f $(OUT)
+	for dir in $(SUBDIRS); do $(MAKE) -C $$dir clean; done

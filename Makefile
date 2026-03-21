@@ -1,15 +1,18 @@
-.PHONY: all arch drivers kernel iso run clean utils
+.PHONY: all arch drivers kernel utils iso run clean
 
-all: iso
+SUBDIRS := arch drivers kernel utils
+SUBDIR_OBJS := $(foreach d,$(SUBDIRS),$(d)/$(notdir $(d)).o)
+
+OUT := kernel.elf
+ISO_KERNEL := iso/boot/kernel.elf
+
+all: $(OUT)
 
 arch:
-	$(MAKE) -C arch/x86
+	$(MAKE) -C arch
 
 drivers:
-	$(MAKE) -C drivers/fb
-	$(MAKE) -C drivers/input
-	$(MAKE) -C drivers/timer
-	$(MAKE) -C drivers/time
+	$(MAKE) -C drivers
 
 kernel:
 	$(MAKE) -C kernel
@@ -17,25 +20,22 @@ kernel:
 utils:
 	$(MAKE) -C utils
 
-kernel.bin: arch kernel drivers utils linker.ld
-	ld -m elf_x86_64 -n -o kernel.bin -T linker.ld arch/x86/arch.o kernel/main.o kernel/idt.o drivers/fb/fb.o drivers/input/input.o drivers/timer/timer.o drivers/time/time.o utils/utils.o
+$(SUBDIR_OBJS):
+	$(MAKE) -C $(dir $@)
 
-iso: kernel.bin
-	mv kernel.bin iso/boot/kernel.bin
+$(OUT): $(SUBDIR_OBJS) linker.ld
+	ld -m elf_x86_64 -n -o $(OUT) -T linker.ld $(SUBDIR_OBJS)
+
+iso: $(OUT)
+	mkdir -p iso/boot
+	cp $(OUT) $(ISO_KERNEL)
 	grub-mkrescue -o os.iso iso
 
 run: iso
 	qemu-system-x86_64 -cdrom os.iso -boot d
 
 clean:
-	$(MAKE) -C arch/x86/boot clean
-	$(MAKE) -C arch/x86/cpu clean
-	$(MAKE) -C arch/x86 clean
-	$(MAKE) -C kernel clean
-	$(MAKE) -C drivers/fb clean
-	$(MAKE) -C drivers/input clean
-	$(MAKE) -C drivers/timer clean
-	$(MAKE) -C drivers/time clean
-	$(MAKE) -C utils clean
-	rm -f kernel.bin os.iso
+	rm -f iso/boot/$(OUT)
+	rm -f $(OUT) os.iso
 	rm -f *.o
+	for dir in $(SUBDIRS); do $(MAKE) -C $$dir clean; done

@@ -4,10 +4,15 @@ CFLAGS = -ffreestanding -m64 -mno-red-zone -fno-pie -fno-pic -fno-stack-protecto
 SRCS = $(wildcard *.c)
 OBJS = $(SRCS:.c=.o)
 
-all: $(OBJS)
+OUT = kernel.o
+
+all: $(OUT)
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
+$(OUT): $(OBJS)
+	ld -r -o $(OUT) $(OBJS)
+
 clean:
-	rm -f $(OBJS)
+	rm -f $(OBJS) $(OUT)

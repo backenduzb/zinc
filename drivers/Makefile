@@ -3,7 +3,7 @@
 SUBDIRS := $(wildcard */)
 SUBDIR_OBJS := $(foreach d,$(SUBDIRS),$(d)$(patsubst %/,%.o,$(d)))
 
-OUT = x86.o
+OUT = drivers.o
 
 all: $(OUT)
 
