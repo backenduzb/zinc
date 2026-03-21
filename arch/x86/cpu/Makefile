@@ -1,12 +1,17 @@
 ASM = nasm
 ASMFLAGS = -f elf64
 
-OBJ = gdt.o paging.o idt.o isr.o
+SRCS = $(wildcard *.asm)
+OBJS = $(SRCS:.asm=.o)
+OUT = cpu.o
 
-all: $(OBJ)
+all: $(OUT)
 
 %.o: %.asm
 	$(ASM) $(ASMFLAGS) $< -o $@
 
+$(OUT): $(OBJS)
+	ld -r -o $(OUT) $(OBJS)
+
 clean:
-	rm -f *.o
+	rm -f $(OBJS) $(OUT)

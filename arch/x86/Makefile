@@ -1,15 +1,18 @@
-.PHONY: all boot cpu clean
+.PHONY: all clean
 
-all: arch.o
+SUBDIRS := $(wildcard */)
+SUBDIR_OBJS := $(foreach d,$(SUBDIRS),$(d)$(patsubst %/,%.o,$(d)))
 
-boot:
-	$(MAKE) -C boot
+OUT = arch.o
 
-cpu:
-	$(MAKE) -C cpu
+all: $(OUT)
 
-arch.o: boot cpu
-	ld -r -o arch.o boot/boot.o boot/multiboot.o cpu/gdt.o cpu/paging.o cpu/idt.o cpu/isr.o
+$(OUT): $(SUBDIR_OBJS)
+	ld -r -o $(OUT) $(SUBDIR_OBJS)
+
+$(SUBDIR_OBJS):
+	$(MAKE) -C $(dir $@)
 
 clean:
-	rm -f arch.o
+	for dir in $(SUBDIRS); do $(MAKE) -C $$dir clean; done
+	rm -f $(OUT)

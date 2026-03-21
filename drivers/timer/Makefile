@@ -4,10 +4,13 @@ CFLAGS = -ffreestanding -m64 -mno-red-zone -fno-pie -fno-pic -fno-stack-protecto
 SRCS = $(wildcard *.c)
 OBJS = $(SRCS:.c=.o)
 
-all: $(OBJS)
+all: timer.o
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
+timer.o: $(OBJS)
+	ld -r -o timer.o $(OBJS)
+	
 clean:
-	rm -f $(OBJS)
+	rm -f $(OBJS) timer.o

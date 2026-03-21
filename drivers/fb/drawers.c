@@ -3,7 +3,6 @@
 #include <font/psf1.h>
 #include <timer/pit.h>
 #include <utils/string.h>
-#include <bg/img.h>
 
 uint32_t *framebuffer = 0;
 uint32_t pitch = 0;
@@ -117,7 +116,7 @@ void draw_resolution(void) {
 void draw_background(){ 
     for (int y = 0; y < height; y++) {
         for (int x = 0; x < width; x++) {
-            framebuffer[y * (pitch/4) +x] = img[y * width + x];
+            // framebuffer[y * (pitch/4) +x] = img[y * width + x];
         }
     }
 }
