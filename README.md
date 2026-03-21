@@ -18,8 +18,8 @@ make run
 
 # Zinc OS ToDo
 - [x] CPU controlling
-- [ ] Keyboard driver
-- [ ] VGA output
+- [x] Keyboard driver
+- [x] Framebuffer output
 - [ ] Create commmands 
 - [ ] Disk controlling
 - [ ] Timer / sleep_ms
