@@ -16,6 +16,12 @@ dd 0
 dd 0
 dd 0
 
+dw 6
+dw 0
+dd 16
+dd 0
+dd 0
+
 dw 0
 dw 0
 dd 8
