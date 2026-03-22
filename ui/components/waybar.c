@@ -6,7 +6,7 @@
 
 static uint32_t last_ticks = 0;
 
-static void draw_waybar() {
+void draw_waybar() {
     if (ticks - last_ticks < 1000) {
         return;
     }
@@ -17,6 +17,7 @@ static void draw_waybar() {
     char time_bufer[9];
     get_time(time_bufer);
     fill_rect(0, 0, 0, 30, 0x001b1b1b);
-    center_label(15, time_bufer, 0x001b1b1b);
-    center_label(15, time_bufer, 0x00FFFFFF);
+    label(-20, 15, time_bufer, 0x001b1b1b);
+    label(-20, 15, time_bufer, 0x00FFFFFF);
+    label(26, 15, "Sun 22 2026", 0x00FFFFFF);
 } 

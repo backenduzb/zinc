@@ -18,7 +18,7 @@ void fill_rect(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t color) {
     }
 }
 
-void center_label(uint32_t y, char *text, uint32_t color) {
+void label(int32_t x, int32_t y, char *text, uint32_t color) {
     uint32_t glyph_h = psf1_get_height();
     if (glyph_h == 0) {
         return;
@@ -26,10 +26,21 @@ void center_label(uint32_t y, char *text, uint32_t color) {
     
     uint32_t text_len = strlen(text);
     uint32_t text_width = text_len * GLYPH_WIDTH;
-    uint32_t text_height = glyph_h;
-    uint32_t new_y = y - GLYPH_WIDTH;
-    uint32_t x = (width - text_width) / 2;
+    int32_t new_y = y - (int32_t)GLYPH_WIDTH;
     
+    if (x == 0) {
+        x = (width - text_width) / 2;
+    }
+    if (x < 0) {
+        x = (int32_t)width - (int32_t)text_width + x;
+    }
+    if (x < 0) {
+        x = 0;
+    }
+    if (new_y < 0) {
+        new_y = 0;
+    }
+
     while (*text) {
         draw_char((int)x, (int)new_y, *text++, color);
         x += GLYPH_WIDTH;
