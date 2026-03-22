@@ -4,11 +4,19 @@
 #include <stdint.h>
 #include <ui/label.h>
 
-void draw_waybar() {
-    fill_rect(0, 0, 0, 30, 0x001b1b1b);
+static uint32_t last_ticks = 0;
+
+static void draw_waybar() {
+    if (ticks - last_ticks < 1000) {
+        return;
+    }
+
+    last_ticks += 1000;
+    update_time();
+
     char time_bufer[9];
     get_time(time_bufer);
-    center_label(15, time_bufer, 0x00FFFFFF);
-    sleep(100);
+    fill_rect(0, 0, 0, 30, 0x001b1b1b);
     center_label(15, time_bufer, 0x001b1b1b);
-}
+    center_label(15, time_bufer, 0x00FFFFFF);
+} 
