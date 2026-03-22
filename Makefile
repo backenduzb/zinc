@@ -1,6 +1,6 @@
-.PHONY: all arch drivers kernel utils iso run clean
+.PHONY: all arch drivers kernel utils iso run clean ui
 
-SUBDIRS := arch drivers kernel utils
+SUBDIRS := arch drivers kernel utils ui
 SUBDIR_OBJS := $(foreach d,$(SUBDIRS),$(d)/$(notdir $(d)).o)
 
 OUT := kernel.elf
@@ -20,6 +20,9 @@ kernel:
 utils:
 	$(MAKE) -C utils
 
+ui:
+	$(MAKE) -C ui
+	
 $(SUBDIR_OBJS):
 	$(MAKE) -C $(dir $@)
 

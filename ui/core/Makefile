@@ -3,7 +3,7 @@ CFLAGS = -ffreestanding -m64 -mno-red-zone -fno-pie -fno-pic -fno-stack-protecto
 
 SRCS = $(wildcard *.c)
 OBJS = $(SRCS:.c=.o)
-OUT = components.o
+OUT = core.o
 
 all: $(OUT)
 
