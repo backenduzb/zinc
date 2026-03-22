@@ -36,8 +36,6 @@ void draw_line_white(void) {
     }
 }
 
-#define GLYPH_WIDTH 8
-
 static uint32_t font_height(void) {
     return psf1_get_height();
 }

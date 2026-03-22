@@ -1,6 +1,8 @@
 #pragma once
 #include <stdint.h>
 
+#define GLYPH_WIDTH 8
+
 extern uint32_t row;
 extern uint32_t col;
 
