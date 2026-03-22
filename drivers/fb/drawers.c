@@ -8,7 +8,7 @@ uint32_t *framebuffer = 0;
 uint32_t pitch = 0;
 uint32_t width = 0;
 uint32_t height = 0;
-uint32_t row = 0;
+uint32_t row = 38;
 uint32_t col = 0;
 
 void draw_line(void) {
