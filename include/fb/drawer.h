@@ -8,8 +8,8 @@ extern uint32_t col;
 
 void draw_line_white(void);
 void draw_line(void);
-void write(const char *text, uint32_t color);
 
+void write(uint32_t row, uint32_t col, const char *text, uint32_t color);
 void write_center(const char *text, uint32_t color);
 void draw_screen_border(uint32_t color);
 void draw_progress_bar(uint32_t x, uint32_t y, uint32_t width, uint32_t progress, uint32_t color);

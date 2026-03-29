@@ -8,8 +8,6 @@ uint32_t *framebuffer = 0;
 uint32_t pitch = 0;
 uint32_t width = 0;
 uint32_t height = 0;
-uint32_t row = 38;
-uint32_t col = 0;
 
 void draw_line(void) {
     uint32_t max_x = (width > 100) ? width : 100;
@@ -40,7 +38,8 @@ static uint32_t font_height(void) {
     return psf1_get_height();
 }
 
-void write(const char *text, uint32_t color) {
+void write(uint32_t row, uint32_t col, const char *text, uint32_t color) {
+    
     uint32_t glyph_h = font_height();
     if (glyph_h == 0) {
         return;
@@ -104,11 +103,11 @@ void write_center_with_duration(const char *text, uint32_t color, uint32_t durat
 void draw_resolution(void) {
     char text[16];
     uitoa(width, text);
-    write(text, 0x00FFFFFF);
+    write(30, 0,text, 0x00FFFFFF);
 
     uitoa(height, text);
-    write("x", 0x00FFFFFF);
-    write(text, 0x00FFFFFF);
+    write(30, 32, "x", 0x00FFFFFF);
+    write(30, 40, text, 0x00FFFFFF);
 }
 
 void draw_background(){ 

@@ -19,5 +19,5 @@ void draw_waybar() {
     fill_rect(0, 0, 0, 30, 0x001b1b1b);
     label(-20, 15, time_bufer, 0x001b1b1b);
     label(-20, 15, time_bufer, 0x00FFFFFF);
-    label(26, 15, "Sun 22 2026", 0x00FFFFFF);
+//    label(26, 15, "Sun 22 2026", 0x00FFFFFF);
 } 

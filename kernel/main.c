@@ -7,7 +7,7 @@
 #include <idt.h>
 #include <input/keyboard.h>
 #include <pic.h>
-#include <ui/waybar.h>
+#include <ui/render.h>
 
 extern const uint8_t _binary_font_psf_start[] __attribute__((weak));
 
@@ -36,7 +36,7 @@ void kernel_main(uint64_t magic, uint64_t mbi_addr) {
     
     while (1) {
         update_time();
-        draw_waybar();
+        render_ui();
         __asm__ volatile("hlt");
     }
 }
