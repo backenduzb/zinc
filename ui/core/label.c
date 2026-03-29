@@ -25,7 +25,7 @@ void label(int32_t x, int32_t y, char *text, uint32_t color) {
     
     uint32_t text_len = strlen(text);
     uint32_t text_width = text_len * GLYPH_WIDTH;
-    int32_t new_y = y - (int32_t)GLYPH_WIDTH;
+    int32_t new_y = y - (int32_t)(glyph_h / 2);
     
     if (x == 0) {
         x = (width - text_width) / 2;
