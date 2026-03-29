@@ -2,7 +2,6 @@
 #include <stdint.h>
 #include <utils/string.h>
 #include <font/psf1.h>
-#include <fb/drawer.h>
 
 void fill_rect(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t color) {
     if (w == 0) w = width;

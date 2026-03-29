@@ -5,7 +5,7 @@ CFLAGS = -ffreestanding -m64 -mno-red-zone -fno-pie -fno-pic -fno-stack-protecto
 
 .DEFAULT_GOAL := all
 
-SRCS = initalizer.c utils.c drawers.c splash.c psf1.c
+SRCS = initalizer.c splash.c psf1.c
 OBJS = $(SRCS:.c=.o)
 
 FONT_PSF_SRC := ../../assets/default8x16.psf

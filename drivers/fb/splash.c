@@ -1,6 +1,5 @@
 #include <stdint.h>
 #include <fb/fb.h>
-#include <fb/drawer.h>
 #include <utils/string.h>
 #include <timer/pit.h>
 

@@ -1,5 +1,4 @@
 #include <stdint.h>
-#include <fb/drawer.h>
 #include <timer/pit.h>
 #include <time/time.h>
 #include <fb/fb.h>
@@ -30,7 +29,6 @@ void kernel_main(uint64_t magic, uint64_t mbi_addr) {
     
     __asm__ volatile("sti");
     show_splash_screen();
-    draw_resolution();
     rtc_init();
     
     

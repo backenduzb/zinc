@@ -5,6 +5,7 @@
 #define MULTIBOOT2_BOOTLOADER_MAGIC 0x36d76289
 #define MULTIBOOT_TAG_TYPE_END 0
 #define MULTIBOOT_TAG_TYPE_FRAMEBUFFER 8
+#define GLYPH_WIDTH 8
 
 struct multiboot_tag {
     uint32_t type;
@@ -29,6 +30,4 @@ extern uint32_t width;
 extern uint32_t height;
 
 void init_framebuffer(uint64_t mbi_addr);
-void draw_line(void);
-void draw_line_white(void);
-void write(uint32_t row, uint32_t col, const char *text, uint32_t color); 
+void show_splash_screen(void);

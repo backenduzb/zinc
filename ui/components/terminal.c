@@ -2,12 +2,10 @@
 #include <stdint.h>
 #include <utils/string.h>
 #include <font/psf1.h>
-#include <fb/drawer.h>
 
 uint32_t col = 0;
 uint32_t row = 38;
 char *term_pointer = "!zinc > ";
-//char char_counter[];
 
 void termwrite(char *text, uint32_t color) {
     uint32_t glyph_h = psf1_get_height();

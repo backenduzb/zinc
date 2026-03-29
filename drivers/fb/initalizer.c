@@ -1,5 +1,17 @@
 #include <fb/fb.h>
 #include <stdint.h>
+#include <font/psf1.h>
+#include <timer/pit.h>
+#include <utils/string.h>
+
+uint32_t *framebuffer = 0;
+uint32_t pitch = 0;
+uint32_t width = 0;
+uint32_t height = 0;
+
+static uint32_t font_height(void) {
+    return psf1_get_height();
+}
 
 void init_framebuffer(uint64_t mbi_addr) {
 

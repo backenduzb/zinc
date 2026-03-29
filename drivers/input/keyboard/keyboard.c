@@ -1,4 +1,3 @@
-#include <fb/drawer.h>
 #include <ui/terminal.h>
 #include <input/keyboard.h>
 #include <io.h>
