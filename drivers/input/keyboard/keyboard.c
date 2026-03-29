@@ -63,10 +63,8 @@ void keyboard_handler(void) {
     }
 
     char ch = scancode_to_ascii(scancode);
-    if (ch) {
-        char buf[2] = { ch, 0 };
-        termwrite(buf, 0x00FFFFFF);
-    }
+    termwrite(ch, 0x00FFFFFF);
+
 
     pic_send_eoi(1);
 }
