@@ -1,11 +1,12 @@
+#include <power.h>
 #include <fb/fb.h>
 #include <stdint.h>
 #include <utils/string.h>
 #include <font/psf1.h>
 #include <ui/layout.h>
+#include <timer/pit.h>
 #define CURSOR_HEIGHT 3
 #define CURSOR_WIDTH 8
-#include <timer/pit.h>
 
 uint32_t col = 15;
 uint32_t row = 38;
@@ -23,7 +24,7 @@ uint64_t cursor_last_toggle = 0;
 uint8_t cursor_on = 1;
 
 void cursor_refresh() {
-    if (ticks - cursor_last_toggle >= 700) {
+    if (ticks - cursor_last_toggle >= 700 && opened) {
         cursor_last_toggle = ticks;
         cursor_on = !cursor_on;
 
@@ -83,7 +84,6 @@ uint32_t write_pointer(uint32_t x, uint32_t y, uint32_t color) {
 }
 
 void termwrite(char ch, uint32_t color) {
-    cursor_update(row + 10, col + 10, 0x00FFFFFF);
     
     if (!opened && ch == '\n') {
         clear_term();
@@ -92,6 +92,7 @@ void termwrite(char ch, uint32_t color) {
 
     if (!opened) return;
 
+    cursor_update(row + 10, col + 10, 0x00FFFFFF);
     uint32_t glyph_h = psf1_get_height();
     
     if (ch == '\n') {
@@ -99,7 +100,14 @@ void termwrite(char ch, uint32_t color) {
         if (strcmp(key_counter, "clear") == 0) {
             clear_term();
         }
+        
+        if (strcmp(key_counter, "mdown") == 0) {
+            shutdown();            
+        }
 
+        if (strcmp(key_counter, "reboot") == 0) {
+            reboot();
+        }
         col = 15;
         row += glyph_h;
         key_index = 0; 

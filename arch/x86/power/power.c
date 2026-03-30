@@ -17,5 +17,7 @@ void reboot() {
 }
 
 void shutdown() {
-    __asm__ volatile("outw %0, %1" : : "a"(0x2000), "Nd"(0x604));
+    uint16_t value = 0x2000;
+    uint16_t port = 0x604;
+    __asm__ volatile("outw %w0, %w1" : : "a"(value), "d"(port));
 }

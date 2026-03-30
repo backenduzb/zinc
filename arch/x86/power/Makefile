@@ -1,17 +1,13 @@
-CC = gcc
-CFLAGS = -ffreestanding -m64 -mno-red-zone -fno-pie -fno-pic -fno-stack-protector -I../../../include
+CC := gcc
+CFLAGS := -ffreestanding -m64 -mno-red-zone -fno-pie -fno-pic -fno-stack-protector -I../../../include
 
-SRCS = $(wildcard *.c)
-OBJS = $(SRCS:.c=.o)
-OUT = interrupts.o
+SRCS := $(wildcard *.c)
+OBJS := $(SRCS:.c=.o)
 
-all: $(OUT)
+all: $(OBJS)
 
-$(OUT): $(OBJS)
-    ld -r -o $(OUT) $(OBJS)
-    
 %.o: %.c
-    $(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -f $(OBJS) $(OUT)
+	rm -f $(OBJS)
