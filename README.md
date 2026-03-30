@@ -20,8 +20,8 @@ make run
 - [x] CPU controlling
 - [x] Keyboard driver
 - [x] Framebuffer output
-- [ ] Create commmands 
+- [x] Create commmands 
 - [ ] Disk controlling
-- [ ] Timer / sleep_ms
+- [x] Timer / sleep_ms
 - [ ] Command history
 - [ ] Tab autocomplete
