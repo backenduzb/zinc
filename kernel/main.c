@@ -7,6 +7,7 @@
 #include <input/keyboard.h>
 #include <pic.h>
 #include <ui/render.h>
+#include <ui/label.h>
 
 extern const uint8_t _binary_font_psf_start[] __attribute__((weak));
 
@@ -30,7 +31,7 @@ void kernel_main(uint64_t magic, uint64_t mbi_addr) {
     __asm__ volatile("sti");
     show_splash_screen();
     rtc_init();
-    
+    label(0, 40, "Press enter for open terminal ...", 0x00FFFFFF);    
     
     while (1) {
         update_time();
