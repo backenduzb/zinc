@@ -6,6 +6,7 @@
 #include <idt.h>
 #include <input/keyboard.h>
 #include <pic.h>
+#include <ui/terminal.h>
 #include <ui/render.h>
 #include <ui/label.h>
 
@@ -32,8 +33,9 @@ void kernel_main(uint64_t magic, uint64_t mbi_addr) {
     show_splash_screen();
     rtc_init();
     label(0, 40, "Press enter for open terminal ...", 0x00FFFFFF);    
-    
+
     while (1) {
+        cursor_refresh();
         update_time();
         render_ui();
         __asm__ volatile("hlt");
