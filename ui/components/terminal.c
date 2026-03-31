@@ -33,13 +33,14 @@ void cursor_refresh() {
         if (cursor_on) {
             for (uint32_t h = 0; h < CURSOR_HEIGHT; h++)
                 for (uint32_t w = 0; w < CURSOR_WIDTH; w++)
-                    framebuffer[(row + 10 + h) * pitch + (col + w)] = 0x00FFFFFF;
+                    framebuffer[(row  + 10 + h) * pitch + (col + w)] = 0x00FFFFFF;
         } else {
             for (uint32_t h = 0; h < CURSOR_HEIGHT; h++)
                 for (uint32_t w = 0; w < CURSOR_WIDTH; w++)
                     framebuffer[(row + 10 + h) * pitch + (col + w)] = cursor_backup[h * CURSOR_WIDTH + w];
         }
-    }}
+    }
+}
 
 void cursor_update(uint32_t row, uint32_t col, uint32_t color) {
     uint32_t pitch = width;
@@ -92,7 +93,8 @@ void termwrite(char ch, uint32_t color) {
 
     if (!opened) return;
 
-    cursor_update(row + 10, col + 10, 0x00FFFFFF);
+    cursor_update(row + 10, col + 8, 0x00FFFFFF);
+    
     uint32_t glyph_h = psf1_get_height();
     
     if (ch == '\n') {
