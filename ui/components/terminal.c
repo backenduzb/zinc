@@ -5,6 +5,7 @@
 #include <font/psf1.h>
 #include <ui/layout.h>
 #include <timer/pit.h>
+#include <time/time.h>
 #define CURSOR_HEIGHT 3
 #define CURSOR_WIDTH 8
 
@@ -75,10 +76,19 @@ uint32_t write_pointer(uint32_t x, uint32_t y, uint32_t color) {
     char *ptr = term_pointer;
     uint32_t glyph_h = psf1_get_height();
     uint32_t glyph_w = GLYPH_WIDTH;
-
+    uint32_t clock_pos = (width - glyph_w * 10);
+    
     while (*ptr) {
         draw_char(x, y, *ptr++, color);
         x += glyph_w;
+    }
+
+    char time[20];
+    get_time(time);
+    char *timee = time;
+    while (*timee) {
+        draw_char(clock_pos, y, *timee++, 0x0000FF00);
+        clock_pos += glyph_w;
     }
     cursor_update(row + 10, x, 0x00FFFFFF);
     return x;
