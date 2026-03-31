@@ -30,5 +30,5 @@ extern const char *terminal_prompt;
 
 void terminal_clear(void);
 uint32_t terminal_write_prompt(uint32_t x, uint32_t y, uint32_t color);
-void terminal_execute_command(const char *command);
+int terminal_execute_command(const char *command);
 void cursor_update(uint32_t row, uint32_t col, uint32_t color);

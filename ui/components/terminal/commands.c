@@ -28,11 +28,12 @@ static const terminal_command_t terminal_commands[] = {
     { "reboot", command_reboot },
 };
 
-void terminal_execute_command(const char *command) {
+int terminal_execute_command(const char *command) {
     for (uint32_t i = 0; i < (sizeof(terminal_commands) / sizeof(terminal_commands[0])); ++i) {
         if (strcmp(command, terminal_commands[i].name) == 0) {
             terminal_commands[i].handler();
-            return;
+            return 1;
         }
     }
+    return 0;
 }
