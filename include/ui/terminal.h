@@ -1,5 +1,6 @@
-#include <stdint.h>
 #pragma once
 
-void cursor_refresh();
-void termwrite(char text, uint32_t color);
+#include <stdint.h>
+
+void cursor_refresh(void);
+void termwrite(char ch, uint32_t color);
