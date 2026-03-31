@@ -116,7 +116,7 @@ void termwrite(char ch, uint32_t color) {
             writewc(
                 terminal_state.col,
                 terminal_state.row + glyph_h,
-                "Command \\\\\\0x00FFFFFF\\\\\\ not \\\\\\0x00FF0000\\\\\\ found!",
+                "bash: command \\\\\\0x00FF0000\\\\\\ NOT \\\\\\0x00FFFFFF\\\\\\ found!",
                 0x00AAAAAA
             );
             terminal_state.row += glyph_h * 2;
