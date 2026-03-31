@@ -86,6 +86,7 @@ uint32_t write_pointer(uint32_t x, uint32_t y, uint32_t color) {
     char time[20];
     get_time(time);
     char *timee = time;
+    
     while (*timee) {
         draw_char(clock_pos, y, *timee++, 0x0000FF00);
         clock_pos += glyph_w;

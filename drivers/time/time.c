@@ -3,10 +3,8 @@
 #include <stdint.h>
 #include <timer/pit.h>
 
-uint32_t last_ticks = 0;
-uint8_t sec = 0;
-uint8_t min = 0;
-uint8_t hour = 0;
+Date current_time;
+uint64_t last_ticks = 0;
 
 uint8_t get_time_bcd(uint8_t reg) {
     outb(0x70, reg);
@@ -24,25 +22,25 @@ void get_string(uint8_t val, char *buf) {
 }
 
 void rtc_init() {
-    sec = bcd_decoder(get_time_bcd(0x00));
-    min = bcd_decoder(get_time_bcd(0x02));
-    hour = bcd_decoder(get_time_bcd(0x04));
-    hour = (hour + 5) % 24;
+    current_time.sec = bcd_decoder(get_time_bcd(0x00));
+    current_time.min = bcd_decoder(get_time_bcd(0x02));
+    current_time.hour = bcd_decoder(get_time_bcd(0x04));
+    current_time.hour = (current_time.hour + 5) % 24;
 }
 
 void update_time() {
     if (ticks - last_ticks >= 1000) {
-        sec++;
-        if (sec >= 60) { sec = 0; min++; }
-        if (min == 60) { min = 0; hour++; }
-        if (hour == 24) { hour = 0; }
+        current_time.sec++;
+        if (current_time.sec >= 60) { current_time.sec = 0; current_time.min++; }
+        if (current_time.min == 60) { current_time.min = 0; current_time.hour++; }
+        if (current_time.hour == 24) { current_time.hour = 0; }
         last_ticks = ticks;
     }
 }
 
 void get_time(char *buff) {
     char tmp[3];
-    get_string(hour, tmp); buff[0] = tmp[0]; buff[1] = tmp[1]; buff[2] = ':';
-    get_string(min, tmp); buff[3] = tmp[0]; buff[4] = tmp[1]; buff[5] = ':';
-    get_string(sec, tmp); buff[6] = tmp[0]; buff[7] = tmp[1]; buff[8] = 0;
+    get_string(current_time.hour, tmp); buff[0] = tmp[0]; buff[1] = tmp[1]; buff[2] = ':';
+    get_string(current_time.min, tmp); buff[3] = tmp[0]; buff[4] = tmp[1]; buff[5] = ':';
+    get_string(current_time.sec, tmp); buff[6] = tmp[0]; buff[7] = tmp[1]; buff[8] = 0;
 }
