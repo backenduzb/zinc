@@ -6,6 +6,7 @@
 #include <idt.h>
 #include <input/keyboard.h>
 #include <pic.h>
+#include <disk/ata.h>
 #include <ui/terminal.h>
 #include <ui/render.h>
 #include <ui/label.h>

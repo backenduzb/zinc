@@ -1,6 +1,9 @@
 #pragma once
 
+#include <stdint.h>
 #include <io.h>
+
+#define ATA_SECTOR_SIZE 512u
 
 #define ATA_DATA 0x1F0
 #define ATA_ERROR 0x1F1
@@ -13,10 +16,17 @@
 #define ATA_STATUS 0x1F7
 #define ATA_ALT_STATUS 0x3F6
 
+#define ATA_STATUS_ERR 0x01
+#define ATA_STATUS_DRQ 0x08
+#define ATA_STATUS_DF 0x20
+#define ATA_STATUS_DRDY 0x40
+#define ATA_STATUS_BSY 0x80
+
 #define ATA_CMD_READ_PIO 0x20
 #define ATA_CMD_WRITE_PIO 0x30
 #define ATA_CMD_IDENTIFY 0xEC
+#define ATA_CMD_CACHE_FLUSH 0xE7
 
-void ata_init(void);
-void ata_read_sectors(unsigned int lba, unsigned char sectors, unsigned char *buf);
-void ata_write_sectors(unsigned int lba, unsigned char sectors, unsigned char *buf);
+int ata_init(void);
+int ata_read_sectors(uint32_t lba, uint8_t sectors, uint8_t *buf);
+int ata_write_sectors(uint32_t lba, uint8_t sectors, const uint8_t *buf);

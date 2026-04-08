@@ -32,3 +32,7 @@ void terminal_clear(void);
 uint32_t terminal_write_prompt(uint32_t x, uint32_t y, uint32_t color);
 int terminal_execute_command(char *command);
 void cursor_update(uint32_t row, uint32_t col, uint32_t color);
+void terminal_writeint(uint32_t num);
+void terminal_writehex(uint32_t num, int digits);
+void terminal_writestring_char(char ch);
+void terminal_writestring(const char *str);
