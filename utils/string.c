@@ -24,6 +24,43 @@ void *memset(void *ptr, int value, size_t count) {
     return ptr;
 }
 
+char *strchr(const char *str, int c) {
+    while (1) {
+        if (*str == (char)c) return (char*)str;
+        if (*str == '\0') return NULL;
+        str ++;
+    }
+}
+
+char *strtok(char *str, const char *delim) {
+    static char *next;
+
+    if (str != NULL) {
+        next = str;
+    }
+
+    if (next == NULL) return NULL;
+
+    while (*next && strchr(delim, *next)) {
+        next++;
+    }
+
+    if (*next == '\0') return NULL;
+
+    char *start = next;
+
+    while (*next && !strchr(delim, *next)) {
+        next++;
+    }
+
+    if (*next) {
+        *next = '\0';
+        next++;
+    }
+
+    return start;
+}
+
 uint32_t uitoa(uint32_t value, char *buf) {
     uint32_t i = 0;
     do {

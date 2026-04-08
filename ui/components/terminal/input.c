@@ -127,6 +127,7 @@ void termwrite(char ch, uint32_t color) {
         terminal_state.col = terminal_write_prompt(terminal_state.col, terminal_state.row, color);
         return;
     }
+
     if (ch == '\b') {
         if (terminal_state.input_length > 0) {
             terminal_state.input_length--;
