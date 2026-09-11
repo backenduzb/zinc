@@ -1,0 +1,18 @@
+[package]
+name = "zincos"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+name = "zincos"
+path = "kernel/src/main.rs"
+crate-type = ["staticlib"]
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"
+
+[dependencies]
+limine = "0.6"
