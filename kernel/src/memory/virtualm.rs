@@ -350,114 +350,37 @@ impl VirtualMemoryManager {
 
         true
     }
-}
 
-extern "C" fn after_address_space_switch() -> ! {
-    crate::drivers::serial::println(
-        "Entered new address space!",
-    );
+    pub fn map_heap(&mut self) -> bool {
+        const HEAP_START: u64 = 0xFFFF_FFFF_9000_0000;
+        const HEAP_SIZE: u64 = 1024 * 1024;
+        const PAGE_SIZE: u64 = 4096;
 
-    let cr3 = crate::arch::x86_64::paging::read_cr3();
+        let page_count = HEAP_SIZE / PAGE_SIZE;
 
-    crate::drivers::serial::print("New CR3: 0x");
-    crate::drivers::serial::print_u64(cr3);
-    crate::drivers::serial::println("");
+        for index in 0..page_count {
+            let virtual_address = HEAP_START + index * PAGE_SIZE;
 
-    unsafe {
-        core::arch::asm!("sti");
-    }
+            let frame = match self.frame_allocator.alloc_frame() {
+                Some(frame) => frame,
+                None => {
+                    crate::drivers::serial::println("ERROR: failed to allocate heap frame");
 
-    crate::drivers::serial::println(
-        "Interrupts enabled!",
-    );
+                    return false;
+                }
+            };
 
-    loop {
-        unsafe {
-            core::arch::asm!("hlt");
-        }
-    }
-}
+            if !self.map_page(virtual_address, frame.address, true, false) {
+                crate::drivers::serial::println("ERROR: failed to map heap page");
 
-pub fn test() {
-    crate::drivers::serial::println("Virtual memory test");
+                self.frame_allocator.free_frame(frame);
 
-    let frame_allocator = crate::memory::physical::FrameAllocator::new();
-
-    let mut virtual_memory = match VirtualMemoryManager::new(frame_allocator) {
-        Some(vm) => vm,
-
-        None => {
-            crate::drivers::serial::println("ERROR: failed to create virtual memory manager");
-
-            return;
-        }
-    };
-
-    crate::drivers::serial::println("Virtual memory manager created");
-
-    let pml4 = virtual_memory.pml4();
-
-    crate::drivers::serial::print("PML4 address: 0x");
-
-    crate::drivers::serial::print_u64(pml4.address);
-
-    crate::drivers::serial::println("");
-
-    if virtual_memory.map_identity_2mb(512 * 1024 * 1024) {
-        crate::drivers::serial::println("Identity map: 512 MiB");
-
-        crate::drivers::serial::println("PML4 -> PDPT -> PD: OK");
-    } else {
-        crate::drivers::serial::println("ERROR: failed to create identity map");
-    }
-
-    if virtual_memory.map_hhdm() {
-        crate::drivers::serial::println("HHDM mapping: OK");
-    } else {
-        crate::drivers::serial::println("ERROR: HHDM mapping failed");
-    }
-
-    if virtual_memory.map_kernel() {
-        crate::drivers::serial::println("Kernel higher-half mapping: OK");
-    } else {
-        crate::drivers::serial::println("ERROR: kernel mapping failed");
-    }
-
-    let test_virtual = 0x0000_4000_0000_0000u64;
-
-    let test_physical = 0x0040_0000u64;
-
-    if virtual_memory.map_page(test_virtual, test_physical, true, false) {
-        crate::drivers::serial::println("4 KiB page mapping: OK");
-    } else {
-        crate::drivers::serial::println("ERROR: 4 KiB page mapping failed");
-    }
-
-    let stack_top = match virtual_memory.create_bootstrap_stack() {
-        Some(address) => {
-            crate::drivers::serial::println("Bootstrap stack: OK");
-
-            crate::drivers::serial::print("Stack top: 0x");
-
-            crate::drivers::serial::print_u64(address);
-
-            crate::drivers::serial::println("");
-
-            address
+                return false;
+            }
         }
 
-        None => {
-            crate::drivers::serial::println("ERROR: failed to create bootstrap stack");
+        crate::drivers::serial::println("Kernel heap mapping created");
 
-            return;
-        }
-    };
-
-    crate::drivers::serial::println("Entering new address space...");
-
-    let entry = after_address_space_switch as usize as u64;
-
-    unsafe {
-        enter_new_address_space(pml4.address, stack_top, entry);
+        true
     }
 }

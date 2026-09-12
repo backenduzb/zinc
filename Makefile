@@ -35,10 +35,10 @@ $(BUILD)/test.o: c/hello.c
 		
 kernel:
 	cargo build \
-		-Z build-std=core \
+		-Z build-std=core,alloc \
 		--target $(TARGET) \
 		--release
-
+		
 $(KERNEL): kernel $(BUILD)/entry.o $(BUILD)/test.o $(BUILD)/paging.o
 	mkdir -p $(ISO_ROOT)/boot
 
@@ -73,7 +73,8 @@ run: iso
 	qemu-system-x86_64 \
 		-cdrom $(ISO) \
 		-m 512M \
-		-serial stdio
+		-serial stdio \
+		-boot d
 
 clean:
 	rm -rf $(BUILD)

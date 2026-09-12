@@ -5,7 +5,6 @@ section .text
 
 switch_address_space:
     ; RDI = PML4 physical address
-
     mov cr3, rdi
     ret
 
