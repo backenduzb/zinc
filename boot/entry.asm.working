@@ -34,6 +34,7 @@ timer_interrupt_stub:
     push r14
     push r15
 
+    mov rdi, rsp
     call timer_handler
 
     pop r15

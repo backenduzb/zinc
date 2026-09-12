@@ -14,7 +14,9 @@ pub extern "C" fn divide_error() -> ! {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn timer_handler(frame: *mut crate::arch::x86_64::context::InterruptFrame) {
+pub extern "C" fn timer_handler(
+    frame: *mut crate::arch::x86_64::context::InterruptFrame,
+) {
     let tick = TICKS.fetch_add(1, Ordering::Relaxed) + 1;
 
     if tick % 100 == 0 {
