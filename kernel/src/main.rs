@@ -23,8 +23,9 @@ pub extern "C" fn kmain() -> ! {
     time::init();
     memory::init();
     
+    memory::physical::test();
     time::clock::test();
-
+    
     unsafe {
         c_test();
     }
