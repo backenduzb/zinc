@@ -190,4 +190,15 @@ impl Scheduler {
 
         self.switch_to(next);
     }
+
+    pub fn tick(&mut self) {
+        let next = match self.next() {
+            Some(index) => index,
+            None => return,
+        };
+
+        if next != self.current_index() {
+            self.switch_to(next);
+        }
+    }
 }

@@ -17,3 +17,9 @@ pub fn yield_now() {
         (*scheduler()).yield_now();
     }
 }
+
+pub fn scheduler_tick() {
+    unsafe {
+        (*scheduler()).tick();
+    }
+}

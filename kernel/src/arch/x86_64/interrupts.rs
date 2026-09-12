@@ -14,13 +14,15 @@ pub extern "C" fn divide_error() -> ! {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn timer_handler() {
+pub extern "C" fn timer_handler(frame: *mut crate::arch::x86_64::context::InterruptFrame) {
     let tick = TICKS.fetch_add(1, Ordering::Relaxed) + 1;
 
     if tick % 100 == 0 {
         crate::drivers::serial::print_u64(tick / 100);
         crate::drivers::serial::println("");
     }
+
+    let _frame = frame;
 
     crate::drivers::timer::pic::end_of_interrupt();
 }
