@@ -43,48 +43,36 @@ impl Thread {
         thread
     }
 
-    pub fn start(&mut self) -> ! {
-        self.state = ThreadState::Running;
-
-        let mut current = CpuContext::empty();
-
-        unsafe {
-            crate::arch::x86_64::context::switch_context(&mut current, &self.context);
-        }
-
-        loop {
-            unsafe {
-                core::arch::asm!("hlt");
-            }
-        }
-    }
-
     fn setup_stack(&mut self, entry: extern "C" fn() -> !) {
-        let stack_top = self.stack.data.as_ptr() as usize + KERNEL_STACK_SIZE;
+        let stack_top =
+            self.stack.data.as_ptr() as usize + KERNEL_STACK_SIZE;
 
-        let mut rsp = stack_top & !0xF;
+        // Bu avval ishlagan variant.
+        let mut rsp = (stack_top & !0xF) - 8;
 
         unsafe {
+            // Return address
             rsp -= 8;
-            *(rsp as *mut u64) = entry as u64; 
+            *(rsp as *mut u64) = entry as u64;
+
+            // Fake callee-saved registers
+            rsp -= 8;
+            *(rsp as *mut u64) = 0; // r15
 
             rsp -= 8;
-            *(rsp as *mut u64) = 0; 
+            *(rsp as *mut u64) = 0; // r14
 
             rsp -= 8;
-            *(rsp as *mut u64) = 0;
+            *(rsp as *mut u64) = 0; // r13
 
             rsp -= 8;
-            *(rsp as *mut u64) = 0; 
+            *(rsp as *mut u64) = 0; // r12
 
             rsp -= 8;
-            *(rsp as *mut u64) = 0; 
+            *(rsp as *mut u64) = 0; // rbx
 
             rsp -= 8;
-            *(rsp as *mut u64) = 0; 
-
-            rsp -= 8;
-            *(rsp as *mut u64) = 0; 
+            *(rsp as *mut u64) = 0; // rbp
         }
 
         self.context.rsp = rsp as u64;
@@ -115,9 +103,8 @@ pub extern "C" fn thread_alpha() -> ! {
     crate::drivers::serial::println("Thread ALPHA started!");
 
     loop {
-        unsafe {
-            core::arch::asm!("hlt");
-        }
+        crate::drivers::serial::println("Thread ALPHA");
+        crate::task::yield_now();
     }
 }
 
@@ -125,8 +112,16 @@ pub extern "C" fn thread_beta() -> ! {
     crate::drivers::serial::println("Thread BETA started!");
 
     loop {
-        unsafe {
-            core::arch::asm!("hlt");
-        }
+        crate::drivers::serial::println("Thread BETA");
+        crate::task::yield_now();
+    }
+}
+
+pub extern "C" fn thread_silf() -> ! {
+    crate::drivers::serial::println("Thread Silf started!");
+
+    loop {
+        crate::drivers::serial::println("Thread Silf");
+        crate::task::yield_now();
     }
 }

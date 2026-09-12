@@ -193,9 +193,6 @@ extern "C" fn after_address_space_switch() -> ! {
 
     crate::drivers::serial::println("");
 
-    // =========================
-    // Heap test
-    // =========================
 
     crate::memory::heap::KERNEL_HEAP.init();
 
@@ -266,10 +263,6 @@ extern "C" fn after_address_space_switch() -> ! {
             "ERROR: Box allocation failed",
         );
     }
-
-    // =========================
-    // Task / scheduler test
-    // =========================
 
     crate::task::test::scheduler_test();
 

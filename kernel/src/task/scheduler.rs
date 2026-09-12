@@ -1,6 +1,6 @@
-use crate::task::thread::{ThreadID, ThreadState};
-
 use super::thread::Thread;
+use crate::arch::x86_64::context::CpuContext;
+use crate::task::thread::{ThreadID, ThreadState};
 
 const MAX_THREADS: usize = 8;
 
@@ -55,26 +55,24 @@ impl Scheduler {
         self.current().map(|thread| thread.id())
     }
 
-    pub fn next(&mut self) -> Option<usize> {
+    pub fn next(&self) -> Option<usize> {
         if self.count == 0 {
             return None;
         }
 
-        let previous = self.current;
+        let current = self.current;
 
-        for _ in 0..MAX_THREADS {
-            self.current = (self.current + 1) % MAX_THREADS;
+        for offset in 1..=MAX_THREADS {
+            let index = (current + offset) % MAX_THREADS;
 
-            if let Some(thread) = &self.threads[self.current] {
+            if let Some(thread) = &self.threads[index] {
                 if thread.state() == ThreadState::Ready || thread.state() == ThreadState::Running {
-                    return Some(self.current);
+                    return Some(index);
                 }
             }
         }
 
-        self.current = previous;
-
-        Some(previous)
+        Some(current)
     }
 
     pub fn count(&self) -> usize {
@@ -93,5 +91,103 @@ impl Scheduler {
 
     pub fn current_index(&self) -> usize {
         self.current
+    }
+
+    pub fn start_first(&mut self) -> ! {
+        if self.count == 0 {
+            loop {
+                unsafe {
+                    core::arch::asm!("hlt");
+                }
+            }
+        }
+
+        self.current = 0;
+
+        if let Some(thread) = self.threads[0].as_mut() {
+            thread.set_state(ThreadState::Running);
+        }
+
+        let dummy = CpuContext::empty();
+
+        let new_context = match self.threads[0].as_ref() {
+            Some(thread) => thread.context() as *const _,
+            None => loop {
+                unsafe {
+                    core::arch::asm!("hlt");
+                }
+            },
+        };
+
+        unsafe {
+            crate::arch::x86_64::context::switch_context(
+                core::ptr::addr_of!(dummy) as *mut _,
+                new_context,
+            );
+        }
+
+        loop {
+            unsafe {
+                core::arch::asm!("hlt");
+            }
+        }
+    }
+
+    pub fn switch_to(&mut self, next: usize) {
+        if next >= MAX_THREADS {
+            return;
+        }
+
+        if self.threads[next].is_none() {
+            return;
+        }
+
+        let current = self.current;
+
+        if current == next {
+            return;
+        }
+
+        let old_context = match self.threads[current].as_mut() {
+            Some(thread) => thread.context_mut() as *mut _,
+            None => return,
+        };
+
+        let new_context = match self.threads[next].as_ref() {
+            Some(thread) => thread.context() as *const _,
+            None => return,
+        };
+
+        if let Some(thread) = self.threads[current].as_mut() {
+            thread.set_state(ThreadState::Ready);
+        }
+
+        if let Some(thread) = self.threads[next].as_mut() {
+            thread.set_state(ThreadState::Running);
+        }
+
+        self.current = next;
+
+        unsafe {
+            crate::arch::x86_64::context::switch_context(old_context, new_context);
+        }
+    }
+
+    pub fn yield_now(&mut self) {
+        crate::drivers::serial::println("Scheduler: yield");
+
+        let next = match self.next() {
+            Some(index) => index,
+            None => {
+                crate::drivers::serial::println("Scheduler: no next thread");
+                return;
+            }
+        };
+
+        crate::drivers::serial::print("Scheduler: next = ");
+        crate::drivers::serial::print_u64(next as u64);
+        crate::drivers::serial::println("");
+
+        self.switch_to(next);
     }
 }
