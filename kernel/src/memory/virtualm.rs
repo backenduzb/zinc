@@ -63,7 +63,7 @@ impl VirtualMemoryManager {
             }
         }
 
-        Some(STACK_BASE + STACK_SIZE)
+        Some(STACK_BASE + STACK_SIZE - 8)
     }
 
     pub fn map_page(

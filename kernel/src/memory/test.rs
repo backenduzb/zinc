@@ -265,18 +265,4 @@ extern "C" fn after_address_space_switch() -> ! {
     }
 
     crate::task::test::scheduler_test();
-
-    unsafe {
-        core::arch::asm!("sti");
-    }
-
-    crate::drivers::serial::println(
-        "Interrupts enabled!",
-    );
-
-    loop {
-        unsafe {
-            core::arch::asm!("hlt");
-        }
-    }
 }

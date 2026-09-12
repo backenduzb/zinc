@@ -27,8 +27,9 @@ pub fn scheduler_test() -> ! {
 
         crate::drivers::serial::println("Thread A added");
         crate::drivers::serial::println("Thread B added");
+        crate::drivers::serial::println("Thread SILF added");
 
-        crate::drivers::serial::println("Starting Thread A...");
+        crate::drivers::serial::println("Starting scheduler (preemptive, timer-driven)...");
 
         (*scheduler).start_first();
     }

@@ -27,6 +27,10 @@ pub struct InterruptFrame {
     pub rcx: u64,
     pub rbx: u64,
     pub rax: u64,
+
+    pub rip: u64,
+    pub cs: u64,
+    pub rflags: u64,
 }
 
 impl CpuContext {
@@ -45,30 +49,40 @@ impl CpuContext {
 
 
 core::arch::global_asm!(r#"
-.global switch_context
-.type switch_context, @function
+.global start_thread_context
+.type start_thread_context, @function
 
-switch_context:
-    push r15
-    push r14
-    push r13
-    push r12
-    push rbx
-    push rbp
+start_thread_context:
+    mov rsp, rdi
 
-    mov [rdi], rsp
-    mov rsp, [rsi]
-
-    pop rbp
-    pop rbx
-    pop r12
-    pop r13
-    pop r14
     pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop r11
+    pop r10
+    pop r9
+    pop r8
+    pop rbp
+    pop rdi
+    pop rsi
+    pop rdx
+    pop rcx
+    pop rbx
+    pop rax
 
-    ret
+    iretq
+
+.global start_first_thread
+.type start_first_thread, @function
+
+start_first_thread:
+    mov rsp, rdi
+    cld
+    jmp rsi
 "#);
 
 unsafe extern "C" {
-    pub fn switch_context(old: *mut CpuContext, new: *const CpuContext);
+    pub fn start_thread_context(frame: *const InterruptFrame) -> !;
+    pub fn start_first_thread(stack_top: u64, entry: *const ()) -> !;
 }

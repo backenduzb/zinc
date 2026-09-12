@@ -50,9 +50,15 @@ pub fn init() {
     unsafe {
         unsafe extern "C" {
             fn timer_interrupt_stub();
+            fn gp_fault_stub();
+            fn page_fault_stub();
+            fn double_fault_stub();
         }
 
         IDT[0] = IdtEntry::new(crate::arch::x86_64::interrupts::divide_error as *const () as usize);
+        IDT[8] = IdtEntry::new(double_fault_stub as *const () as usize);
+        IDT[13] = IdtEntry::new(gp_fault_stub as *const () as usize);
+        IDT[14] = IdtEntry::new(page_fault_stub as *const () as usize);
         IDT[32] = IdtEntry::new(timer_interrupt_stub as *const () as usize);
 
         let pointer = IdtPointer {

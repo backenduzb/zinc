@@ -23,14 +23,26 @@ pub fn uptime_seconds() -> u64 {
 }
 
 pub fn test() {
-    let mut start = uptime_ms();
+    let start = ticks();
+
+    let mut spins: u64 = 0;
+    const SPIN_TIMEOUT: u64 = 1_000_000_000;
 
     loop {
-        let now = uptime_ms();
+        let now = ticks();
 
-        if now >= start + 1000 {
-            crate::drivers::serial::println("Clock test: 1000ms PASS");
-            start = now;
+        if now >= start + 100 {
+            crate::drivers::serial::print("Clock test: 100 ticks PASS (ticks=");
+            crate::drivers::serial::print_u64(now);
+            crate::drivers::serial::println(")");
+            return;
+        }
+
+        spins += 1;
+
+        if spins >= SPIN_TIMEOUT {
+            crate::drivers::serial::println("Clock test: TIMEOUT, timer IRQ kelmayapti!");
+            return;
         }
 
         core::hint::spin_loop();

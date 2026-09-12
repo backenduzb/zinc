@@ -31,7 +31,6 @@ pub extern "C" fn kmain() -> ! {
 
     memory::physical::test();
 
-    memory::test::virtual_memory_test();
     time::clock::test();
 
     unsafe {
@@ -44,4 +43,5 @@ pub extern "C" fn kmain() -> ! {
 
     drivers::display::init();
 
+    memory::test::virtual_memory_test();
 }

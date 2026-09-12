@@ -12,14 +12,16 @@ pub fn scheduler() -> *mut Scheduler {
     core::ptr::addr_of_mut!(SCHEDULER)
 }
 
-pub fn yield_now() {
-    unsafe {
-        (*scheduler()).yield_now();
-    }
-}
+// pub fn yield_now() {
+//     unsafe {
+//         (*scheduler()).yield_now();
+//     }
+// }
 
-pub fn scheduler_tick() {
+pub fn scheduler_tick(
+    frame: *mut crate::arch::x86_64::context::InterruptFrame,
+) -> (u64, u64) {
     unsafe {
-        (*scheduler()).tick();
+        (*scheduler()).tick(frame)
     }
 }

@@ -1,5 +1,5 @@
 use super::thread::Thread;
-use crate::arch::x86_64::context::CpuContext;
+use crate::arch::x86_64::context::{CpuContext, InterruptFrame};
 use crate::task::thread::{ThreadID, ThreadState};
 
 const MAX_THREADS: usize = 8;
@@ -8,6 +8,7 @@ pub struct Scheduler {
     threads: [Option<Thread>; MAX_THREADS],
     current: usize,
     count: usize,
+    switches: u64,
 }
 
 impl Scheduler {
@@ -16,6 +17,7 @@ impl Scheduler {
             threads: [const { None }; MAX_THREADS],
             current: 0,
             count: 0,
+            switches: 0,
         }
     }
 
@@ -94,24 +96,31 @@ impl Scheduler {
     }
 
     pub fn start_first(&mut self) -> ! {
-        if self.count == 0 {
-            loop {
+        let first = (0..MAX_THREADS)
+            .find(|&index| self.threads[index].is_some());
+
+        let first = match first {
+            Some(index) => index,
+            None => loop {
                 unsafe {
                     core::arch::asm!("hlt");
                 }
-            }
-        }
+            },
+        };
 
-        self.current = 0;
+        self.current = first;
 
-        if let Some(thread) = self.threads[0].as_mut() {
+        if let Some(thread) = self.threads[first].as_mut() {
             thread.set_state(ThreadState::Running);
+            thread.mark_started();
         }
 
-        let dummy = CpuContext::empty();
+        crate::drivers::serial::print("Scheduler: starting thread slot ");
+        crate::drivers::serial::print_u64(first as u64);
+        crate::drivers::serial::println("");
 
-        let new_context = match self.threads[0].as_ref() {
-            Some(thread) => thread.context() as *const _,
+        let (stack_top, entry) = match self.threads[first].as_ref() {
+            Some(thread) => (thread.stack_top(), thread.entry()),
             None => loop {
                 unsafe {
                     core::arch::asm!("hlt");
@@ -120,45 +129,93 @@ impl Scheduler {
         };
 
         unsafe {
-            crate::arch::x86_64::context::switch_context(
-                core::ptr::addr_of!(dummy) as *mut _,
-                new_context,
+            crate::arch::x86_64::context::start_first_thread(
+                stack_top,
+                entry as *const (),
             );
-        }
-
-        loop {
-            unsafe {
-                core::arch::asm!("hlt");
-            }
         }
     }
 
-    pub fn switch_to(&mut self, next: usize) {
-        if next >= MAX_THREADS {
-            return;
+    // pub fn switch_to(&mut self, next: usize) {
+    //     if next >= MAX_THREADS {
+    //         return;
+    //     }
+
+    //     if self.threads[next].is_none() {
+    //         return;
+    //     }
+
+    //     let current = self.current;
+
+    //     if current == next {
+    //         return;
+    //     }
+
+    //     let old_context = match self.threads[current].as_mut() {
+    //         Some(thread) => thread.context_mut() as *mut _,
+    //         None => return,
+    //     };
+
+    //     let new_context = match self.threads[next].as_ref() {
+    //         Some(thread) => thread.context() as *const _,
+    //         None => return,
+    //     };
+
+    //     if let Some(thread) = self.threads[current].as_mut() {
+    //         thread.set_state(ThreadState::Ready);
+    //     }
+
+    //     if let Some(thread) = self.threads[next].as_mut() {
+    //         thread.set_state(ThreadState::Running);
+    //     }
+
+    //     self.current = next;
+
+    //     unsafe {
+    //         crate::arch::x86_64::context::switch_context(old_context, new_context);
+    //     }
+    // }
+
+    // pub fn yield_now(&mut self) {
+    //     crate::drivers::serial::println("Scheduler: yield");
+
+    //     let next = match self.next() {
+    //         Some(index) => index,
+    //         None => {
+    //             crate::drivers::serial::println("Scheduler: no next thread");
+    //             return;
+    //         }
+    //     };
+
+    //     crate::drivers::serial::print("Scheduler: next = ");
+    //     crate::drivers::serial::print_u64(next as u64);
+    //     crate::drivers::serial::println("");
+
+    //     self.switch_to(next);
+    // }
+
+    pub fn tick(
+        &mut self,
+        frame: *mut InterruptFrame,
+    ) -> (u64, u64) {
+        if self.count == 0 {
+            return (frame as u64, 0);
         }
-
-        if self.threads[next].is_none() {
-            return;
+    
+        if let Some(thread) = self.threads[self.current].as_mut() {
+            thread.set_interrupt_rsp(frame as u64);
         }
-
-        let current = self.current;
-
-        if current == next {
-            return;
-        }
-
-        let old_context = match self.threads[current].as_mut() {
-            Some(thread) => thread.context_mut() as *mut _,
-            None => return,
+    
+        let next = match self.next() {
+            Some(index) => index,
+            None => return (frame as u64, 0),
         };
+    
+        if next == self.current {
+            return (frame as u64, 0);
+        }
 
-        let new_context = match self.threads[next].as_ref() {
-            Some(thread) => thread.context() as *const _,
-            None => return,
-        };
-
-        if let Some(thread) = self.threads[current].as_mut() {
+        if let Some(thread) = self.threads[self.current].as_mut() {
             thread.set_state(ThreadState::Ready);
         }
 
@@ -167,38 +224,35 @@ impl Scheduler {
         }
 
         self.current = next;
+        self.switches = self.switches.wrapping_add(1);
 
-        unsafe {
-            crate::arch::x86_64::context::switch_context(old_context, new_context);
+        if self.switches % 200 == 0 {
+            crate::drivers::serial::print("Scheduler: ");
+            crate::drivers::serial::print_u64(self.switches);
+            crate::drivers::serial::print(" switches, now on slot ");
+            crate::drivers::serial::print_u64(next as u64);
+            crate::drivers::serial::println("");
         }
-    }
 
-    pub fn yield_now(&mut self) {
-        crate::drivers::serial::println("Scheduler: yield");
-
-        let next = match self.next() {
-            Some(index) => index,
-            None => {
-                crate::drivers::serial::println("Scheduler: no next thread");
-                return;
+        let fresh = match self.threads[next].as_mut() {
+            Some(thread) if thread.is_fresh() => {
+                thread.mark_started();
+                true
             }
+            _ => false,
         };
 
-        crate::drivers::serial::print("Scheduler: next = ");
-        crate::drivers::serial::print_u64(next as u64);
-        crate::drivers::serial::println("");
+        if fresh {
+            let thread = self.threads[next].as_ref().unwrap();
 
-        self.switch_to(next);
-    }
+            (thread.stack_top(), thread.entry())
+        } else {
+            let rsp = self.threads[next]
+                .as_ref()
+                .unwrap()
+                .interrupt_rsp();
 
-    pub fn tick(&mut self) {
-        let next = match self.next() {
-            Some(index) => index,
-            None => return,
-        };
-
-        if next != self.current_index() {
-            self.switch_to(next);
+            (rsp, 0)
         }
     }
 }
