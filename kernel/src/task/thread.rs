@@ -14,7 +14,7 @@ struct KernelStack {
 pub enum ThreadState {
     Ready,
     Running,
-    Blocked,
+    Sleeping,
     Terminated,
 }
 
@@ -27,6 +27,7 @@ pub struct Thread {
     stack_top: u64,
     entry: u64,
     stack: Box<KernelStack>,
+    wake_at: u64
 }
 
 impl Thread {
@@ -43,6 +44,7 @@ impl Thread {
             interrupt_rsp: 0,
             stack_top: 0,
             entry: entry as u64,
+            wake_at: 0,
             stack,
         };
 
@@ -52,75 +54,73 @@ impl Thread {
     }
 
     fn setup_stack(&mut self, entry: extern "C" fn() -> !) {
-        let stack_top =
-            (self.stack.data.as_ptr() as usize + KERNEL_STACK_SIZE) & !0xF;
+        let stack_top = (self.stack.data.as_ptr() as usize + KERNEL_STACK_SIZE) & !0xF;
 
         let stack_top = stack_top - 8;
 
         self.stack_top = stack_top as u64;
 
         let mut rsp = stack_top;
-    
+
         unsafe {
             rsp -= 8;
             *(rsp as *mut u64) = 0x10202; // RFLAGS: IF = 1, RF = 1
-    
+
             rsp -= 8;
             *(rsp as *mut u64) = 0x08; // CS
-    
+
             rsp -= 8;
             *(rsp as *mut u64) = entry as u64; // RIP
 
-    
             rsp -= 8;
             *(rsp as *mut u64) = 0; // RAX
-    
+
             rsp -= 8;
             *(rsp as *mut u64) = 0; // RBX
-    
+
             rsp -= 8;
             *(rsp as *mut u64) = 0; // RCX
-    
+
             rsp -= 8;
             *(rsp as *mut u64) = 0; // RDX
-    
+
             rsp -= 8;
             *(rsp as *mut u64) = 0; // RSI
-    
+
             rsp -= 8;
             *(rsp as *mut u64) = 0; // RDI
-    
+
             rsp -= 8;
             *(rsp as *mut u64) = 0; // RBP
-    
+
             rsp -= 8;
             *(rsp as *mut u64) = 0; // R8
-    
+
             rsp -= 8;
             *(rsp as *mut u64) = 0; // R9
-    
+
             rsp -= 8;
             *(rsp as *mut u64) = 0; // R10
-    
+
             rsp -= 8;
             *(rsp as *mut u64) = 0; // R11
-    
+
             rsp -= 8;
             *(rsp as *mut u64) = 0; // R12
-    
+
             rsp -= 8;
             *(rsp as *mut u64) = 0; // R13
-    
+
             rsp -= 8;
             *(rsp as *mut u64) = 0; // R14
-    
+
             rsp -= 8;
             *(rsp as *mut u64) = 0; // R15
         }
-    
+
         self.interrupt_rsp = rsp as u64;
     }
-
+    
     pub fn interrupt_rsp(&self) -> u64 {
         self.interrupt_rsp
     }
@@ -164,6 +164,30 @@ impl Thread {
     pub fn context_mut(&mut self) -> &mut CpuContext {
         &mut self.context
     }
+
+    pub fn wake_at(&self) -> u64 {
+        self.wake_at
+    }
+
+    pub fn set_wake_at(&mut self, ticks: u64) {
+        self.wake_at = ticks;
+    }
+    
+    pub fn sleep_until(&mut self, wake_at: u64) {
+        self.wake_at = wake_at;
+        self.state = ThreadState::Sleeping;
+    }
+
+    pub fn sleep(&mut self, ticks: u64) {
+        let now = crate::arch::x86_64::interrupts::ticks();
+    
+        self.wake_at = now + ticks;
+        self.state = ThreadState::Sleeping;
+    }
+    
+    pub fn exit(&mut self) {
+        self.state = ThreadState::Terminated;
+    }
 }
 
 pub extern "C" fn thread_alpha() -> ! {
@@ -176,15 +200,13 @@ pub extern "C" fn thread_alpha() -> ! {
     let mut counter: u64 = 0;
 
     loop {
-        counter = counter.wrapping_add(1);
+        counter += 1;
 
-        if counter % 1_000_000 == 0 {
-            crate::drivers::serial::print("Thread ALPHA: ");
-            crate::drivers::serial::print_u64(counter);
-            crate::drivers::serial::println("");
-        }
+        crate::drivers::serial::print("ALPHA: ");
+        crate::drivers::serial::print_u64(counter);
+        crate::drivers::serial::println("");
 
-        core::hint::spin_loop();
+        crate::task::sleep(100);
     }
 }
 
@@ -198,15 +220,13 @@ pub extern "C" fn thread_beta() -> ! {
     let mut counter: u64 = 0;
 
     loop {
-        counter = counter.wrapping_add(1);
+        counter += 1;
 
-        if counter % 1_000_000 == 0 {
-            crate::drivers::serial::print("Thread BETA: ");
-            crate::drivers::serial::print_u64(counter);
-            crate::drivers::serial::println("");
-        }
+        crate::drivers::serial::print("BETA: ");
+        crate::drivers::serial::print_u64(counter);
+        crate::drivers::serial::println("");
 
-        core::hint::spin_loop();
+        crate::task::sleep(100);
     }
 }
 
@@ -220,14 +240,12 @@ pub extern "C" fn thread_silf() -> ! {
     let mut counter: u64 = 0;
 
     loop {
-        counter = counter.wrapping_add(1);
+        counter += 1;
 
-        if counter % 1_000_000 == 0 {
-            crate::drivers::serial::print("Thread SILF: ");
-            crate::drivers::serial::print_u64(counter);
-            crate::drivers::serial::println("");
-        }
+        crate::drivers::serial::print("SILF: ");
+        crate::drivers::serial::print_u64(counter);
+        crate::drivers::serial::println("");
 
-        core::hint::spin_loop();
+        crate::task::sleep(100);
     }
 }

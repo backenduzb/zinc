@@ -1,6 +1,6 @@
 use super::thread::Thread;
 use crate::arch::x86_64::context::{CpuContext, InterruptFrame};
-use crate::task::thread::{ThreadID, ThreadState};
+use crate::task::thread::{self, ThreadID, ThreadState};
 
 const MAX_THREADS: usize = 8;
 
@@ -68,13 +68,19 @@ impl Scheduler {
             let index = (current + offset) % MAX_THREADS;
 
             if let Some(thread) = &self.threads[index] {
-                if thread.state() == ThreadState::Ready || thread.state() == ThreadState::Running {
+                if thread.state() == ThreadState::Ready {
                     return Some(index);
                 }
             }
         }
 
-        Some(current)
+        if let Some(thread) = &self.threads[current] {
+            if thread.state() == ThreadState::Running {
+                return Some(current);
+            }
+        }
+
+        None
     }
 
     pub fn count(&self) -> usize {
@@ -96,8 +102,7 @@ impl Scheduler {
     }
 
     pub fn start_first(&mut self) -> ! {
-        let first = (0..MAX_THREADS)
-            .find(|&index| self.threads[index].is_some());
+        let first = (0..MAX_THREADS).find(|&index| self.threads[index].is_some());
 
         let first = match first {
             Some(index) => index,
@@ -129,94 +134,44 @@ impl Scheduler {
         };
 
         unsafe {
-            crate::arch::x86_64::context::start_first_thread(
-                stack_top,
-                entry as *const (),
-            );
+            crate::arch::x86_64::context::start_first_thread(stack_top, entry as *const ());
         }
     }
 
-    // pub fn switch_to(&mut self, next: usize) {
-    //     if next >= MAX_THREADS {
-    //         return;
-    //     }
-
-    //     if self.threads[next].is_none() {
-    //         return;
-    //     }
-
-    //     let current = self.current;
-
-    //     if current == next {
-    //         return;
-    //     }
-
-    //     let old_context = match self.threads[current].as_mut() {
-    //         Some(thread) => thread.context_mut() as *mut _,
-    //         None => return,
-    //     };
-
-    //     let new_context = match self.threads[next].as_ref() {
-    //         Some(thread) => thread.context() as *const _,
-    //         None => return,
-    //     };
-
-    //     if let Some(thread) = self.threads[current].as_mut() {
-    //         thread.set_state(ThreadState::Ready);
-    //     }
-
-    //     if let Some(thread) = self.threads[next].as_mut() {
-    //         thread.set_state(ThreadState::Running);
-    //     }
-
-    //     self.current = next;
-
-    //     unsafe {
-    //         crate::arch::x86_64::context::switch_context(old_context, new_context);
-    //     }
-    // }
-
-    // pub fn yield_now(&mut self) {
-    //     crate::drivers::serial::println("Scheduler: yield");
-
-    //     let next = match self.next() {
-    //         Some(index) => index,
-    //         None => {
-    //             crate::drivers::serial::println("Scheduler: no next thread");
-    //             return;
-    //         }
-    //     };
-
-    //     crate::drivers::serial::print("Scheduler: next = ");
-    //     crate::drivers::serial::print_u64(next as u64);
-    //     crate::drivers::serial::println("");
-
-    //     self.switch_to(next);
-    // }
-
-    pub fn tick(
-        &mut self,
-        frame: *mut InterruptFrame,
-    ) -> (u64, u64) {
+    pub fn tick(&mut self, frame: *mut InterruptFrame) -> (u64, u64) {
         if self.count == 0 {
             return (frame as u64, 0);
         }
-    
+
+        let now = crate::arch::x86_64::interrupts::ticks();
+
+        for thread in self.threads.iter_mut() {
+            if let Some(thread) = thread.as_mut() {
+                if thread.state() == ThreadState::Sleeping && thread.wake_at() <= now {
+                    thread.set_state(ThreadState::Ready);
+                }
+            }
+        }
+
         if let Some(thread) = self.threads[self.current].as_mut() {
             thread.set_interrupt_rsp(frame as u64);
         }
-    
+
         let next = match self.next() {
             Some(index) => index,
-            None => return (frame as u64, 0),
+            None => {
+                return (frame as u64, 0);
+            }
         };
-    
+
         if next == self.current {
             return (frame as u64, 0);
         }
 
         if let Some(thread) = self.threads[self.current].as_mut() {
-            thread.set_state(ThreadState::Ready);
+            if thread.state() == ThreadState::Running {
+                thread.set_state(ThreadState::Ready);
+            }
         }
 
         if let Some(thread) = self.threads[next].as_mut() {
@@ -247,12 +202,24 @@ impl Scheduler {
 
             (thread.stack_top(), thread.entry())
         } else {
-            let rsp = self.threads[next]
-                .as_ref()
-                .unwrap()
-                .interrupt_rsp();
+            let rsp = self.threads[next].as_ref().unwrap().interrupt_rsp();
 
             (rsp, 0)
+        }
+    }
+
+    pub fn sleep_current(&mut self, ticks: u64) {
+        let now = crate::arch::x86_64::interrupts::ticks();
+    
+        if let Some(thread) = self.threads[self.current].as_mut() {
+            thread.set_wake_at(now + ticks);
+            thread.set_state(ThreadState::Sleeping);
+    
+            crate::drivers::serial::print("SLEEP thread=");
+            crate::drivers::serial::print_u64(thread.id());
+            crate::drivers::serial::print(" wake_at=");
+            crate::drivers::serial::print_u64(now + ticks);
+            crate::drivers::serial::println("");
         }
     }
 }
