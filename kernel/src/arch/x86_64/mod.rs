@@ -21,8 +21,6 @@ pub fn init() {
     crate::drivers::serial::println("x86_64 architecture registered");
 }
 
-// LAPIC yoqilgan bo'lsa 8259 PIC interruptlari CPU ga yetib bormaydi.
-// Shuning uchun PIC ishlatish uchun LAPIC ni o'chiramiz (MSR 0x1B, bit 11).
 fn disable_lapic_for_pic() {
     unsafe {
         let apic_msr = crate::arch::x86_64::io::rdmsr(0x1B);

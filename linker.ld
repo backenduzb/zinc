@@ -1,11 +1,10 @@
-ENTRY(_start)
-
 SECTIONS
 {
     . = 0xffffffff80000000;
 
     .text : ALIGN(4K)
     {
+        _kernel_start = .;
         *(.text*)
     }
 
@@ -28,5 +27,6 @@ SECTIONS
     {
         *(COMMON)
         *(.bss*)
+        _kernel_end = .;
     }
 }
