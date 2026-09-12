@@ -17,6 +17,11 @@ $(BUILD)/entry.o: boot/entry.asm
 	mkdir -p $(BUILD)
 	nasm -f elf64 $< -o$@
 
+$(BUILD)/paging.o: boot/paging.asm
+	mkdir -p $(BUILD)
+	nasm -f elf64 $< -o$@
+
+	
 $(BUILD)/test.o: c/hello.c
 	mkdir -p $(BUILD)
 	gcc \
@@ -34,7 +39,7 @@ kernel:
 		--target $(TARGET) \
 		--release
 
-$(KERNEL): kernel $(BUILD)/entry.o $(BUILD)/test.o
+$(KERNEL): kernel $(BUILD)/entry.o $(BUILD)/test.o $(BUILD)/paging.o
 	mkdir -p $(ISO_ROOT)/boot
 
 	ld \
@@ -43,6 +48,7 @@ $(KERNEL): kernel $(BUILD)/entry.o $(BUILD)/test.o
 		-T linker.ld \
 		-o $(KERNEL) \
 		$(BUILD)/entry.o \
+		$(BUILD)/paging.o \
 		target/$(TARGET)/release/libzincos.a \
 		$(BUILD)/test.o
 

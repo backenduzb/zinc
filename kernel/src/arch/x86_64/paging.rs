@@ -21,6 +21,10 @@ impl PageTableEntry {
         self.0 & PRESENT != 0
     }
 
+    pub fn is_huge(&self) -> bool {
+        self.0 & HUGE_PAGE != 0
+    }
+
     pub fn set(&mut self, physical_address: u64, writable: bool, user: bool) {
         let mut flags = PRESENT;
 
