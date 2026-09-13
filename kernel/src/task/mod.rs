@@ -6,6 +6,8 @@ pub mod test;
 use scheduler::Scheduler;
 use thread::ThreadState;
 
+use crate::task::thread::ThreadID;
+
 pub static mut SCHEDULER: Scheduler = Scheduler::new();
 
 #[inline]
@@ -41,5 +43,29 @@ pub fn scheduler_tick(
 ) -> (u64, u64) {
     unsafe {
         (*scheduler()).tick(frame)
+    }
+}
+
+pub fn exit() -> ! {
+    unsafe {
+        (*scheduler()).exit_current();
+    }
+
+    loop {
+        unsafe {
+            core::arch::asm!("hlt");
+        }
+    }
+}
+
+pub fn kill(id: ThreadID) -> bool {
+    unsafe {
+        (*scheduler()).kill(id)
+    }
+}
+
+pub fn join(id: thread::ThreadID) {
+    unsafe {
+        (*scheduler()).join(id);
     }
 }

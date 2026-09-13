@@ -1,5 +1,6 @@
 use super::thread::Thread;
 use crate::arch::x86_64::context::{CpuContext, InterruptFrame};
+use crate::drivers::serial;
 use crate::task::thread::{self, ThreadID, ThreadState};
 
 const MAX_THREADS: usize = 8;
@@ -143,6 +144,8 @@ impl Scheduler {
             return (frame as u64, 0);
         }
 
+        self.reap_terminated();
+
         let now = crate::arch::x86_64::interrupts::ticks();
 
         for thread in self.threads.iter_mut() {
@@ -210,16 +213,139 @@ impl Scheduler {
 
     pub fn sleep_current(&mut self, ticks: u64) {
         let now = crate::arch::x86_64::interrupts::ticks();
-    
+
         if let Some(thread) = self.threads[self.current].as_mut() {
             thread.set_wake_at(now + ticks);
             thread.set_state(ThreadState::Sleeping);
-    
+
             crate::drivers::serial::print("SLEEP thread=");
             crate::drivers::serial::print_u64(thread.id());
             crate::drivers::serial::print(" wake_at=");
             crate::drivers::serial::print_u64(now + ticks);
             crate::drivers::serial::println("");
+        }
+    }
+
+    pub fn exit_current(&mut self) {
+        let exiting_id = match self.threads[self.current].as_ref() {
+            Some(thread) => thread.id(),
+            None => return,
+        };
+
+        if let Some(thread) = self.threads[self.current].as_mut() {
+            thread.set_state(ThreadState::Terminated);
+
+            serial::print("EXIT thread=");
+            serial::print_u64(exiting_id);
+            serial::println("");
+        }
+
+        for index in 0..MAX_THREADS {
+            if index == self.current {
+                continue;
+            }
+
+            if let Some(thread) = self.threads[index].as_mut() {
+                if thread.state() == ThreadState::Waiting
+                    && thread.waiting_for() == Some(exiting_id)
+                {
+                    thread.set_waiting_for(None);
+                    thread.set_state(ThreadState::Ready);
+
+                    serial::print("JOIN: waking thread=");
+                    serial::print_u64(thread.id());
+                    serial::println("");
+                }
+            }
+        }
+    }
+
+    pub fn kill(&mut self, id: ThreadID) -> bool {
+        for index in 0..MAX_THREADS {
+            if let Some(thread) = self.threads[index].as_mut() {
+                if thread.id() == id {
+                    thread.set_state(ThreadState::Terminated);
+
+                    crate::drivers::serial::print("KILL thread=");
+                    crate::drivers::serial::print_u64(id);
+                    crate::drivers::serial::println("");
+
+                    return true;
+                }
+            }
+        }
+
+        false
+    }
+
+    pub fn reap_terminated(&mut self) {
+        for index in 0..MAX_THREADS {
+            if index == self.current {
+                continue;
+            }
+
+            let should_reap = match &self.threads[index] {
+                Some(thread) => thread.state() == ThreadState::Terminated,
+                None => false,
+            };
+
+            if should_reap {
+                let id = self.threads[index]
+                    .as_ref()
+                    .map(|thread| thread.id())
+                    .unwrap_or(0);
+
+                self.threads[index] = None;
+                self.count -= 1;
+
+                crate::drivers::serial::print("Scheduler: reaped thread=");
+                crate::drivers::serial::print_u64(id);
+                crate::drivers::serial::print(" slot=");
+                crate::drivers::serial::print_u64(index as u64);
+                crate::drivers::serial::println("");
+            }
+        }
+    }
+
+    pub fn join(&mut self, id: ThreadID) {
+        let current_id = match self.current_id() {
+            Some(id) => id,
+            None => return,
+        };
+
+        if current_id == id {
+            return;
+        }
+
+        let target_exists = self
+            .threads
+            .iter()
+            .flatten()
+            .any(|thread| thread.id() == id);
+
+        if !target_exists {
+            return;
+        }
+
+        if let Some(thread) = self.threads[self.current].as_mut() {
+            thread.set_waiting_for(Some(id));
+            thread.set_state(ThreadState::Waiting);
+
+            serial::println("JOIN: current thread waiting");
+        }
+
+        loop {
+            unsafe {
+                core::arch::asm!("hlt");
+            }
+
+            let state = self.threads[self.current]
+                .as_ref()
+                .map(|thread| thread.state());
+
+            if state != Some(ThreadState::Waiting) {
+                break;
+            }
         }
     }
 }

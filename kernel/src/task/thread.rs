@@ -1,4 +1,4 @@
-use crate::arch::x86_64::context::{CpuContext, InterruptFrame};
+use crate::{arch::x86_64::{context::{CpuContext, InterruptFrame}, paging::PageTable}, task::thread::ThreadState::Terminated};
 use alloc::boxed::Box;
 
 pub type ThreadID = u64;
@@ -14,6 +14,7 @@ struct KernelStack {
 pub enum ThreadState {
     Ready,
     Running,
+    Waiting,
     Sleeping,
     Terminated,
 }
@@ -27,7 +28,8 @@ pub struct Thread {
     stack_top: u64,
     entry: u64,
     stack: Box<KernelStack>,
-    wake_at: u64
+    wake_at: u64,
+    waiting_for: Option<ThreadID>,
 }
 
 impl Thread {
@@ -46,6 +48,7 @@ impl Thread {
             entry: entry as u64,
             wake_at: 0,
             stack,
+            waiting_for: None,
         };
 
         thread.setup_stack(entry);
@@ -188,64 +191,16 @@ impl Thread {
     pub fn exit(&mut self) {
         self.state = ThreadState::Terminated;
     }
-}
 
-pub extern "C" fn thread_alpha() -> ! {
-    unsafe {
-        core::arch::asm!("sti");
+    pub fn is_terminated(&self) -> bool {
+        self.state == ThreadState::Terminated
     }
 
-    crate::drivers::serial::println("Thread ALPHA started!");
-
-    let mut counter: u64 = 0;
-
-    loop {
-        counter += 1;
-
-        crate::drivers::serial::print("ALPHA: ");
-        crate::drivers::serial::print_u64(counter);
-        crate::drivers::serial::println("");
-
-        crate::task::sleep(100);
-    }
-}
-
-pub extern "C" fn thread_beta() -> ! {
-    unsafe {
-        core::arch::asm!("sti");
+    pub fn waiting_for(&self) -> Option<ThreadID> {
+        self.waiting_for
     }
 
-    crate::drivers::serial::println("Thread BETA started!");
-
-    let mut counter: u64 = 0;
-
-    loop {
-        counter += 1;
-
-        crate::drivers::serial::print("BETA: ");
-        crate::drivers::serial::print_u64(counter);
-        crate::drivers::serial::println("");
-
-        crate::task::sleep(100);
-    }
-}
-
-pub extern "C" fn thread_silf() -> ! {
-    unsafe {
-        core::arch::asm!("sti");
-    }
-
-    crate::drivers::serial::println("Thread SILF started!");
-
-    let mut counter: u64 = 0;
-
-    loop {
-        counter += 1;
-
-        crate::drivers::serial::print("SILF: ");
-        crate::drivers::serial::print_u64(counter);
-        crate::drivers::serial::println("");
-
-        crate::task::sleep(100);
+    pub fn set_waiting_for(&mut self, id: Option<ThreadID>) {
+        self.waiting_for = id;
     }
 }

@@ -27,6 +27,7 @@ pub fn putc(byte: u8) {
     }
 }
 
+
 pub fn print(text: &str) {
     for byte in text.bytes() {
         putc(byte);
@@ -36,6 +37,15 @@ pub fn print(text: &str) {
 pub fn println(text: &str) {
     print(text);
     putc(b'\n');
+}
+
+pub fn print_hex_u32(mut value: u32) {
+    let hex = b"0123456789ABCDEF";
+
+    for i in (0..8).rev() {
+        let digit = ((value >> (i * 4)) & 0xF) as usize;
+        putc(hex[digit]);
+    }
 }
 
 pub fn print_u64(mut value: u64) {
