@@ -1,5 +1,7 @@
+use limine::request::Response;
+
 use crate::arch::x86_64::paging::PageTable;
-use crate::memory::physical::{FrameAllocator, PhysFrame};
+use crate::memory::physical::{self, FrameAllocator, PhysFrame};
 
 const HUGE_PAGE_SIZE: u64 = 2 * 1024 * 1024;
 const STACK_BASE: u64 = 0xFFFF_FFFF_A000_0000;
@@ -380,6 +382,37 @@ impl VirtualMemoryManager {
         }
 
         crate::drivers::serial::println("Kernel heap mapping created");
+
+        true
+    }
+
+    pub fn map_mmio(&mut self, physical_address: u64, size: u64) -> bool {
+        if size == 0 {
+            return false;
+        }
+
+        let hhdm_offset = match crate::boot::limine::HHDM_REQUEST.response() {
+            Some(response) => response.offset,
+            None => {
+                crate::drivers::serial::println("ERROR: HHDM unavailable for MMIO");
+                return false;
+            }
+        };
+
+        let physical_start = physical_address & !(PAGE_SIZE - 1);
+        let physical_end = (physical_address + size + PAGE_SIZE - 1) & !(PAGE_SIZE - 1);
+
+        let page_count = (physical_end - physical_start) / PAGE_SIZE;
+
+        for index in 0..page_count {
+            let physical = physical_start + index * PAGE_SIZE;
+            let virtual_address = hhdm_offset + physical;
+
+            if !self.map_page(virtual_address, physical, true, false) {
+                crate::drivers::serial::println("ERROR: failed to map MMIO page");
+                return false;
+            }
+        }
 
         true
     }

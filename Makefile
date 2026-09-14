@@ -74,6 +74,7 @@ run: iso
 		-cdrom $(ISO) \
 		-m 512M \
 		-serial stdio \
+		-smp 4 \
 		-boot d
 
 clean:

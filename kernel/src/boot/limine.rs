@@ -1,5 +1,6 @@
 use limine::BaseRevision;
 use limine::request::{
+    RsdpRequest,
     ExecutableAddressRequest,
     FramebufferRequest,
     MemmapRequest,
@@ -18,6 +19,11 @@ pub static MEMORY_MAP_REQUEST: MemmapRequest =
 #[used]
 #[unsafe(link_section = ".limine_requests")]
 pub static BASE_REVISION: BaseRevision = BaseRevision::new();
+
+#[used]
+#[unsafe(link_section = ".limine_requests")]
+pub static RSDP_REQUEST: RsdpRequest = RsdpRequest::new();
+
 
 #[used]
 #[unsafe(link_section = ".limine_requests")]
@@ -49,4 +55,9 @@ pub fn physical_to_virtual(
 ) -> Option<u64> {
     let response = HHDM_REQUEST.response()?;
     Some(response.offset + physical_address)
+}
+
+pub fn rsdp_address() -> Option<u64> {
+    let response = RSDP_REQUEST.response()?;
+    Some(response.address as u64)
 }

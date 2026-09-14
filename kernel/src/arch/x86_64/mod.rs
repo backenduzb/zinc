@@ -4,13 +4,15 @@ pub mod gdt;
 pub mod idt;
 pub mod interrupts;
 pub mod io;
+pub mod lapic;
 pub mod paging;
+pub mod smp;
 
 pub fn init() {
     gdt::init();
     idt::init();
-
-    disable_lapic_for_pic();
+    smp::init();
+    // disable_lapic_for_pic();
 
     crate::drivers::timer::init();
 

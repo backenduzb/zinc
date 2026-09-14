@@ -48,6 +48,14 @@ pub fn print_hex_u32(mut value: u32) {
     }
 }
 
+pub fn print_hex_u64(value: u64) {
+    let hex = b"0123456789ABCDEF";
+    for i in (0..16).rev() {
+        let digit = ((value >> (i * 4)) & 0xF) as usize;
+        putc(hex[digit]);
+    }
+}
+
 pub fn print_u64(mut value: u64) {
     if value == 0 {
         putc(b'0');
