@@ -7,6 +7,7 @@ pub mod io;
 pub mod lapic;
 pub mod paging;
 pub mod smp;
+pub mod tss;
 
 pub fn init() {
     gdt::init();
