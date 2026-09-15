@@ -73,3 +73,16 @@ pub extern "C" fn timer_handler(
 
     (frame as u64, 0)
 }
+
+static LAPIC_TICKS: AtomicU64 = AtomicU64::new(0);
+
+#[unsafe(no_mangle)]
+pub extern "C" fn lapic_timer_handler() {
+    let ticks = LAPIC_TICKS.fetch_add(1, Ordering::Relaxed) + 1;
+
+    crate::arch::x86_64::lapic::eoi();
+
+    crate::drivers::serial::print("LAPIC TIMER: ");
+    crate::drivers::serial::print_u64(ticks);
+    crate::drivers::serial::println("");
+}

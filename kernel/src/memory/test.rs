@@ -205,6 +205,28 @@ extern "C" fn after_address_space_switch() -> ! {
 
     crate::arch::x86_64::lapic::init(lapic_phys);
 
+    crate::arch::x86_64::lapic::timer_init();
+    crate::arch::x86_64::lapic::timer_start(10_000_000);
+
+    crate::arch::x86_64::lapic::timer_debug_count();
+    for _ in 0..1_000_000 {
+        core::hint::spin_loop();
+    }
+    crate::arch::x86_64::lapic::timer_debug_count();
+
+    let rflags: u64;
+    unsafe {
+        core::arch::asm!("pushfq; pop {}", out(reg) rflags, options(nomem, preserves_flags));
+    }
+    crate::drivers::serial::print("RFLAGS.IF (1=enabled): ");
+    crate::drivers::serial::print_u64((rflags >> 9) & 1);
+    crate::drivers::serial::println("");
+
+    unsafe {
+        core::arch::asm!("sti", options(nomem, nostack, preserves_flags));
+    }
+    crate::drivers::serial::println("STI: interrupts enabled");
+    
     let bsp_apic_id = crate::arch::x86_64::lapic::id();
 
     crate::drivers::serial::print("LAPIC ID after switch: ");

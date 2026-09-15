@@ -23,6 +23,15 @@ const ICR_DELIVERY_STATUS: u32 = 1 << 12;
 
 static mut BASE: u64 = LAPIC_DEFAULT_BASE;
 
+const REG_LVT_TIMER: u64 = 0x320;
+const REG_INITIAL_COUNT: u64 = 0x380;
+const REG_CURRENT_COUNT: u64 = 0x390;
+const REG_DIVIDE_CONFIG: u64 = 0x3E0;
+
+const LVT_PERIODIC: u32 = 1 << 17;
+
+pub const TIMER_VECTOR: u8 = 48;
+
 unsafe fn read(offset: u64) -> u32 {
     core::ptr::read_volatile((BASE + offset) as *const u32)
 }
@@ -170,4 +179,53 @@ pub fn start_ap(apic_id: u32, vector: u8) {
 
     send_startup_ipi(apic_id, vector);
     delay();
+}
+
+pub fn timer_init() {
+    unsafe {
+        write(REG_DIVIDE_CONFIG, 0x3);
+        write(REG_LVT_TIMER, TIMER_VECTOR as u32 | LVT_PERIODIC);
+        write(REG_INITIAL_COUNT, 0);
+
+        let lvt = read(REG_LVT_TIMER);
+        let divide = read(REG_DIVIDE_CONFIG);
+
+        crate::drivers::serial::print("LAPIC LVT TIMER: 0x");
+        crate::drivers::serial::print_hex_u32(lvt);
+        crate::drivers::serial::println("");
+
+        crate::drivers::serial::print("LAPIC DIVIDE: 0x");
+        crate::drivers::serial::print_hex_u32(divide);
+        crate::drivers::serial::println("");
+    }
+
+    crate::drivers::serial::println("LAPIC: timer initialized");
+}
+
+pub fn timer_start(count: u32) {
+    unsafe {
+        write(REG_INITIAL_COUNT, count);
+
+        let current = read(REG_CURRENT_COUNT);
+
+        crate::drivers::serial::print("LAPIC initial count: ");
+        crate::drivers::serial::print_u64(count as u64);
+        crate::drivers::serial::println("");
+
+        crate::drivers::serial::print("LAPIC current count: ");
+        crate::drivers::serial::print_u64(current as u64);
+        crate::drivers::serial::println("");
+    }
+
+    crate::drivers::serial::println("LAPIC: timer started");
+}
+
+pub fn timer_debug_count() {
+    unsafe {
+        let current = read(REG_CURRENT_COUNT);
+
+        crate::drivers::serial::print("LAPIC current count now: ");
+        crate::drivers::serial::print_u64(current as u64);
+        crate::drivers::serial::println("");
+    }
 }

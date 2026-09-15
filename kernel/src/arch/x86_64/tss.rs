@@ -1,4 +1,4 @@
-#[repr(C, packed)]
+#[repr(C)]
 pub struct TaskStateSegment {
     _reserved0: u32,
 
