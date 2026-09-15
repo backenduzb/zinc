@@ -84,16 +84,47 @@ pub extern "C" fn ap_main() -> ! {
     let apic_id = crate::arch::x86_64::lapic::id();
     let cpu_id = apic_id as usize;
 
-    crate::drivers::serial::print("AP: entered trampoline, LAPIC ID = ");
+    crate::drivers::serial::print(
+        "AP: entered trampoline, LAPIC ID = ",
+    );
     crate::drivers::serial::print_u64(apic_id as u64);
     crate::drivers::serial::println("");
 
     if cpu_id < MAX_CPUS {
         AP_STARTED[cpu_id].store(true, Ordering::Release);
 
-        crate::arch::x86_64::smp::percpu::set_ap_online(cpu_id);
+        crate::arch::x86_64::smp::percpu::init_ap(
+            cpu_id,
+            apic_id,
+        );
     }
 
+    let cpu = crate::arch::x86_64::smp::percpu::current();
+
+    crate::drivers::serial::print("AP: PerCpu CPU ID = ");
+    crate::drivers::serial::print_u64(cpu.cpu_id as u64);
+    crate::drivers::serial::println("");
+
+    crate::drivers::serial::print("AP: PerCpu APIC ID = ");
+    crate::drivers::serial::print_u64(cpu.apic_id as u64);
+    crate::drivers::serial::println("");
+
+    let cpu = crate::arch::x86_64::smp::percpu::current();
+    
+    crate::drivers::serial::print("AP: GS CPU ID = ");
+    crate::drivers::serial::print_u64(cpu.cpu_id as u64);
+    crate::drivers::serial::println("");
+    
+    crate::drivers::serial::print("AP: GS APIC ID = ");
+    crate::drivers::serial::print_u64(cpu.apic_id as u64);
+    crate::drivers::serial::println("");
+
+    let cpu = crate::arch::x86_64::smp::percpu::current();
+    
+    crate::drivers::serial::print("SMP: GS current CPU = ");
+    crate::drivers::serial::print_u64(cpu.cpu_id as u64);
+    crate::drivers::serial::println("");
+    
     loop {
         unsafe {
             core::arch::asm!("hlt");

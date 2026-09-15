@@ -43,6 +43,7 @@ pub fn cpu_count() -> usize {
 }
 
 pub fn init() {
+    crate::arch::x86_64::smp::percpu::init();
     println("SMP: initializing ACPI");
     acpi::init();
 }

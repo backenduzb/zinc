@@ -284,6 +284,12 @@ extern "C" fn after_address_space_switch() -> ! {
         }
     };
 
+    let bsp = crate::arch::x86_64::smp::percpu::current();
+    
+    crate::drivers::serial::print("SMP: current CPU = ");
+    crate::drivers::serial::print_u64(bsp.cpu_id as u64);
+    crate::drivers::serial::println("");
+    
     let ptr = unsafe { core::alloc::GlobalAlloc::alloc(&crate::memory::heap::KERNEL_HEAP, layout) };
 
     if ptr.is_null() {

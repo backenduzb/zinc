@@ -1,20 +1,27 @@
-use core::{sync::atomic::{AtomicBool, Ordering}, usize::MAX};
+use core::sync::atomic::{AtomicBool, Ordering};
+
+use crate::arch::x86_64::cpu;
 
 pub const MAX_CPUS: usize = 16;
+const IA32_GS_BASE: u32 = 0xC0000101;
 
 pub struct PerCpu {
     pub cpu_id: usize,
     pub apic_id: u32,
-    pub online: AtomicBool,
+    online: AtomicBool,
 }
 
 impl PerCpu {
-    pub const fn new(cpu_id: usize, apic_id: u32) -> Self {
+    pub const fn new(cpu_id: usize) -> Self {
         Self {
             cpu_id,
-            apic_id,
+            apic_id: 0,
             online: AtomicBool::new(false),
         }
+    }
+
+    pub fn set_apic_id(&mut self, apic_id: u32) {
+        self.apic_id = apic_id;
     }
 
     pub fn set_online(&self) {
@@ -26,43 +33,70 @@ impl PerCpu {
     }
 }
 
-static CPU0: PerCpu = PerCpu::new(0, 0);
+static mut PER_CPUS: [PerCpu; MAX_CPUS] = [const { PerCpu::new(0) }; MAX_CPUS];
 
-static CPU_ONLINE: [AtomicBool; MAX_CPUS] =
-    [const { AtomicBool::new(false) }; MAX_CPUS];
-
-pub fn bsp() -> &'static PerCpu {
-    &CPU0
+pub fn init() {
+    unsafe {
+        for cpu_id in 0..MAX_CPUS {
+            PER_CPUS[cpu_id] = PerCpu::new(cpu_id);
+        }
+    }
 }
 
-pub fn set_ap_online(cpu_id: usize) {
+pub fn get(cpu_id: usize) -> Option<&'static PerCpu> {
+    if cpu_id >= MAX_CPUS {
+        return None;
+    }
+
+    unsafe { Some(&PER_CPUS[cpu_id]) }
+}
+
+pub fn bsp() -> &'static PerCpu {
+    get(0).expect("BSP PerCpu missing")
+}
+
+pub fn init_bsp(apic_id: u32) {
+    unsafe {
+        PER_CPUS[0].set_apic_id(apic_id);
+        PER_CPUS[0].set_online();
+    }
+
+    let cpu = get(0).expect("BSP PerCpu missing");
+
+    set_gs_base(cpu);
+
+    crate::drivers::serial::print(
+        "SMP: BSP CPU 0 online, APIC ID = ",
+    );
+    crate::drivers::serial::print_u64(apic_id as u64);
+    crate::drivers::serial::println("");
+}
+
+pub fn init_ap(cpu_id: usize, apic_id: u32) {
     if cpu_id >= MAX_CPUS {
         return;
     }
 
-    CPU_ONLINE[cpu_id].store(true, Ordering::Release);
+    unsafe {
+        PER_CPUS[cpu_id].set_apic_id(apic_id);
+        PER_CPUS[cpu_id].set_online();
+    }
+
+    let cpu = get(cpu_id).expect("AP PerCpu missing");
+
+    set_gs_base(cpu);
 
     crate::drivers::serial::print("SMP: CPU ");
     crate::drivers::serial::print_u64(cpu_id as u64);
-    crate::drivers::serial::println(" online");
-}
-
-pub fn is_online(cpu_id: usize) -> bool {
-    if cpu_id >= MAX_CPUS {
-        return false;
-    }
-
-    CPU_ONLINE[cpu_id].load(Ordering::Acquire)
-}
-
-pub fn init_bsp(apic_id: u32) {
-    CPU0.online.store(true, Ordering::Release);
-
-    CPU_ONLINE[0].store(true, Ordering::Release);
-
-    crate::drivers::serial::print("SMP: BSP CPU 0 online, APIC ID = ");
+    crate::drivers::serial::print(" online, APIC ID = ");
     crate::drivers::serial::print_u64(apic_id as u64);
     crate::drivers::serial::println("");
+}
+pub fn is_online(cpu_id: usize) -> bool {
+    match get(cpu_id) {
+        Some(cpu) => cpu.is_online(),
+        None => false,
+    }
 }
 
 pub fn online_count() -> usize {
@@ -76,3 +110,27 @@ pub fn online_count() -> usize {
 
     count
 }
+
+pub fn current() -> &'static PerCpu {
+    let gs = unsafe {
+        crate::arch::x86_64::io::rdmsr(IA32_GS_BASE)
+    };
+
+    if gs == 0 {
+        panic!("SMP: GS.base is not initialized");
+    }
+
+    unsafe {
+        &*(gs as *const PerCpu)
+    }
+}
+
+pub fn set_gs_base(cpu: &'static PerCpu) {
+    unsafe {
+        crate::arch::x86_64::io::wrmsr(
+            IA32_GS_BASE,
+            cpu as *const PerCpu as u64,
+        );
+    }
+}
+
