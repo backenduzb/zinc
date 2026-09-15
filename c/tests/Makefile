@@ -1,22 +1,18 @@
-CC := gcc
-LD := ld
-
-CFLAGS := -m64 -ffreestanding -mno-red-zone -fno-pie -fno-pic -fno-stack-protector -I../include
-
-SRCS := $(wildcard *.c)
-OBJS := $(SRCS:.c=.o)
-
-OUT := tests.o
-
 .PHONY: all clean
+
+SUBDIRS := $(wildcard */)
+SUBDIR_OBJS := $(foreach d,$(SUBDIRS),$(d)$(patsubst %/,%.o,$(d)))
+
+OUT = tests.o
 
 all: $(OUT)
 
-%.o: %.c
-	\((CC)\)(CFLAGS) -c \(< -o\)@
+$(OUT): $(SUBDIR_OBJS)
+	ld -r -o $(OUT) $(SUBDIR_OBJS)
 
-\((OUT):\)(OBJS)
-	\((LD) -r -o\)@ $(OBJS)
+$(SUBDIR_OBJS):
+	$(MAKE) -C $(dir $@)
 
 clean:
-	rm -f \((OBJS)\)(OUT)
+	for dir in $(SUBDIRS); do $(MAKE) -C $$dir clean; done
+	rm -f $(OUT)

@@ -3,6 +3,8 @@ BUILD := build
 ISO_ROOT := $(BUILD)/iso
 KERNEL := $(ISO_ROOT)/boot/kernel.elf
 ISO := $(BUILD)/zincos.iso
+C_WORKSPACE = ./c
+ASM_WORKSPACE = ./boot
 
 RUSTFLAGS := -C relocation-model=static
 
@@ -13,25 +15,11 @@ all: iso
 $(BUILD):
 	mkdir -p $(BUILD)
 
-$(BUILD)/entry.o: boot/entry.asm
-	mkdir -p $(BUILD)
-	nasm -f elf64 $< -o$@
-
-$(BUILD)/paging.o: boot/paging.asm
-	mkdir -p $(BUILD)
-	nasm -f elf64 $< -o$@
-
+asmbuild: $(ASM_WORKSPACE)
+	make -C $(ASM_WORKSPACE)
 	
-$(BUILD)/test.o: c/hello.c
-	mkdir -p $(BUILD)
-	gcc \
-		-m64 \
-		-ffreestanding \
-		-fno-stack-protector \
-		-fno-pic \
-		-fno-pie \
-		-c $< \
-		-o $@
+cbuild: $(C_WORKSPACE)
+	make -C $(C_WORKSPACE)
 		
 kernel:
 	cargo build \
@@ -39,7 +27,7 @@ kernel:
 		--target $(TARGET) \
 		--release
 		
-$(KERNEL): kernel $(BUILD)/entry.o $(BUILD)/test.o $(BUILD)/paging.o
+$(KERNEL): kernel cbuild asmbuild
 	mkdir -p $(ISO_ROOT)/boot
 
 	ld \
@@ -47,10 +35,9 @@ $(KERNEL): kernel $(BUILD)/entry.o $(BUILD)/test.o $(BUILD)/paging.o
 		-z max-page-size=0x1000 \
 		-T linker.ld \
 		-o $(KERNEL) \
-		$(BUILD)/entry.o \
-		$(BUILD)/paging.o \
+		$(ASM_WORKSPACE)/asmbuild.o \
 		target/$(TARGET)/release/libzincos.a \
-		$(BUILD)/test.o
+		$(C_WORKSPACE)/cbuild.o
 
 iso: $(KERNEL)
 	mkdir -p $(ISO_ROOT)/boot
@@ -79,3 +66,5 @@ run: iso
 
 clean:
 	rm -rf $(BUILD)
+	make -C $(C_WORKSPACE) clean
+	make -C $(ASM_WORKSPACE) clean

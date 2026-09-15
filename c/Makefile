@@ -1,30 +1,23 @@
-CC := gcc
-LD := ld
-
-CFLAGS := -m64 -ffreestanding -mno-red-zone -fno-pie -fno-pic -fno-stack-protector -I./include
+.PHONY: all tests
 
 SUBDIRS := tests
-SRCS := $(wildcard *.c)
-OBJS := $(SRCS:.c=.o)
+SUBDIR_OBJS := $(foreach d,$(SUBDIRS),$(d)/$(notdir $(d)).o)
 
-SUBDIR_OBJS := \((foreach d,\)(SUBDIRS),\((d)/\)(notdir $(d)).o)
+OUT := cbuild.o
 
-OUT := ../../build/c_objs.o
+all: $(OUT)
 
-.PHONY: all clean $(SUBDIRS)
+tets:
+	$(MAKE) -C tests
+	
+$(SUBDIR_OBJS):
+	$(MAKE) -C $(dir $@)
 
-all: \((SUBDIRS)\)(OUT)
-
-$(SUBDIRS):
-	\((MAKE) -C\)@
-
-%.o: %.c
-	\((CC)\)(CFLAGS) -c \(< -o\)@
-
-\((OUT):\)(OBJS) $(SUBDIRS)
-	mkdir -p \((dir\)(OUT))
-	\((LD) -r -o\)@ \((OBJS)\)(SUBDIR_OBJS)
+$(OUT): $(SUBDIR_OBJS)
+	ld -r -o $(OUT) $(SUBDIR_OBJS)
 
 clean:
-	rm -f \((OBJS)\)(OUT)
-	for dir in \((SUBDIRS); do\)(MAKE) -C $$dir clean; done
+	rm -f iso/boot/$(OUT)
+	rm -f $(OUT) os.iso
+	rm -f *.o
+	for dir in $(SUBDIRS); do $(MAKE) -C $$dir clean; done
