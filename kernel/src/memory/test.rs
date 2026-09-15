@@ -1,6 +1,9 @@
 use crate::arch::x86_64::paging::PageTable;
 use crate::memory::physical::{FrameAllocator, PhysFrame};
 
+const AP1_STACK_TOP: u64 = 0xFFFF_FFFF_A010_FFF8;
+const AP2_STACK_TOP: u64 = 0xFFFF_FFFF_A011_FFF8;
+const AP3_STACK_TOP: u64 = 0xFFFF_FFFF_A012_FFF8;
 const HUGE_PAGE_SIZE: u64 = 2 * 1024 * 1024;
 const STACK_BASE: u64 = 0xFFFF_FFFF_A000_0000;
 const STACK_SIZE: u64 = 64 * 1024;
@@ -64,6 +67,7 @@ pub fn virtual_memory_test() -> ! {
 
     {
         let lapic_phys_raw = crate::arch::x86_64::smp::acpi::lapic_phys();
+
         let lapic_phys = if lapic_phys_raw != 0 {
             lapic_phys_raw
         } else {
@@ -74,8 +78,6 @@ pub fn virtual_memory_test() -> ! {
             crate::drivers::serial::println("SMP: LAPIC MMIO mapping FAILED");
         } else {
             crate::drivers::serial::println("SMP: LAPIC MMIO mapping OK");
-
-            crate::arch::x86_64::lapic::init(lapic_phys);
         }
     }
 
@@ -113,6 +115,37 @@ pub fn virtual_memory_test() -> ! {
         }
     };
 
+    const AP_STACK_BASE: u64 = 0xFFFF_FFFF_A010_0000;
+    const AP_STACK_SIZE: u64 = 64 * 1024;
+
+    let mut ap_stack_tops = [0u64; 3];
+
+    for index in 0..3 {
+        let base = AP_STACK_BASE + index as u64 * AP_STACK_SIZE;
+
+        ap_stack_tops[index] = match virtual_memory.create_ap_stack(base, AP_STACK_SIZE) {
+            Some(stack_top) => {
+                crate::drivers::serial::print("AP stack ");
+                crate::drivers::serial::print_u64((index + 1) as u64);
+                crate::drivers::serial::print(": 0x");
+                crate::drivers::serial::print_u64(stack_top);
+                crate::drivers::serial::println("");
+
+                stack_top
+            }
+
+            None => {
+                crate::drivers::serial::println("ERROR: failed to create AP stack");
+
+                loop {
+                    unsafe {
+                        core::arch::asm!("hlt");
+                    }
+                }
+            }
+        };
+    }
+
     crate::drivers::serial::println("Entering new address space...");
 
     if virtual_memory.map_heap() {
@@ -140,22 +173,98 @@ extern "C" fn after_address_space_switch() -> ! {
     let cr3 = crate::arch::x86_64::paging::read_cr3();
 
     crate::drivers::serial::print("New CR3: 0x");
-
     crate::drivers::serial::print_u64(cr3);
-
     crate::drivers::serial::println("");
 
-    // 1-bosqich tekshiruvi: yangi address space da LAPIC MMIO saqlanganmi
-    {
-        let id = crate::arch::x86_64::lapic::id();
-        let ver = crate::arch::x86_64::lapic::version();
-        crate::drivers::serial::print("LAPIC ID after switch: ");
-        crate::drivers::serial::print_u64(id as u64);
+    let lapic_phys_raw = crate::arch::x86_64::smp::acpi::lapic_phys();
+
+    let lapic_phys = if lapic_phys_raw != 0 {
+        lapic_phys_raw
+    } else {
+        0xFEE0_0000
+    };
+
+    unsafe {
+        const IA32_APIC_BASE: u32 = 0x1B;
+        const APIC_ENABLE: u64 = 1 << 11;
+
+        let apic_msr_before = crate::arch::x86_64::io::rdmsr(IA32_APIC_BASE);
+
+        crate::drivers::serial::print("APIC MSR before enable: 0x");
+        crate::drivers::serial::print_hex_u64(apic_msr_before);
         crate::drivers::serial::println("");
-        crate::drivers::serial::print("LAPIC version after switch: 0x");
-        crate::drivers::serial::print_hex_u64(ver as u64);
+
+        crate::arch::x86_64::io::wrmsr(IA32_APIC_BASE, apic_msr_before | APIC_ENABLE);
+
+        let apic_msr_after = crate::arch::x86_64::io::rdmsr(IA32_APIC_BASE);
+
+        crate::drivers::serial::print("APIC MSR after enable: 0x");
+        crate::drivers::serial::print_hex_u64(apic_msr_after);
         crate::drivers::serial::println("");
     }
+
+    crate::arch::x86_64::lapic::init(lapic_phys);
+
+    let bsp_apic_id = crate::arch::x86_64::lapic::id();
+
+    crate::drivers::serial::print("LAPIC ID after switch: ");
+    crate::drivers::serial::print_u64(bsp_apic_id as u64);
+    crate::drivers::serial::println("");
+
+    crate::drivers::serial::print("LAPIC version after switch: 0x");
+    crate::drivers::serial::print_hex_u64(crate::arch::x86_64::lapic::version() as u64);
+    crate::drivers::serial::println("");
+
+    crate::arch::x86_64::smp::percpu::init_bsp(bsp_apic_id);
+
+    let ap_entry = crate::arch::x86_64::smp::trampoline::ap_main as *const () as usize as u64;
+
+    let aps = [
+        (1u32, AP1_STACK_TOP),
+        (2u32, AP2_STACK_TOP),
+        (3u32, AP3_STACK_TOP),
+    ];
+
+    for &(apic_id, stack_top) in &aps {
+        crate::drivers::serial::println("--------------------------------");
+
+        crate::drivers::serial::print("SMP: preparing APIC ");
+        crate::drivers::serial::print_u64(apic_id as u64);
+        crate::drivers::serial::println("");
+
+        crate::arch::x86_64::smp::trampoline::reset_ap_state(apic_id as usize);
+
+        crate::arch::x86_64::smp::trampoline::install(cr3, stack_top, ap_entry);
+
+        crate::arch::x86_64::lapic::start_ap(apic_id, 0x08);
+
+        let mut started = false;
+
+        for _ in 0..10_000_000 {
+            if crate::arch::x86_64::smp::trampoline::is_ap_started(apic_id as usize) {
+                started = true;
+                break;
+            }
+
+            core::hint::spin_loop();
+        }
+
+        if started {
+            crate::drivers::serial::print("SMP: APIC ");
+            crate::drivers::serial::print_u64(apic_id as u64);
+            crate::drivers::serial::println(" started successfully");
+        } else {
+            crate::drivers::serial::print("ERROR: APIC ");
+            crate::drivers::serial::print_u64(apic_id as u64);
+            crate::drivers::serial::println(" failed to start");
+        }
+    }
+
+    let online = crate::arch::x86_64::smp::percpu::online_count();
+
+    crate::drivers::serial::print("SMP: CPUs online = ");
+    crate::drivers::serial::print_u64(online as u64);
+    crate::drivers::serial::println("");
 
     crate::memory::heap::KERNEL_HEAP.init();
 
@@ -201,5 +310,11 @@ extern "C" fn after_address_space_switch() -> ! {
         crate::drivers::serial::println("ERROR: Box allocation failed");
     }
 
-    crate::task::test::scheduler_test();
+    // crate::task::test::scheduler_test();
+
+    loop {
+        unsafe {
+            core::arch::asm!("hlt");
+        }
+    }
 }

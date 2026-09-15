@@ -1,4 +1,8 @@
+use crate::drivers::serial::println;
+
 pub mod acpi;
+pub mod trampoline;
+pub mod percpu;
 
 #[derive(Clone, Copy)]
 pub struct SmpCpu {
@@ -39,7 +43,6 @@ pub fn cpu_count() -> usize {
 }
 
 pub fn init() {
-    crate::drivers::serial::println("SMP: initializing ACPI");
-
+    println("SMP: initializing ACPI");
     acpi::init();
 }

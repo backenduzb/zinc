@@ -23,7 +23,11 @@ pub fn uptime_seconds() -> u64 {
 }
 
 pub fn test() {
+    crate::drivers::serial::println("CLOCK TEST: ENTER");
+
     let start = ticks();
+
+    crate::drivers::serial::println("CLOCK TEST: TICKS READ");
 
     let mut spins: u64 = 0;
     const SPIN_TIMEOUT: u64 = 1_000_000_000;
@@ -41,7 +45,9 @@ pub fn test() {
         spins += 1;
 
         if spins >= SPIN_TIMEOUT {
-            crate::drivers::serial::println("Clock test: TIMEOUT, timer IRQ kelmayapti!");
+            crate::drivers::serial::println(
+                "Clock test: TIMEOUT, timer IRQ kelmayapti!"
+            );
             return;
         }
 

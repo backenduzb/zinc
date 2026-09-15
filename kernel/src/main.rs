@@ -33,13 +33,20 @@ pub extern "C" fn kmain() -> ! {
     } else {
         crate::drivers::serial::println("ERROR: ACPI RSDP not found");
     }
+
     arch::init();
     time::init();
     memory::init();
 
+    crate::drivers::serial::println("BEFORE PMM TEST");
+
     memory::physical::test();
 
+    crate::drivers::serial::println("AFTER PMM TEST");
+
     time::clock::test();
+
+    crate::drivers::serial::println("AFTER CLOCK TEST");
 
     unsafe {
         c_test();

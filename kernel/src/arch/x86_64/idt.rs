@@ -60,7 +60,7 @@ pub fn init() {
         IDT[13] = IdtEntry::new(gp_fault_stub as *const () as usize);
         IDT[14] = IdtEntry::new(page_fault_stub as *const () as usize);
         IDT[32] = IdtEntry::new(timer_interrupt_stub as *const () as usize);
-
+        
         let pointer = IdtPointer {
             limit: (size_of::<[IdtEntry; 256]>() - 1) as u16,
             base: core::ptr::addr_of!(IDT) as u64,

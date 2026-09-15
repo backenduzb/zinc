@@ -59,11 +59,17 @@ pub extern "C" fn double_fault_handler(code: u64) -> ! {
 pub extern "C" fn timer_handler(
     frame: *mut crate::arch::x86_64::context::InterruptFrame,
 ) -> (u64, u64) {
-    TICKS.fetch_add(1, Ordering::Relaxed);
+    let tick = TICKS.fetch_add(1, Ordering::Relaxed) + 1;
 
-    let next = crate::task::scheduler_tick(frame);
+    if tick == 1 {
+        crate::drivers::serial::println("TIMER IRQ: FIRST");
+    }
+
+    if tick == 100 {
+        crate::drivers::serial::println("TIMER IRQ: 100");
+    }
 
     crate::drivers::timer::pic::end_of_interrupt();
 
-    next
+    (frame as u64, 0)
 }

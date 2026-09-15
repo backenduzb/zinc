@@ -416,4 +416,21 @@ impl VirtualMemoryManager {
 
         true
     }
+
+    pub fn create_ap_stack(&mut self, base: u64, size: u64) -> Option<u64> {
+        let page_count = size / PAGE_SIZE;
+    
+        for index in 0..page_count {
+            let frame = self.frame_allocator.alloc_frame()?;
+    
+            let virtual_address = base + index * PAGE_SIZE;
+    
+            if !self.map_page(virtual_address, frame.address, true, false) {
+                self.frame_allocator.free_frame(frame);
+                return None;
+            }
+        }
+    
+        Some(base + size - 8)
+    }
 }

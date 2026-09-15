@@ -11,8 +11,10 @@ pub mod smp;
 pub fn init() {
     gdt::init();
     idt::init();
+
     smp::init();
-    // disable_lapic_for_pic();
+
+    disable_lapic_for_pic();
 
     crate::drivers::timer::init();
 
