@@ -1,3 +1,5 @@
+use core::sync::atomic::{AtomicU64, Ordering};
+
 const LAPIC_DEFAULT_BASE: u64 = 0xFEE0_0000;
 
 const REG_ID: u64 = 0x020;
@@ -20,6 +22,8 @@ const ICR_LEVEL_ASSERT: u32 = 1 << 14;
 const ICR_TRIGGER_LEVEL: u32 = 1 << 15;
 
 const ICR_DELIVERY_STATUS: u32 = 1 << 12;
+
+pub static LAPIC_TICKS: AtomicU64 = AtomicU64::new(0); 
 
 static mut BASE: u64 = LAPIC_DEFAULT_BASE;
 
@@ -228,4 +232,13 @@ pub fn timer_debug_count() {
         crate::drivers::serial::print_u64(current as u64);
         crate::drivers::serial::println("");
     }
+}
+
+pub fn ticks() -> u64 {
+    LAPIC_TICKS.load(Ordering::Relaxed)
+}
+
+#[inline]
+pub fn tick() -> u64 {
+    LAPIC_TICKS.fetch_add(1, Ordering::Relaxed) + 1
 }

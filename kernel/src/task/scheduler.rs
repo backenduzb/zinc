@@ -150,12 +150,29 @@ impl Scheduler {
 
         self.reap_terminated();
 
-        let now = crate::arch::x86_64::interrupts::ticks();
-
+        let now = crate::arch::x86_64::lapic::ticks();
+        crate::drivers::serial::print("TIME=");
+        crate::drivers::serial::print_u64(now);
+        crate::drivers::serial::println("");
+        
         for thread in self.threads.iter_mut() {
             if let Some(thread) = thread.as_mut() {
-                if thread.state() == ThreadState::Sleeping && thread.wake_at() <= now {
-                    thread.set_state(ThreadState::Ready);
+                if thread.state() == ThreadState::Sleeping {
+                    crate::drivers::serial::print("SLEEP CHECK thread=");
+                    crate::drivers::serial::print_u64(thread.id());
+        
+                    crate::drivers::serial::print(" wake=");
+                    crate::drivers::serial::print_u64(thread.wake_at());
+        
+                    crate::drivers::serial::print(" now=");
+                    crate::drivers::serial::print_u64(now);
+        
+                    if thread.wake_at() <= now {
+                        thread.set_state(ThreadState::Ready);
+                        crate::drivers::serial::println(" -> WAKE");
+                    } else {
+                        crate::drivers::serial::println(" -> WAIT");
+                    }
                 }
             }
         }
@@ -249,8 +266,12 @@ impl Scheduler {
     }
 
     pub fn sleep_current(&mut self, ticks: u64) {
-        let now = crate::arch::x86_64::interrupts::ticks();
+        let now = crate::arch::x86_64::lapic::ticks();
 
+        crate::drivers::serial::print("TIME=");
+        crate::drivers::serial::print_u64(now);
+        crate::drivers::serial::println("");
+        
         if let Some(thread) = self.threads[self.current].as_mut() {
             thread.set_wake_at(now + ticks);
             thread.set_state(ThreadState::Sleeping);

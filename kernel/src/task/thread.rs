@@ -190,7 +190,7 @@ impl Thread {
     }
 
     pub fn sleep(&mut self, ticks: u64) {
-        let now = crate::arch::x86_64::interrupts::ticks();
+        let now = crate::arch::x86_64::lapic::ticks();
 
         self.wake_at = now + ticks;
         self.state = ThreadState::Sleeping;

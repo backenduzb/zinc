@@ -70,13 +70,11 @@ pub extern "C" fn timer_handler(
     (frame as u64, 0)
 }
 
-static LAPIC_TICKS: AtomicU64 = AtomicU64::new(0);
-
 #[unsafe(no_mangle)]
 pub extern "C" fn lapic_timer_handler(
     frame: *mut crate::arch::x86_64::context::InterruptFrame,
 ) -> (u64, u64) {
-    let ticks = LAPIC_TICKS.fetch_add(1, Ordering::Relaxed) + 1;
+    let ticks = crate::arch::x86_64::lapic::tick();
 
     crate::arch::x86_64::lapic::eoi();
 

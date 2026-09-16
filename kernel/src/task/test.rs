@@ -21,7 +21,7 @@ pub extern "C" fn thread_alpha() -> ! {
             crate::task::exit();
         }
 
-        crate::task::sleep(100);
+        crate::task::sleep(5);
     }
 }
 
@@ -51,7 +51,7 @@ pub extern "C" fn thread_beta() -> ! {
             crate::task::exit();
         }
 
-        crate::task::sleep(100);
+        crate::task::sleep(5);
     }
 }
 
@@ -71,7 +71,7 @@ pub extern "C" fn thread_silf() -> ! {
         crate::drivers::serial::print_u64(counter);
         crate::drivers::serial::println("");
 
-        crate::task::sleep(100);
+        crate::task::sleep(5);
 
         if counter == 4 {
             crate::drivers::serial::println("SILF: killing BETA!");
