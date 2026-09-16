@@ -45,6 +45,7 @@ pub struct PerCpu {
     pub scheduler: UnsafeCell<Scheduler>,
 
     online: AtomicBool,
+    timer_initialized: AtomicBool,
 }
 
 impl PerCpu {
@@ -59,6 +60,7 @@ impl PerCpu {
             scheduler: UnsafeCell::new(Scheduler::new()),
 
             online: AtomicBool::new(false),
+            timer_initialized: AtomicBool::new(false),
         }
     }
 
@@ -72,6 +74,14 @@ impl PerCpu {
 
     pub fn is_online(&self) -> bool {
         self.online.load(Ordering::Acquire)
+    }
+
+    pub fn set_timer_initialized(&self) {
+        self.timer_initialized.store(true, Ordering::Release);
+    }
+
+    pub fn is_timer_initialized(&self) -> bool {
+        self.timer_initialized.load(Ordering::Acquire)
     }
 
     pub fn current_cpu_id(&self) -> usize {
@@ -179,6 +189,13 @@ pub fn init_ap(cpu_id: usize, apic_id: u32) {
 pub fn is_online(cpu_id: usize) -> bool {
     match get(cpu_id) {
         Some(cpu) => cpu.is_online(),
+        None => false,
+    }
+}
+
+pub fn is_timer_initialized(cpu_id: usize) -> bool {
+    match get(cpu_id) {
+        Some(cpu) => cpu.is_timer_initialized(),
         None => false,
     }
 }

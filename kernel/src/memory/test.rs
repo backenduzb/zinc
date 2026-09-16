@@ -245,6 +245,10 @@ extern "C" fn after_address_space_switch() -> ! {
 
     crate::drivers::serial::println("STI: interrupts enabled");
 
+    crate::memory::heap::KERNEL_HEAP.init();
+
+    crate::drivers::serial::println("Kernel heap initialized");
+
     let ap_entry = crate::arch::x86_64::smp::trampoline::ap_main as *const () as usize as u64;
 
     let aps = [
@@ -293,10 +297,6 @@ extern "C" fn after_address_space_switch() -> ! {
     crate::drivers::serial::print("SMP: CPUs online = ");
     crate::drivers::serial::print_u64(online as u64);
     crate::drivers::serial::println("");
-
-    crate::memory::heap::KERNEL_HEAP.init();
-
-    crate::drivers::serial::println("Kernel heap initialized");
 
     let layout = match core::alloc::Layout::from_size_align(128, 8) {
         Ok(layout) => layout,

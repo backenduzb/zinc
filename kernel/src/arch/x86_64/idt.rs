@@ -97,3 +97,18 @@ pub fn init() {
 
     crate::drivers::serial::println("IDT initalized");
 }
+
+pub fn load_ap() {
+    unsafe {
+        let pointer = IdtPointer {
+            limit: (size_of::<[IdtEntry; 256]>() - 1) as u16,
+            base: core::ptr::addr_of!(IDT) as u64,
+        };
+
+        core::arch::asm!(
+            "lidt [{}]",
+            in(reg) &pointer,
+            options(readonly, nostack, preserves_flags)
+        );
+    }
+}

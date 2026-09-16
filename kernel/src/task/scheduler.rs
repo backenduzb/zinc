@@ -4,21 +4,40 @@ use crate::drivers::serial;
 use crate::task::thread::{self, ThreadID, ThreadState};
 
 const MAX_THREADS: usize = 8;
+const IDLE_SLOT: usize = MAX_THREADS - 1;
 
 pub struct Scheduler {
     threads: [Option<Thread>; MAX_THREADS],
     current: usize,
     count: usize,
     switches: u64,
+    ticks: u64,
 }
 
 impl Scheduler {
+    pub fn init_idle(&mut self, cpu_id: usize) {
+        if self.threads[IDLE_SLOT].is_some() {
+            return;
+        }
+
+        let idle = Thread::new(0, cpu_id, idle_thread);
+
+        self.threads[IDLE_SLOT] = Some(idle);
+        self.threads[IDLE_SLOT]
+            .as_mut()
+            .unwrap()
+            .set_state(ThreadState::Ready);
+
+        self.count += 1;
+    }
+
     pub const fn new() -> Self {
         Self {
             threads: [const { None }; MAX_THREADS],
             current: 0,
             count: 0,
             switches: 0,
+            ticks: 0,
         }
     }
 
@@ -68,9 +87,12 @@ impl Scheduler {
         }
 
         let current = self.current;
-
-        for offset in 1..=MAX_THREADS {
+        for offset in 1..MAX_THREADS {
             let index = (current + offset) % MAX_THREADS;
+
+            if index == IDLE_SLOT {
+                continue;
+            }
 
             if let Some(thread) = &self.threads[index] {
                 if thread.state() == ThreadState::Ready {
@@ -79,9 +101,9 @@ impl Scheduler {
             }
         }
 
-        if let Some(thread) = &self.threads[current] {
-            if thread.state() == ThreadState::Running {
-                return Some(current);
+        if let Some(thread) = &self.threads[IDLE_SLOT] {
+            if thread.state() == ThreadState::Ready || thread.state() == ThreadState::Running {
+                return Some(IDLE_SLOT);
             }
         }
 
@@ -150,23 +172,96 @@ impl Scheduler {
 
         self.reap_terminated();
 
+        if crate::arch::x86_64::smp::percpu::current_cpu_id() != 0 {
+            self.ticks = self.ticks.wrapping_add(1);
+
+            if self.ticks % 100 == 0 {
+                crate::drivers::serial::print("AP Scheduler tick: CPU=");
+                crate::drivers::serial::print_u64(
+                    crate::arch::x86_64::smp::percpu::current_cpu_id() as u64,
+                );
+                crate::drivers::serial::print(" ticks=");
+                crate::drivers::serial::print_u64(self.ticks);
+                crate::drivers::serial::println("");
+            }
+
+            if let Some(thread) = self.threads[self.current].as_mut() {
+                thread.set_interrupt_rsp(frame as u64);
+            }
+            
+            let now = crate::arch::x86_64::lapic::ticks();
+
+            for thread in self.threads.iter_mut() {
+                if let Some(thread) = thread.as_mut() {
+                    if thread.state() == ThreadState::Sleeping && thread.wake_at() <= now {
+                        thread.set_state(ThreadState::Ready);
+                    }
+                }
+            }
+
+            let next = match self.next() {
+                Some(index) => index,
+                None => {
+                    return (frame as u64, 0);
+                }
+            };
+
+            if next == self.current {
+                return (frame as u64, 0);
+            }
+
+            if let Some(thread) = self.threads[self.current].as_mut() {
+                if thread.state() == ThreadState::Running {
+                    thread.set_state(ThreadState::Ready);
+                }
+            }
+
+            if let Some(thread) = self.threads[next].as_mut() {
+                thread.set_state(ThreadState::Running);
+            }
+
+            self.current = next;
+            self.switches = self.switches.wrapping_add(1);
+
+            let fresh = match self.threads[next].as_mut() {
+                Some(thread) if thread.is_fresh() => {
+                    thread.mark_started();
+                    true
+                }
+                _ => false,
+            };
+
+            if fresh {
+                let thread = self.threads[next].as_ref().unwrap();
+
+                let stack = thread.stack_top();
+                let entry = thread.entry();
+
+                return (stack, entry);
+            } else {
+                let rsp = self.threads[next].as_ref().unwrap().interrupt_rsp();
+
+                return (rsp, 0);
+            }
+        }
+
         let now = crate::arch::x86_64::lapic::ticks();
         crate::drivers::serial::print("TIME=");
         crate::drivers::serial::print_u64(now);
         crate::drivers::serial::println("");
-        
+
         for thread in self.threads.iter_mut() {
             if let Some(thread) = thread.as_mut() {
                 if thread.state() == ThreadState::Sleeping {
                     crate::drivers::serial::print("SLEEP CHECK thread=");
                     crate::drivers::serial::print_u64(thread.id());
-        
+
                     crate::drivers::serial::print(" wake=");
                     crate::drivers::serial::print_u64(thread.wake_at());
-        
+
                     crate::drivers::serial::print(" now=");
                     crate::drivers::serial::print_u64(now);
-        
+
                     if thread.wake_at() <= now {
                         thread.set_state(ThreadState::Ready);
                         crate::drivers::serial::println(" -> WAKE");
@@ -178,18 +273,16 @@ impl Scheduler {
         }
 
         crate::drivers::serial::print("SCHED tick CPU=");
-        crate::drivers::serial::print_u64(
-            crate::arch::x86_64::smp::percpu::current_cpu_id() as u64
-        );
+        crate::drivers::serial::print_u64(crate::arch::x86_64::smp::percpu::current_cpu_id() as u64);
         crate::drivers::serial::print(" current=");
         crate::drivers::serial::print_u64(self.current as u64);
         crate::drivers::serial::print(" next=");
-        
+
         match self.next() {
             Some(index) => crate::drivers::serial::print_u64(index as u64),
             None => crate::drivers::serial::print_u64(99),
         }
-        
+
         crate::drivers::serial::println("");
 
         if let Some(thread) = self.threads[self.current].as_mut() {
@@ -212,7 +305,6 @@ impl Scheduler {
                 thread.set_state(ThreadState::Ready);
             }
         }
-        
 
         if let Some(thread) = self.threads[next].as_mut() {
             thread.set_state(ThreadState::Running);
@@ -239,24 +331,24 @@ impl Scheduler {
 
         if fresh {
             let thread = self.threads[next].as_ref().unwrap();
-        
+
             let stack = thread.stack_top();
             let entry = thread.entry();
-        
+
             crate::drivers::serial::print("FRESH SWITCH: slot=");
             crate::drivers::serial::print_u64(next as u64);
-        
+
             crate::drivers::serial::print(" thread=");
             crate::drivers::serial::print_u64(thread.id());
-        
+
             crate::drivers::serial::print(" entry=");
             crate::drivers::serial::print_u64(entry);
-        
+
             crate::drivers::serial::print(" stack=");
             crate::drivers::serial::print_u64(stack);
-        
+
             crate::drivers::serial::println("");
-        
+
             (stack, entry)
         } else {
             let rsp = self.threads[next].as_ref().unwrap().interrupt_rsp();
@@ -271,7 +363,7 @@ impl Scheduler {
         crate::drivers::serial::print("TIME=");
         crate::drivers::serial::print_u64(now);
         crate::drivers::serial::println("");
-        
+
         if let Some(thread) = self.threads[self.current].as_mut() {
             thread.set_wake_at(now + ticks);
             thread.set_state(ThreadState::Sleeping);
@@ -338,6 +430,10 @@ impl Scheduler {
 
     pub fn reap_terminated(&mut self) {
         for index in 0..MAX_THREADS {
+            if index == IDLE_SLOT {
+                continue;
+            }
+            
             if index == self.current {
                 continue;
             }
@@ -404,6 +500,15 @@ impl Scheduler {
             if state != Some(ThreadState::Waiting) {
                 break;
             }
+        }
+    }
+}
+
+extern "C" fn idle_thread() -> ! {
+    loop {
+        unsafe {
+            core::arch::asm!("sti");
+            core::arch::asm!("hlt");
         }
     }
 }

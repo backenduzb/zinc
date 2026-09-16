@@ -133,14 +133,138 @@ pub fn scheduler_test() -> ! {
             crate::drivers::serial::println("ERROR: failed to add SILF");
         }
 
+        (*scheduler).init_idle(0);
+
         crate::drivers::serial::println("ALPHA -> CPU 0");
         crate::drivers::serial::println("BETA  -> CPU 0");
         crate::drivers::serial::println("SILF  -> CPU 0");
+        crate::drivers::serial::println("IDLE  -> CPU 0");
 
-        crate::drivers::serial::println(
-            "Starting scheduler..."
-        );
+        crate::drivers::serial::println("Starting scheduler...");
 
         (*scheduler).start_first();
+    }
+}
+
+pub extern "C" fn thread_idle() -> ! {
+    loop {
+        unsafe {
+            core::arch::asm!("sti", "hlt");
+        }
+    }
+}
+
+pub const AP_BETA_ID: super::thread::ThreadID = 10;
+pub const AP_SILF_ID: super::thread::ThreadID = 11;
+pub const AP_GAMMA_ID: super::thread::ThreadID = 12;
+
+pub extern "C" fn ap_beta() -> ! {
+    unsafe {
+        core::arch::asm!("sti");
+    }
+
+    crate::drivers::serial::print("AP BETA started CPU=");
+    crate::drivers::serial::print_u64(crate::arch::x86_64::smp::percpu::current_cpu_id() as u64);
+    crate::drivers::serial::println("");
+
+    let mut counter: u64 = 0;
+
+    loop {
+        counter += 1;
+
+        if counter % 10 == 0 {
+            crate::drivers::serial::print("AP BETA CPU=");
+            crate::drivers::serial::print_u64(
+                crate::arch::x86_64::smp::percpu::current_cpu_id() as u64,
+            );
+            crate::drivers::serial::print(" counter=");
+            crate::drivers::serial::print_u64(counter);
+            crate::drivers::serial::println("");
+        }
+
+        if counter == 30 {
+            crate::drivers::serial::print("AP BETA exiting CPU=");
+            crate::drivers::serial::print_u64(
+                crate::arch::x86_64::smp::percpu::current_cpu_id() as u64,
+            );
+            crate::drivers::serial::println("");
+            crate::task::exit();
+        }
+
+        crate::task::sleep(5);
+    }
+}
+
+pub extern "C" fn ap_silf() -> ! {
+    unsafe {
+        core::arch::asm!("sti");
+    }
+
+    crate::drivers::serial::print("AP SILF started CPU=");
+    crate::drivers::serial::print_u64(crate::arch::x86_64::smp::percpu::current_cpu_id() as u64);
+    crate::drivers::serial::println("");
+
+    let mut counter: u64 = 0;
+
+    loop {
+        counter += 1;
+
+        if counter % 10 == 0 {
+            crate::drivers::serial::print("AP SILF CPU=");
+            crate::drivers::serial::print_u64(
+                crate::arch::x86_64::smp::percpu::current_cpu_id() as u64,
+            );
+            crate::drivers::serial::print(" counter=");
+            crate::drivers::serial::print_u64(counter);
+            crate::drivers::serial::println("");
+        }
+
+        if counter == 30 {
+            crate::drivers::serial::print("AP SILF exiting CPU=");
+            crate::drivers::serial::print_u64(
+                crate::arch::x86_64::smp::percpu::current_cpu_id() as u64,
+            );
+            crate::drivers::serial::println("");
+            crate::task::exit();
+        }
+
+        crate::task::sleep(5);
+    }
+}
+
+pub extern "C" fn ap_gamma() -> ! {
+    unsafe {
+        core::arch::asm!("sti");
+    }
+
+    crate::drivers::serial::print("AP GAMMA started CPU=");
+    crate::drivers::serial::print_u64(crate::arch::x86_64::smp::percpu::current_cpu_id() as u64);
+    crate::drivers::serial::println("");
+
+    let mut counter: u64 = 0;
+
+    loop {
+        counter += 1;
+
+        if counter % 10 == 0 {
+            crate::drivers::serial::print("AP GAMMA CPU=");
+            crate::drivers::serial::print_u64(
+                crate::arch::x86_64::smp::percpu::current_cpu_id() as u64,
+            );
+            crate::drivers::serial::print(" counter=");
+            crate::drivers::serial::print_u64(counter);
+            crate::drivers::serial::println("");
+        }
+
+        if counter == 30 {
+            crate::drivers::serial::print("AP GAMMA exiting CPU=");
+            crate::drivers::serial::print_u64(
+                crate::arch::x86_64::smp::percpu::current_cpu_id() as u64,
+            );
+            crate::drivers::serial::println("");
+            crate::task::exit();
+        }
+
+        crate::task::sleep(5);
     }
 }

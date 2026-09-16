@@ -74,6 +74,20 @@ pub extern "C" fn timer_handler(
 pub extern "C" fn lapic_timer_handler(
     frame: *mut crate::arch::x86_64::context::InterruptFrame,
 ) -> (u64, u64) {
+    let cpu_id = crate::arch::x86_64::smp::percpu::current_cpu_id();
+
+    if cpu_id != 0 {
+        crate::arch::x86_64::lapic::ap_tick(cpu_id);
+
+        crate::arch::x86_64::lapic::eoi();
+
+        if frame.is_null() {
+            return (frame as u64, 0);
+        }
+
+        return crate::task::scheduler_tick(frame);
+    }
+
     let ticks = crate::arch::x86_64::lapic::tick();
 
     crate::arch::x86_64::lapic::eoi();

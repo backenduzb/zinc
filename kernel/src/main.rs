@@ -37,7 +37,7 @@ pub extern "C" fn kmain() -> ! {
     arch::init();
     time::init();
     memory::init();
-
+    drivers::pci::init();
     crate::drivers::serial::println("BEFORE PMM TEST");
 
     memory::physical::test();

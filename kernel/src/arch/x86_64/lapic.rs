@@ -25,6 +25,11 @@ const ICR_DELIVERY_STATUS: u32 = 1 << 12;
 
 pub static LAPIC_TICKS: AtomicU64 = AtomicU64::new(0); 
 
+pub const MAX_AP_CPUS: usize = 16;
+static AP_TICKS: [AtomicU64; MAX_AP_CPUS] = [const { AtomicU64::new(0) }; MAX_AP_CPUS];
+
+pub const TIMER_INITIAL_COUNT: u32 = 10_000_000;
+
 static mut BASE: u64 = LAPIC_DEFAULT_BASE;
 
 const REG_LVT_TIMER: u64 = 0x320;
@@ -241,4 +246,48 @@ pub fn ticks() -> u64 {
 #[inline]
 pub fn tick() -> u64 {
     LAPIC_TICKS.fetch_add(1, Ordering::Relaxed) + 1
+}
+
+#[inline]
+pub fn ap_tick(cpu_id: usize) -> u64 {
+    if cpu_id >= MAX_AP_CPUS {
+        return 0;
+    }
+    AP_TICKS[cpu_id].fetch_add(1, Ordering::Relaxed) + 1
+}
+
+#[inline]
+pub fn ap_ticks(cpu_id: usize) -> u64 {
+    if cpu_id >= MAX_AP_CPUS {
+        return 0;
+    }
+    AP_TICKS[cpu_id].load(Ordering::Relaxed)
+}
+
+pub fn init_ap() {
+    let apic_id = id();
+    unsafe {
+        let svr = read(REG_SVR);
+        write(REG_SVR, (svr & 0xFF) | SVR_ENABLE | SPURIOUS_VECTOR);
+    }
+    crate::drivers::serial::print("AP LAPIC: enabled, ID = ");
+    crate::drivers::serial::print_u64(apic_id as u64);
+    crate::drivers::serial::println("");
+}
+
+pub fn timer_init_ap() {
+    unsafe {
+        write(REG_DIVIDE_CONFIG, 0x3);
+        write(REG_LVT_TIMER, TIMER_VECTOR as u32 | LVT_PERIODIC);
+        write(REG_INITIAL_COUNT, 0);
+    }
+}
+
+pub fn timer_start_ap(count: u32) {
+    unsafe {
+        write(REG_INITIAL_COUNT, count);
+    }
+    crate::drivers::serial::print("AP LAPIC: timer started, count = ");
+    crate::drivers::serial::print_u64(count as u64);
+    crate::drivers::serial::println("");
 }
