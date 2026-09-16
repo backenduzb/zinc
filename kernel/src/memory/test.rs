@@ -205,19 +205,36 @@ extern "C" fn after_address_space_switch() -> ! {
 
     crate::arch::x86_64::lapic::init(lapic_phys);
 
+    let bsp_apic_id = crate::arch::x86_64::lapic::id();
+
+    crate::drivers::serial::print("LAPIC ID after switch: ");
+    crate::drivers::serial::print_u64(bsp_apic_id as u64);
+    crate::drivers::serial::println("");
+
+    crate::arch::x86_64::smp::percpu::init_bsp(bsp_apic_id);
+
     crate::arch::x86_64::lapic::timer_init();
     crate::arch::x86_64::lapic::timer_start(10_000_000);
 
     crate::arch::x86_64::lapic::timer_debug_count();
+
     for _ in 0..1_000_000 {
         core::hint::spin_loop();
     }
+
     crate::arch::x86_64::lapic::timer_debug_count();
 
     let rflags: u64;
+
     unsafe {
-        core::arch::asm!("pushfq; pop {}", out(reg) rflags, options(nomem, preserves_flags));
+        core::arch::asm!(
+            "pushfq",
+            "pop {}",
+            out(reg) rflags,
+            options(nomem, preserves_flags)
+        );
     }
+
     crate::drivers::serial::print("RFLAGS.IF (1=enabled): ");
     crate::drivers::serial::print_u64((rflags >> 9) & 1);
     crate::drivers::serial::println("");
@@ -225,19 +242,8 @@ extern "C" fn after_address_space_switch() -> ! {
     unsafe {
         core::arch::asm!("sti", options(nomem, nostack, preserves_flags));
     }
+
     crate::drivers::serial::println("STI: interrupts enabled");
-    
-    let bsp_apic_id = crate::arch::x86_64::lapic::id();
-
-    crate::drivers::serial::print("LAPIC ID after switch: ");
-    crate::drivers::serial::print_u64(bsp_apic_id as u64);
-    crate::drivers::serial::println("");
-
-    crate::drivers::serial::print("LAPIC version after switch: 0x");
-    crate::drivers::serial::print_hex_u64(crate::arch::x86_64::lapic::version() as u64);
-    crate::drivers::serial::println("");
-
-    crate::arch::x86_64::smp::percpu::init_bsp(bsp_apic_id);
 
     let ap_entry = crate::arch::x86_64::smp::trampoline::ap_main as *const () as usize as u64;
 
@@ -307,11 +313,11 @@ extern "C" fn after_address_space_switch() -> ! {
     };
 
     let bsp = crate::arch::x86_64::smp::percpu::current();
-    
+
     crate::drivers::serial::print("SMP: current CPU = ");
     crate::drivers::serial::print_u64(bsp.cpu_id as u64);
     crate::drivers::serial::println("");
-    
+
     let ptr = unsafe { core::alloc::GlobalAlloc::alloc(&crate::memory::heap::KERNEL_HEAP, layout) };
 
     if ptr.is_null() {
@@ -338,11 +344,11 @@ extern "C" fn after_address_space_switch() -> ! {
         crate::drivers::serial::println("ERROR: Box allocation failed");
     }
 
-    // crate::task::test::scheduler_test();
+    crate::task::test::scheduler_test();
 
-    loop {
-        unsafe {
-            core::arch::asm!("hlt");
-        }
-    }
+    // loop {
+    //     unsafe {
+    //         core::arch::asm!("hlt");
+    //     }
+    // }
 }

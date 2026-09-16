@@ -14,9 +14,7 @@ pub extern "C" fn divide_error() -> ! {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn gp_fault_handler(code: u64) -> ! {
-    crate::drivers::serial::print(
-        "EXCEPTION: General Protection Fault (#GP), code=",
-    );
+    crate::drivers::serial::print("EXCEPTION: General Protection Fault (#GP), code=");
     crate::drivers::serial::print_u64(code);
     crate::drivers::serial::println("");
 
@@ -46,9 +44,7 @@ pub extern "C" fn page_fault_handler(code: u64) -> ! {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn double_fault_handler(code: u64) -> ! {
-    crate::drivers::serial::print(
-        "EXCEPTION: Double Fault (#DF), code=",
-    );
+    crate::drivers::serial::print("EXCEPTION: Double Fault (#DF), code=");
     crate::drivers::serial::print_u64(code);
     crate::drivers::serial::println("");
 
@@ -77,12 +73,23 @@ pub extern "C" fn timer_handler(
 static LAPIC_TICKS: AtomicU64 = AtomicU64::new(0);
 
 #[unsafe(no_mangle)]
-pub extern "C" fn lapic_timer_handler() {
+pub extern "C" fn lapic_timer_handler(
+    frame: *mut crate::arch::x86_64::context::InterruptFrame,
+) -> (u64, u64) {
     let ticks = LAPIC_TICKS.fetch_add(1, Ordering::Relaxed) + 1;
 
     crate::arch::x86_64::lapic::eoi();
 
-    crate::drivers::serial::print("LAPIC TIMER: ");
-    crate::drivers::serial::print_u64(ticks);
-    crate::drivers::serial::println("");
+    if ticks <= 20 {
+        crate::drivers::serial::print("LAPIC TIMER: ");
+        crate::drivers::serial::print_u64(ticks);
+        crate::drivers::serial::println("");
+    }
+
+    if frame.is_null() {
+        crate::drivers::serial::println("LAPIC TIMER: BAD FRAME");
+        return (frame as u64, 0);
+    }
+
+    crate::task::scheduler_tick(frame)
 }

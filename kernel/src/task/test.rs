@@ -112,22 +112,33 @@ pub extern "C" fn thread_silf() -> ! {
 // }
 
 pub fn scheduler_test() -> ! {
-    crate::drivers::serial::println("=== JOIN TEST ===");
+    crate::drivers::serial::println("=== SCHEDULER TEST ===");
 
-    let thread_a = Thread::new(1, thread_alpha);
-    let thread_b = Thread::new(2, thread_beta);
+    let thread_a = Thread::new(1, 0, thread_alpha);
+    let thread_b = Thread::new(2, 0, thread_beta);
+    let thread_s = Thread::new(3, 0, thread_silf);
 
     unsafe {
         let scheduler = crate::task::scheduler();
 
-        (*scheduler).add_thread(thread_a);
-        (*scheduler).add_thread(thread_b);
+        if !(*scheduler).add_thread(thread_a, 0) {
+            crate::drivers::serial::println("ERROR: failed to add ALPHA");
+        }
 
-        crate::drivers::serial::println("Thread A added");
-        crate::drivers::serial::println("Thread B added");
+        if !(*scheduler).add_thread(thread_b, 0) {
+            crate::drivers::serial::println("ERROR: failed to add BETA");
+        }
+
+        if !(*scheduler).add_thread(thread_s, 0) {
+            crate::drivers::serial::println("ERROR: failed to add SILF");
+        }
+
+        crate::drivers::serial::println("ALPHA -> CPU 0");
+        crate::drivers::serial::println("BETA  -> CPU 0");
+        crate::drivers::serial::println("SILF  -> CPU 0");
 
         crate::drivers::serial::println(
-            "Starting scheduler (preemptive, timer-driven)..."
+            "Starting scheduler..."
         );
 
         (*scheduler).start_first();

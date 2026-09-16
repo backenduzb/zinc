@@ -1,4 +1,10 @@
-use crate::{arch::x86_64::{context::{CpuContext, InterruptFrame}, paging::PageTable}, task::thread::ThreadState::Terminated};
+use crate::{
+    arch::x86_64::{
+        context::{CpuContext, InterruptFrame},
+        paging::PageTable,
+    },
+    task::thread::ThreadState::Terminated,
+};
 use alloc::boxed::Box;
 
 pub type ThreadID = u64;
@@ -23,6 +29,7 @@ pub struct Thread {
     id: ThreadID,
     state: ThreadState,
     started: bool,
+    cpu_id: usize,
     context: CpuContext,
     interrupt_rsp: u64,
     stack_top: u64,
@@ -33,7 +40,7 @@ pub struct Thread {
 }
 
 impl Thread {
-    pub fn new(id: ThreadID, entry: extern "C" fn() -> !) -> Self {
+    pub fn new(id: ThreadID, cpu_id: usize, entry: extern "C" fn() -> !) -> Self {
         let stack = Box::new(KernelStack {
             data: [0; KERNEL_STACK_SIZE],
         });
@@ -42,6 +49,7 @@ impl Thread {
             id,
             state: ThreadState::Ready,
             started: false,
+            cpu_id,
             context: CpuContext::empty(),
             interrupt_rsp: 0,
             stack_top: 0,
@@ -123,7 +131,7 @@ impl Thread {
 
         self.interrupt_rsp = rsp as u64;
     }
-    
+
     pub fn interrupt_rsp(&self) -> u64 {
         self.interrupt_rsp
     }
@@ -175,7 +183,7 @@ impl Thread {
     pub fn set_wake_at(&mut self, ticks: u64) {
         self.wake_at = ticks;
     }
-    
+
     pub fn sleep_until(&mut self, wake_at: u64) {
         self.wake_at = wake_at;
         self.state = ThreadState::Sleeping;
@@ -183,11 +191,11 @@ impl Thread {
 
     pub fn sleep(&mut self, ticks: u64) {
         let now = crate::arch::x86_64::interrupts::ticks();
-    
+
         self.wake_at = now + ticks;
         self.state = ThreadState::Sleeping;
     }
-    
+
     pub fn exit(&mut self) {
         self.state = ThreadState::Terminated;
     }
@@ -202,5 +210,13 @@ impl Thread {
 
     pub fn set_waiting_for(&mut self, id: Option<ThreadID>) {
         self.waiting_for = id;
+    }
+
+    pub fn cpu_id(&self) -> usize {
+        self.cpu_id
+    }
+    
+    pub fn set_cpu_id(&mut self, cpu_id: usize) {
+        self.cpu_id = cpu_id;
     }
 }

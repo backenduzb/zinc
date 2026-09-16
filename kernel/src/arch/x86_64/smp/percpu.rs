@@ -3,7 +3,7 @@ use core::{
     sync::atomic::{AtomicBool, Ordering},
 };
 
-use crate::arch::x86_64::tss::TaskStateSegment;
+use crate::{arch::x86_64::tss::TaskStateSegment, task::scheduler::Scheduler};
 
 pub const MAX_CPUS: usize = 16;
 const IA32_GS_BASE: u32 = 0xC0000101;
@@ -42,6 +42,8 @@ pub struct PerCpu {
     pub gdt: UnsafeCell<PerCpuGdt>,
     pub tss: UnsafeCell<TaskStateSegment>,
 
+    pub scheduler: UnsafeCell<Scheduler>,
+
     online: AtomicBool,
 }
 
@@ -50,8 +52,12 @@ impl PerCpu {
         Self {
             cpu_id,
             apic_id: 0,
+
             gdt: UnsafeCell::new(PerCpuGdt::new()),
             tss: UnsafeCell::new(TaskStateSegment::new()),
+
+            scheduler: UnsafeCell::new(Scheduler::new()),
+
             online: AtomicBool::new(false),
         }
     }
@@ -66,6 +72,10 @@ impl PerCpu {
 
     pub fn is_online(&self) -> bool {
         self.online.load(Ordering::Acquire)
+    }
+
+    pub fn current_cpu_id(&self) -> usize {
+        self.cpu_id
     }
 }
 
@@ -106,16 +116,15 @@ pub fn init_bsp(apic_id: u32) {
     unsafe {
         let gdt = &mut *cpu.gdt.get();
         let tss = &*cpu.tss.get();
-    
+
         crate::arch::x86_64::gdt::load_for_cpu(gdt, tss);
     }
     crate::drivers::serial::println("TSS: LTR loaded");
-    
+
     let rsp0 = unsafe { (*cpu.tss.get()).rsp[0] };
 
     let tss = unsafe { &*cpu.tss.get() };
 
-    
     crate::arch::x86_64::gdt::load_tss(tss);
 
     crate::drivers::serial::print("CPU 0 TSS RSP0 = ");
@@ -146,7 +155,7 @@ pub fn init_ap(cpu_id: usize, apic_id: u32) {
     unsafe {
         let gdt = &mut *cpu.gdt.get();
         let tss = &*cpu.tss.get();
-    
+
         crate::arch::x86_64::gdt::load_for_cpu(gdt, tss);
     }
     crate::drivers::serial::println("TSS: LTR loaded");
@@ -208,4 +217,16 @@ pub fn kernel_stack_top(cpu_id: usize) -> u64 {
 
         stack.0.as_ptr() as u64 + KERNEL_STACK_SIZE as u64
     }
+}
+
+pub fn current_scheduler() -> &'static mut Scheduler {
+    let cpu = current();
+
+    unsafe {
+        &mut *cpu.scheduler.get()
+    }
+}
+
+pub fn current_cpu_id() -> usize {
+    current().cpu_id
 }

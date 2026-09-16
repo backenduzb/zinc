@@ -22,7 +22,11 @@ impl Scheduler {
         }
     }
 
-    pub fn add_thread(&mut self, thread: Thread) -> bool {
+    pub fn add_thread(&mut self, thread: Thread, cpu_id: usize) -> bool {
+        if thread.cpu_id() != cpu_id {
+            return false;
+        }
+
         if self.count >= MAX_THREADS {
             return false;
         }
@@ -156,6 +160,21 @@ impl Scheduler {
             }
         }
 
+        crate::drivers::serial::print("SCHED tick CPU=");
+        crate::drivers::serial::print_u64(
+            crate::arch::x86_64::smp::percpu::current_cpu_id() as u64
+        );
+        crate::drivers::serial::print(" current=");
+        crate::drivers::serial::print_u64(self.current as u64);
+        crate::drivers::serial::print(" next=");
+        
+        match self.next() {
+            Some(index) => crate::drivers::serial::print_u64(index as u64),
+            None => crate::drivers::serial::print_u64(99),
+        }
+        
+        crate::drivers::serial::println("");
+
         if let Some(thread) = self.threads[self.current].as_mut() {
             thread.set_interrupt_rsp(frame as u64);
         }
@@ -176,6 +195,7 @@ impl Scheduler {
                 thread.set_state(ThreadState::Ready);
             }
         }
+        
 
         if let Some(thread) = self.threads[next].as_mut() {
             thread.set_state(ThreadState::Running);
@@ -202,8 +222,25 @@ impl Scheduler {
 
         if fresh {
             let thread = self.threads[next].as_ref().unwrap();
-
-            (thread.stack_top(), thread.entry())
+        
+            let stack = thread.stack_top();
+            let entry = thread.entry();
+        
+            crate::drivers::serial::print("FRESH SWITCH: slot=");
+            crate::drivers::serial::print_u64(next as u64);
+        
+            crate::drivers::serial::print(" thread=");
+            crate::drivers::serial::print_u64(thread.id());
+        
+            crate::drivers::serial::print(" entry=");
+            crate::drivers::serial::print_u64(entry);
+        
+            crate::drivers::serial::print(" stack=");
+            crate::drivers::serial::print_u64(stack);
+        
+            crate::drivers::serial::println("");
+        
+            (stack, entry)
         } else {
             let rsp = self.threads[next].as_ref().unwrap().interrupt_rsp();
 

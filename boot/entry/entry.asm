@@ -27,10 +27,6 @@ _start:
     jmp .start_hang
 
 
-; ============================================================
-; PIT / PIC timer interrupt
-; ============================================================
-
 timer_interrupt_stub:
     push rax
     push rbx
@@ -52,10 +48,6 @@ timer_interrupt_stub:
 
     mov rdi, rsp
     call timer_handler
-
-    ; rax = resume frame / stack
-    ; rdx = 0 -> normal return
-    ; rdx != 0 -> fresh thread entry
 
     mov rsp, rax
 
@@ -86,10 +78,6 @@ timer_fresh_thread:
     jmp rdx
 
 
-; ============================================================
-; LAPIC timer interrupt
-; ============================================================
-
 lapic_timer_interrupt_stub:
     push rax
     push rbx
@@ -109,7 +97,13 @@ lapic_timer_interrupt_stub:
 
     cld
 
+    mov rdi, rsp
     call lapic_timer_handler
+
+    test rdx, rdx
+    jnz lapic_timer_fresh_thread
+
+    mov rsp, rax
 
     pop r15
     pop r14
@@ -130,10 +124,12 @@ lapic_timer_interrupt_stub:
     iretq
 
 
-; ============================================================
-; General Protection Fault
-; ============================================================
+lapic_timer_fresh_thread:
 
+    mov rsp, rax
+    cld
+    jmp rdx
+    
 gp_fault_stub:
     pop rdi
     call gp_fault_handler

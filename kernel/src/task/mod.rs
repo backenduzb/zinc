@@ -7,12 +7,25 @@ use scheduler::Scheduler;
 use thread::ThreadState;
 
 use crate::task::thread::ThreadID;
+use crate::arch::x86_64::smp::percpu::MAX_CPUS;
 
-pub static mut SCHEDULER: Scheduler = Scheduler::new();
+
+pub static mut SCHEDULERS: [Scheduler; MAX_CPUS] = [
+    const { Scheduler::new() };
+    MAX_CPUS
+];
 
 #[inline]
 pub fn scheduler() -> *mut Scheduler {
-    core::ptr::addr_of_mut!(SCHEDULER)
+    let cpu_id = crate::arch::x86_64::smp::percpu::current_cpu_id();
+
+    if cpu_id >= MAX_CPUS {
+        panic!("SMP: invalid CPU ID");
+    }
+
+    unsafe {
+        core::ptr::addr_of_mut!(SCHEDULERS[cpu_id])
+    }
 }
 
 pub fn sleep(ticks: u64) {
