@@ -5,15 +5,17 @@ pub mod test;
 
 use scheduler::Scheduler;
 use thread::ThreadState;
+use process::ProcessManager;
 
 use crate::task::thread::ThreadID;
 use crate::arch::x86_64::smp::percpu::MAX_CPUS;
-
 
 pub static mut SCHEDULERS: [Scheduler; MAX_CPUS] = [
     const { Scheduler::new() };
     MAX_CPUS
 ];
+
+pub static mut PROCESS_MANAGER: ProcessManager = ProcessManager::new();
 
 #[inline]
 pub fn scheduler() -> *mut Scheduler {
@@ -25,6 +27,13 @@ pub fn scheduler() -> *mut Scheduler {
 
     unsafe {
         core::ptr::addr_of_mut!(SCHEDULERS[cpu_id])
+    }
+}
+
+#[inline]
+pub fn process_manager() -> *mut ProcessManager {
+    unsafe {
+        core::ptr::addr_of_mut!(PROCESS_MANAGER)
     }
 }
 

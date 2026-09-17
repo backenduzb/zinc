@@ -1,10 +1,5 @@
 use alloc::vec::Vec;
 
-use crate::task::{
-    process,
-    thread::{self, Thread},
-};
-
 use super::thread::ThreadID;
 
 pub type ProcessID = u64;
@@ -21,11 +16,6 @@ pub struct Process {
     id: ProcessID,
     state: ProcessState,
     threads: Vec<ThreadID>,
-}
-
-pub struct ProcessManager {
-    processes: Vec<Process>,
-    next_pid: ProcessID,
 }
 
 impl Process {
@@ -73,8 +63,14 @@ impl Process {
         self.state == ProcessState::Terminated
     }
 }
+
+pub struct ProcessManager {
+    processes: Vec<Process>,
+    next_pid: ProcessID,
+}
+
 impl ProcessManager {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             processes: Vec::new(),
             next_pid: 1,

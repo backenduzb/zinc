@@ -104,8 +104,6 @@ pub extern "C" fn ap_main() -> ! {
     crate::drivers::serial::print_u64(cpu.apic_id as u64);
     crate::drivers::serial::println("");
 
-    let cpu = crate::arch::x86_64::smp::percpu::current();
-
     crate::drivers::serial::print("AP: GS CPU ID = ");
     crate::drivers::serial::print_u64(cpu.cpu_id as u64);
     crate::drivers::serial::println("");
@@ -114,18 +112,28 @@ pub extern "C" fn ap_main() -> ! {
     crate::drivers::serial::print_u64(cpu.apic_id as u64);
     crate::drivers::serial::println("");
 
-    let cpu = crate::arch::x86_64::smp::percpu::current();
-
     crate::drivers::serial::print("SMP: GS current CPU = ");
     crate::drivers::serial::print_u64(cpu.cpu_id as u64);
     crate::drivers::serial::println("");
 
+    /*
+     * Load AP-local IDT.
+     */
     crate::arch::x86_64::idt::load_ap();
 
+    /*
+     * Enable local APIC on this CPU.
+     */
     crate::arch::x86_64::lapic::init_ap();
 
+    /*
+     * Initialize and start AP-local LAPIC timer.
+     */
     crate::arch::x86_64::lapic::timer_init_ap();
-    crate::arch::x86_64::lapic::timer_start_ap(crate::arch::x86_64::lapic::TIMER_INITIAL_COUNT);
+
+    crate::arch::x86_64::lapic::timer_start_ap(
+        crate::arch::x86_64::lapic::TIMER_INITIAL_COUNT
+    );
 
     let cpu = crate::arch::x86_64::smp::percpu::current();
     cpu.set_timer_initialized();
@@ -134,12 +142,20 @@ pub extern "C" fn ap_main() -> ! {
     crate::drivers::serial::print_u64(cpu.cpu_id as u64);
     crate::drivers::serial::println("");
 
-    let cpu_id = crate::arch::x86_64::smp::percpu::current_cpu_id();
-
+    /*
+     * Initialize scheduler and test thread for this AP.
+     */
     if cpu_id != 0 && cpu_id < crate::arch::x86_64::smp::percpu::MAX_CPUS {
-        use crate::task::test::{AP_BETA_ID, AP_GAMMA_ID, AP_SILF_ID};
+        use crate::task::test::{
+            AP_BETA_ID,
+            AP_GAMMA_ID,
+            AP_SILF_ID,
+        };
         use crate::task::thread::Thread;
 
+        /*
+         * Every CPU has its own scheduler-local idle thread.
+         */
         unsafe {
             crate::task::SCHEDULERS[cpu_id].init_idle(cpu_id);
         }
@@ -148,59 +164,114 @@ pub extern "C" fn ap_main() -> ! {
         crate::drivers::serial::print_u64(cpu_id as u64);
         crate::drivers::serial::println("");
 
-        let (thread, name) = match cpu_id {
+        /*
+         * Thread::new(
+         *     thread_id,
+         *     cpu_id,
+         *     process_id,
+         *     entry
+         * )
+         *
+         * All AP test threads belong to kernel process PID 0.
+         */
+        let (thread, name, thread_id) = match cpu_id {
             1 => (
                 Thread::new(
                     AP_BETA_ID,
-                    0, 
-                    1, 
+                    cpu_id,
+                    0,
                     crate::task::test::ap_beta,
                 ),
                 "AP_BETA",
+                AP_BETA_ID,
             ),
 
             2 => (
                 Thread::new(
                     AP_SILF_ID,
-                    0, 
-                    2, 
+                    cpu_id,
+                    0,
                     crate::task::test::ap_silf,
                 ),
                 "AP_SILF",
+                AP_SILF_ID,
             ),
 
             3 => (
                 Thread::new(
                     AP_GAMMA_ID,
-                    0, 
-                    3, 
+                    cpu_id,
+                    0,
                     crate::task::test::ap_gamma,
                 ),
                 "AP_GAMMA",
+                AP_GAMMA_ID,
             ),
 
             _ => {
-                crate::drivers::serial::print("AP Scheduler: no test thread for CPU=");
+                crate::drivers::serial::print(
+                    "AP Scheduler: no test thread for CPU=",
+                );
                 crate::drivers::serial::print_u64(cpu_id as u64);
                 crate::drivers::serial::println("");
 
-                unsafe {
-                    crate::task::SCHEDULERS[cpu_id].start_first();
+                loop {
+                    unsafe {
+                        core::arch::asm!("hlt");
+                    }
                 }
             }
         };
 
-        unsafe {
-            if !crate::task::SCHEDULERS[cpu_id].add_thread(thread, cpu_id) {
-                crate::drivers::serial::print("ERROR: failed to add ");
-                crate::drivers::serial::println(name);
-            } else {
-                crate::drivers::serial::print(name);
-                crate::drivers::serial::print(" -> CPU ");
-                crate::drivers::serial::print_u64(cpu_id as u64);
-                crate::drivers::serial::println("");
+        /*
+         * Add thread to this CPU's scheduler.
+         */
+        let added = unsafe {
+            crate::task::SCHEDULERS[cpu_id]
+                .add_thread(thread, cpu_id)
+        };
+
+        if !added {
+            crate::drivers::serial::print("ERROR: failed to add ");
+            crate::drivers::serial::println(name);
+
+            /*
+             * Do not start an empty/broken AP scheduler.
+             */
+            loop {
+                unsafe {
+                    core::arch::asm!("hlt");
+                }
             }
         }
+
+        
+        // let registered = unsafe {
+        //     (*crate::task::process_manager())
+        //         .add_thread(0, thread_id)
+        // };
+
+        // if !registered {
+        //     crate::drivers::serial::print("ERROR: failed to register ");
+        //     crate::drivers::serial::println(name);
+
+        //     loop {
+        //         unsafe {
+        //             core::arch::asm!("hlt");
+        //         }
+        //     }
+        // }
+
+        
+        crate::drivers::serial::print(name);
+        crate::drivers::serial::print(" -> CPU ");
+        crate::drivers::serial::print_u64(cpu_id as u64);
+        crate::drivers::serial::println("");
+
+        crate::drivers::serial::print(name);
+        crate::drivers::serial::print(" -> PID 0, TID ");
+        crate::drivers::serial::print_u64(thread_id as u64);
+        crate::drivers::serial::println("");
 
         unsafe {
             crate::task::SCHEDULERS[cpu_id].start_first();
@@ -208,10 +279,14 @@ pub extern "C" fn ap_main() -> ! {
     }
 
     unsafe {
-        core::arch::asm!("sti", options(nomem, nostack, preserves_flags));
+        core::arch::asm!(
+            "sti",
+            options(nomem, nostack, preserves_flags)
+        );
     }
 
     let rflags: u64;
+
     unsafe {
         core::arch::asm!(
             "pushfq",
@@ -220,8 +295,10 @@ pub extern "C" fn ap_main() -> ! {
             options(nomem, preserves_flags)
         );
     }
+
     crate::drivers::serial::print("AP: interrupts enabled, CPU=");
     crate::drivers::serial::print_u64(cpu_id as u64);
+
     crate::drivers::serial::print(" IF=");
     crate::drivers::serial::print_u64((rflags >> 9) & 1);
     crate::drivers::serial::println("");

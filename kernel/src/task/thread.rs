@@ -2,7 +2,8 @@ use crate::{
     arch::x86_64::{
         context::{CpuContext, InterruptFrame},
         paging::PageTable,
-    }, task::{process::ProcessID, thread::ThreadState::Terminated},
+    },
+    task::{process::ProcessID, thread::ThreadState::Terminated},
 };
 use alloc::boxed::Box;
 
@@ -40,7 +41,12 @@ pub struct Thread {
 }
 
 impl Thread {
-    pub fn new(id: ThreadID, cpu_id: usize, process_id: ProcessID, entry: extern "C" fn() -> !) -> Self {
+    pub fn new(
+        id: ThreadID,
+        cpu_id: usize,
+        process_id: ProcessID,
+        entry: extern "C" fn() -> !,
+    ) -> Self {
         let stack = Box::new(KernelStack {
             data: [0; KERNEL_STACK_SIZE],
         });
@@ -220,7 +226,7 @@ impl Thread {
     pub fn cpu_id(&self) -> usize {
         self.cpu_id
     }
-    
+
     pub fn set_cpu_id(&mut self, cpu_id: usize) {
         self.cpu_id = cpu_id;
     }

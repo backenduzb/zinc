@@ -298,6 +298,45 @@ extern "C" fn after_address_space_switch() -> ! {
     crate::drivers::serial::print_u64(online as u64);
     crate::drivers::serial::println("");
 
+    let kernel_created = unsafe { (*crate::task::process_manager()).create_with_pid(0) };
+
+    if !kernel_created {
+        crate::drivers::serial::println("ERROR: failed to create kernel process");
+    } else {
+        crate::drivers::serial::println("Process manager: initialized");
+
+        crate::drivers::serial::println("Kernel process: PID=0");
+
+
+        unsafe {
+            let pm = crate::task::process_manager();
+
+            let beta = (*pm).add_thread(0, crate::task::test::AP_BETA_ID);
+
+            let silf = (*pm).add_thread(0, crate::task::test::AP_SILF_ID);
+
+            let gamma = (*pm).add_thread(0, crate::task::test::AP_GAMMA_ID);
+
+            if beta && silf && gamma {
+                crate::drivers::serial::println("AP threads registered to kernel process");
+            } else {
+                crate::drivers::serial::println("ERROR: failed to register AP threads");
+
+                if !beta {
+                    crate::drivers::serial::println("  AP_BETA registration failed");
+                }
+
+                if !silf {
+                    crate::drivers::serial::println("  AP_SILF registration failed");
+                }
+
+                if !gamma {
+                    crate::drivers::serial::println("  AP_GAMMA registration failed");
+                }
+            }
+        }
+    }
+
     let layout = match core::alloc::Layout::from_size_align(128, 8) {
         Ok(layout) => layout,
 
@@ -315,7 +354,9 @@ extern "C" fn after_address_space_switch() -> ! {
     let bsp = crate::arch::x86_64::smp::percpu::current();
 
     crate::drivers::serial::print("SMP: current CPU = ");
+
     crate::drivers::serial::print_u64(bsp.cpu_id as u64);
+
     crate::drivers::serial::println("");
 
     let ptr = unsafe { core::alloc::GlobalAlloc::alloc(&crate::memory::heap::KERNEL_HEAP, layout) };
@@ -345,10 +386,4 @@ extern "C" fn after_address_space_switch() -> ! {
     }
 
     crate::task::test::scheduler_test();
-
-    // loop {
-    //     unsafe {
-    //         core::arch::asm!("hlt");
-    //     }
-    // }
 }

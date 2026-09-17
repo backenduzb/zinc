@@ -120,17 +120,24 @@ pub fn scheduler_test() -> ! {
 
     unsafe {
         let scheduler = crate::task::scheduler();
+        let process_manager = crate::task::process_manager();
 
         if !(*scheduler).add_thread(thread_a, 0) {
             crate::drivers::serial::println("ERROR: failed to add ALPHA");
+        } else {
+            (*process_manager).add_thread(0, 1);
         }
 
         if !(*scheduler).add_thread(thread_b, 0) {
             crate::drivers::serial::println("ERROR: failed to add BETA");
+        } else {
+            (*process_manager).add_thread(0, 2);
         }
 
         if !(*scheduler).add_thread(thread_s, 0) {
             crate::drivers::serial::println("ERROR: failed to add SILF");
+        } else {
+            (*process_manager).add_thread(0, 3);
         }
 
         (*scheduler).init_idle(0);
@@ -139,6 +146,12 @@ pub fn scheduler_test() -> ! {
         crate::drivers::serial::println("BETA  -> CPU 0");
         crate::drivers::serial::println("SILF  -> CPU 0");
         crate::drivers::serial::println("IDLE  -> CPU 0");
+
+        if let Some(process) = (*process_manager).get(0) {
+            crate::drivers::serial::print("Kernel process threads: ");
+            crate::drivers::serial::print_u64(process.thread_count() as u64);
+            crate::drivers::serial::println("");
+        }
 
         crate::drivers::serial::println("Starting scheduler...");
 

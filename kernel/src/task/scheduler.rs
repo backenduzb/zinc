@@ -21,13 +21,13 @@ impl Scheduler {
         }
 
         let idle = Thread::new(0, cpu_id, 0, idle_thread);
-
+    
         self.threads[IDLE_SLOT] = Some(idle);
         self.threads[IDLE_SLOT]
             .as_mut()
             .unwrap()
             .set_state(ThreadState::Ready);
-
+    
         self.count += 1;
     }
 
@@ -173,12 +173,13 @@ impl Scheduler {
         self.reap_terminated();
 
         if crate::arch::x86_64::smp::percpu::current_cpu_id() != 0 {
+            let cpu = crate::arch::x86_64::smp::percpu::current_cpu_id();
             self.ticks = self.ticks.wrapping_add(1);
 
             if self.ticks % 100 == 0 {
                 crate::drivers::serial::print("AP Scheduler tick: CPU=");
                 crate::drivers::serial::print_u64(
-                    crate::arch::x86_64::smp::percpu::current_cpu_id() as u64,
+                    cpu as u64,
                 );
                 crate::drivers::serial::print(" ticks=");
                 crate::drivers::serial::print_u64(self.ticks);
@@ -195,6 +196,12 @@ impl Scheduler {
                 if let Some(thread) = thread.as_mut() {
                     if thread.state() == ThreadState::Sleeping && thread.wake_at() <= now {
                         thread.set_state(ThreadState::Ready);
+                        // Transition-only: wake (no per-IRQ spam).
+                        crate::drivers::serial::print("CPU=");
+                        crate::drivers::serial::print_u64(cpu as u64);
+                        crate::drivers::serial::print(" TID=");
+                        crate::drivers::serial::print_u64(thread.id());
+                        crate::drivers::serial::println(" WAKE");
                     }
                 }
             }
@@ -210,6 +217,10 @@ impl Scheduler {
                 return (frame as u64, 0);
             }
 
+            let prev = self.current;
+            let prev_tid = self.threads[prev].as_ref().map(|t| t.id()).unwrap_or(99);
+            let next_tid = self.threads[next].as_ref().map(|t| t.id()).unwrap_or(99);
+
             if let Some(thread) = self.threads[self.current].as_mut() {
                 if thread.state() == ThreadState::Running {
                     thread.set_state(ThreadState::Ready);
@@ -222,6 +233,28 @@ impl Scheduler {
 
             self.current = next;
             self.switches = self.switches.wrapping_add(1);
+
+            // Transition-only: context switch (no per-IRQ spam).
+            crate::drivers::serial::print("CPU=");
+            crate::drivers::serial::print_u64(cpu as u64);
+            crate::drivers::serial::print(" current=");
+            crate::drivers::serial::print_u64(prev as u64);
+            crate::drivers::serial::print(" -> next=");
+            crate::drivers::serial::print_u64(next as u64);
+            crate::drivers::serial::println("");
+            if prev == IDLE_SLOT && next != IDLE_SLOT {
+                crate::drivers::serial::print("CPU=");
+                crate::drivers::serial::print_u64(cpu as u64);
+                crate::drivers::serial::print(" IDLE -> TID=");
+                crate::drivers::serial::print_u64(next_tid);
+                crate::drivers::serial::println("");
+            } else if prev != IDLE_SLOT && next == IDLE_SLOT {
+                crate::drivers::serial::print("CPU=");
+                crate::drivers::serial::print_u64(cpu as u64);
+                crate::drivers::serial::print(" TID=");
+                crate::drivers::serial::print_u64(prev_tid);
+                crate::drivers::serial::println(" -> IDLE");
+            }
 
             let fresh = match self.threads[next].as_mut() {
                 Some(thread) if thread.is_fresh() => {
@@ -359,6 +392,7 @@ impl Scheduler {
 
     pub fn sleep_current(&mut self, ticks: u64) {
         let now = crate::arch::x86_64::lapic::ticks();
+        let cpu = crate::arch::x86_64::smp::percpu::current_cpu_id();
 
         crate::drivers::serial::print("TIME=");
         crate::drivers::serial::print_u64(now);
@@ -373,6 +407,13 @@ impl Scheduler {
             crate::drivers::serial::print(" wake_at=");
             crate::drivers::serial::print_u64(now + ticks);
             crate::drivers::serial::println("");
+
+            // Transition-only diagnostic (no per-IRQ spam).
+            crate::drivers::serial::print("CPU=");
+            crate::drivers::serial::print_u64(cpu as u64);
+            crate::drivers::serial::print(" TID=");
+            crate::drivers::serial::print_u64(thread.id());
+            crate::drivers::serial::println(" SLEEP");
         }
     }
 
