@@ -110,7 +110,7 @@ impl AddressSpace {
 
                 (*(table_va as *mut PageTable)).zero();
 
-                pml4.entries[pml4_index].set(frame.address, true, true);
+                pml4.entries[pml4_index].set(frame.address, true, true, true);
 
                 pdpt_frame = frame;
             } else {
@@ -139,7 +139,7 @@ impl AddressSpace {
 
                 (*(table_va as *mut PageTable)).zero();
 
-                pdpt.entries[pdpt_index].set(frame.address, true, true);
+                pdpt.entries[pdpt_index].set(frame.address, true, true, true);
 
                 pd_frame = frame;
             } else {
@@ -172,7 +172,7 @@ impl AddressSpace {
 
                 (*(table_va as *mut PageTable)).zero();
 
-                pd.entries[pd_index].set(frame.address, true, true);
+                pd.entries[pd_index].set(frame.address, true, true, true);
 
                 pt_frame = frame;
             } else {
@@ -194,7 +194,7 @@ impl AddressSpace {
                 return false;
             }
 
-            pt.entries[pt_index].set(physical_address, writable, true);
+            pt.entries[pt_index].set(physical_address, true, writable, true);
         }
 
         true

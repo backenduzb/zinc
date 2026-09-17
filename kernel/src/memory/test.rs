@@ -516,3 +516,44 @@ pub fn user_page_unmap_test() {
         crate::drivers::serial::println("Translation after unmap: FAILED");
     }
 }
+
+pub fn nx_test() {
+    crate::drivers::serial::println("=== NX PAGE TEST ===");
+
+    let mut allocator = crate::memory::physical::FrameAllocator::new();
+
+    let Some(mut address_space) =
+        crate::memory::address_space::AddressSpace::new_user(&mut allocator)
+    else {
+        crate::drivers::serial::println("NX AddressSpace: FAILED");
+        return;
+    };
+
+    let Some(frame) = allocator.alloc_frame() else {
+        crate::drivers::serial::println("NX frame allocation: FAILED");
+        return;
+    };
+
+    let va = 0x0040_0000;
+
+    if !address_space.map_page(&mut allocator, va, frame.address, false) {
+        crate::drivers::serial::println("NX mapping: FAILED");
+        return;
+    }
+
+    match address_space.translate_page(va) {
+        Some(address) if address == frame.address => {
+            crate::drivers::serial::println("NX mapping: OK");
+        }
+
+        _ => {
+            crate::drivers::serial::println("NX mapping translation: FAILED");
+        }
+    }
+
+    if let Some(unmapped) = address_space.unmap_page(&mut allocator, va) {
+        if unmapped.address == frame.address {
+            crate::drivers::serial::println("NX cleanup: OK");
+        }
+    }
+}

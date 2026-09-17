@@ -8,6 +8,8 @@ const USER: u64 = 1 << 2;
 
 const ADDRESS_MASK: u64 = 0x000F_FFFF_FFFF_F000;
 
+const NO_EXECUTE: u64 = 1 << 63;
+
 #[repr(transparent)]
 #[derive(Clone, Copy)]
 pub struct PageTableEntry(u64);
@@ -25,15 +27,18 @@ impl PageTableEntry {
         self.0 & HUGE_PAGE != 0
     }
 
-    pub fn set(&mut self, physical_address: u64, writable: bool, user: bool) {
+    pub fn set(&mut self, physical_address: u64, user: bool, writable: bool, executable: bool) {
         let mut flags = PRESENT;
-
         if writable {
             flags |= WRITABLE;
         }
 
         if user {
             flags |= USER;
+        }
+
+        if !executable {
+            flags |= NO_EXECUTE;
         }
 
         self.0 = (physical_address & ADDRESS_MASK) | flags;
@@ -55,17 +60,28 @@ impl PageTableEntry {
         &mut self,
         physical_address: u64,
         writable: bool,
-        user: bool
+        user: bool,
+        executable: bool,
     ) {
         let mut flags = PRESENT | HUGE_PAGE;
+
         if writable {
-            flags |= WRITABLE
+            flags |= WRITABLE;
         }
+
         if user {
             flags |= USER;
         }
 
+        if !executable {
+            flags |= NO_EXECUTE;
+        }
+
         self.0 = (physical_address & ADDRESS_MASK) | flags;
+    }
+
+    pub fn is_executable(&self) -> bool {
+        self.0 & NO_EXECUTE == 0 
     }
 }
 

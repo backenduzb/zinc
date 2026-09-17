@@ -37,7 +37,6 @@ impl VirtualMemoryManager {
             let table = virtual_address as *mut PageTable;
 
             (*table).zero();
-
         }
 
         crate::drivers::serial::println("PML4 allocated");
@@ -101,7 +100,7 @@ impl VirtualMemoryManager {
                     None => return false,
                 };
 
-                pml4.entries[pml4_index].set(pdpt_frame.address, true, user);
+                pml4.entries[pml4_index].set(pdpt_frame.address, user, true, true);
             }
         }
 
@@ -125,7 +124,7 @@ impl VirtualMemoryManager {
                     None => return false,
                 };
 
-                pdpt.entries[pdpt_index].set(pd_frame.address, true, user);
+                pdpt.entries[pdpt_index].set(pd_frame.address, user, true, true);
             }
         }
 
@@ -157,7 +156,7 @@ impl VirtualMemoryManager {
                     None => return false,
                 };
 
-                pd.entries[pd_index].set(pt_frame.address, true, user);
+                pd.entries[pd_index].set(pt_frame.address, user, true, true);
             }
         }
 
@@ -169,7 +168,7 @@ impl VirtualMemoryManager {
         unsafe {
             let pt = &mut *pt_ptr;
 
-            pt.entries[pt_index].set(physical_address, writable, user);
+            pt.entries[pt_index].set(physical_address, user, writable, true);
         }
 
         true
@@ -238,14 +237,14 @@ impl VirtualMemoryManager {
             let pdpt_table = &mut *pdpt_ptr;
             let pd_table = &mut *pd_ptr;
 
-            pml4.entries[0].set(pdpt.address, true, false);
+            pml4.entries[0].set(pdpt.address, true, false, true);
 
-            pdpt_table.entries[0].set(pd.address, true, false);
+            pdpt_table.entries[0].set(pd.address, true, false, true);
 
             for index in 0..page_count as usize {
                 let physical_address = index as u64 * HUGE_PAGE_SIZE;
 
-                pd_table.entries[index].set_huge(physical_address, true, false);
+                pd_table.entries[index].set_huge(physical_address, true, false, true);
             }
         }
 
@@ -422,26 +421,24 @@ impl VirtualMemoryManager {
 
     pub fn create_ap_stack(&mut self, base: u64, size: u64) -> Option<u64> {
         let page_count = size / PAGE_SIZE;
-    
+
         for index in 0..page_count {
             let frame = self.frame_allocator.alloc_frame()?;
-    
+
             let virtual_address = base + index * PAGE_SIZE;
-    
+
             if !self.map_page(virtual_address, frame.address, true, false) {
                 self.frame_allocator.free_frame(frame);
                 return None;
             }
         }
-    
+
         Some(base + size - 8)
     }
 }
 
 pub fn kernel_pml4() -> PhysFrame {
-    unsafe {
-        KERNEL_PML4.expect("Kernel PML4 is not initialized")
-    }
+    unsafe { KERNEL_PML4.expect("Kernel PML4 is not initialized") }
 }
 
 pub fn try_kernel_pml4() -> Option<PhysFrame> {

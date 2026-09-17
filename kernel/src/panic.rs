@@ -17,8 +17,6 @@ fn panic(info: &PanicInfo) -> ! {
     if let Some(message) = info.message().as_str() {
         crate::drivers::serial::println(message);
     } else {
-        // `expect()`, `unwrap()` and formatted panics don't expose a `&str`.
-        // Display them via fmt instead of hiding them as "unknown panic".
         let _ = writeln!(SerialWriter, "{}", info.message());
     }
 
