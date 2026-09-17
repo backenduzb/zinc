@@ -41,12 +41,13 @@ pub extern "C" fn kmain() -> ! {
     drivers::pci::init();
     crate::drivers::serial::println("BEFORE PMM TEST");
 
-    crate::memory::test::nx_test();
     crate::memory::test::address_space_test();
     crate::memory::test::user_address_space_test();
+    crate::memory::test::nx_test();
     crate::memory::test::user_page_map_test();
     crate::memory::test::user_page_unmap_test();
     memory::physical::test();
+    crate::exec::test::test_loader();
 
     crate::drivers::serial::println("AFTER PMM TEST");
 

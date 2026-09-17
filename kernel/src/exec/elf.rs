@@ -1,3 +1,11 @@
+use alloc::collections::btree_map::Values;
+
+use crate::arch::x86_64::paging::PAGE_SIZE;
+use crate::memory::address_space::AddressSpace;
+use crate::memory::physical::FrameAllocator;
+
+const USER_MAX: u64 = 0x0000_8000_0000_0000;
+
 const ELF_MAGIC: [u8; 4] = [0x7F, b'E', b'L', b'F'];
 
 const ELFCLASS64: u8 = 2;
@@ -5,14 +13,20 @@ const ELFDATA2LSB: u8 = 1;
 
 const EM_X86_64: u16 = 62;
 
-const PT_LOAD: u32 = 1;
+pub const PT_LOAD: u32 = 1;
 
-const PF_X: u32 = 1;
-const PF_W: u32 = 2;
-const PF_R: u32 = 4;
+pub const PF_X: u32 = 1;
+pub const PF_W: u32 = 2;
+pub const PF_R: u32 = 4;
 
 const ELF64_HEADER_SIZE: usize = 64;
 const ELF64_PROGRAM_HEADER_SIZE: usize = 56;
+
+pub struct ElfLoader;
+
+pub struct LoadedElf {
+    pub entry: u64,
+}
 
 #[derive(Clone, Copy)]
 pub struct Elf64Header {
@@ -41,6 +55,159 @@ pub enum ElfError {
     WrongMachine,
     InvalidProgramHeaders,
     InvalidSegment,
+}
+
+impl ElfLoader {
+    pub fn load(
+        data: &[u8],
+        address_space: &mut AddressSpace,
+        frame_allocator: &mut FrameAllocator,
+    ) -> Result<LoadedElf, ElfError> {
+        let header = parse_header(data)?;
+
+        let mut loaded_segments = 0usize;
+
+        for index in 0..header.program_header_count as usize {
+            let segment = parse_program_header(data, &header, index)?;
+
+            if segment.segment_type != PT_LOAD {
+                continue;
+            }
+
+            validate_load_segment(data, &segment)?;
+
+            Self::load_segment(data, &segment, address_space, frame_allocator)?;
+
+            loaded_segments += 1;
+        }
+
+        if loaded_segments == 0 {
+            return Err(ElfError::InvalidSegment);
+        }
+
+        if header.entry >= USER_MAX {
+            return Err(ElfError::InvalidSegment);
+        }
+
+        Ok(LoadedElf {
+            entry: header.entry,
+        })
+    }
+
+    fn load_segment(
+        data: &[u8],
+        segment: &Elf64ProgramHeader,
+        address_space: &mut AddressSpace,
+        frame_allocator: &mut FrameAllocator,
+    ) -> Result<(), ElfError> {
+        let segment_end = segment
+            .virtual_address
+            .checked_add(segment.memory_size)
+            .ok_or(ElfError::InvalidSegment)?;
+
+        if segment_end > USER_MAX {
+            return Err(ElfError::InvalidSegment);
+        }
+
+        let page_start = align_down(segment.virtual_address);
+
+        let page_end = align_up(segment_end).ok_or(ElfError::InvalidSegment)?;
+
+        let writable = segment.flags & PF_W != 0;
+        let executable = segment.flags & PF_X != 0;
+
+        let mut page = page_start;
+
+        while page < page_end {
+            crate::drivers::serial::print("ELF: allocating page 0x");
+            crate::drivers::serial::print_u64(page);
+            crate::drivers::serial::println("");
+
+            let frame = frame_allocator
+                .alloc_frame()
+                .ok_or(ElfError::InvalidSegment)?;
+
+            crate::drivers::serial::print("ELF: frame=0x");
+            crate::drivers::serial::print_u64(frame.address);
+            crate::drivers::serial::println("");
+
+            if !address_space.map_page(frame_allocator, page, frame.address, writable, executable) {
+                crate::drivers::serial::println("ELF: MAP_PAGE FAILED");
+
+                frame_allocator.free_frame(frame);
+
+                return Err(ElfError::InvalidSegment);
+            }
+
+            crate::drivers::serial::println("ELF: page mapped");
+
+            let physical = crate::boot::limine::physical_to_virtual(frame.address)
+                .ok_or(ElfError::InvalidSegment)?;
+
+            unsafe {
+                core::ptr::write_bytes(physical as *mut u8, 0, PAGE_SIZE as usize);
+            }
+
+            Self::copy_segment_data(data, segment, page, physical)?;
+
+            crate::drivers::serial::println("ELF: page loaded");
+
+            page = page
+                .checked_add(PAGE_SIZE)
+                .ok_or(ElfError::InvalidSegment)?;
+        }
+
+        Ok(())
+    }
+
+    fn copy_segment_data(
+        data: &[u8],
+        segment: &Elf64ProgramHeader,
+        page_virtual: u64,
+        page_physical_virtual: u64,
+    ) -> Result<(), ElfError> {
+        let segment_file_end = segment
+            .offset
+            .checked_add(segment.file_size)
+            .ok_or(ElfError::InvalidSegment)?;
+
+        if segment_file_end > data.len() as u64 {
+            return Err(ElfError::InvalidSegment);
+        }
+
+        let page_end = page_virtual
+            .checked_add(PAGE_SIZE)
+            .ok_or(ElfError::InvalidSegment)?;
+
+        let file_start_va = segment.virtual_address;
+        let file_end_va = segment
+            .virtual_address
+            .checked_add(segment.file_size)
+            .ok_or(ElfError::InvalidSegment)?;
+
+        let copy_start = core::cmp::max(page_virtual, file_start_va);
+        let copy_end = core::cmp::min(page_end, file_end_va);
+
+        if copy_start >= copy_end {
+            return Ok(());
+        }
+
+        let destination_offset = (copy_start - page_virtual) as usize;
+
+        let source_offset = (segment.offset + (copy_start - segment.virtual_address)) as usize;
+
+        let length = (copy_end - copy_start) as usize;
+
+        unsafe {
+            core::ptr::copy_nonoverlapping(
+                data.as_ptr().add(source_offset),
+                (page_physical_virtual as *mut u8).add(destination_offset),
+                length,
+            );
+        }
+
+        Ok(())
+    }
 }
 
 fn read_u16(data: &[u8], offset: usize) -> Option<u16> {
@@ -139,34 +306,68 @@ pub fn parse_program_header(
         .ok_or(ElfError::InvalidProgramHeaders)? as usize;
 
     let end = base
-        .checked_add(ELF64_HEADER_SIZE)
-        .ok_or(ElfError::InvalidProgramHeaders)? as usize;
+        .checked_add(ELF64_PROGRAM_HEADER_SIZE)
+        .ok_or(ElfError::InvalidProgramHeaders)?;
 
     if end > data.len() {
         return Err(ElfError::InvalidProgramHeaders);
     }
 
-    let segment_type = read_u32(data, base).ok_or(ElfError::InvalidSegment)?;
-    let flags = read_u32(data, base + 4).ok_or(ElfError::InvalidSegment)?;
-    let offset = read_u64(data, base + 8).ok_or(ElfError::InvalidSegment)?;
+    let segment_type = read_u32(data, base).ok_or(ElfError::InvalidProgramHeaders)?;
 
-    let virtual_address = read_u64(data, base + 16).ok_or(ElfError::InvalidSegment)?;
+    let flags = read_u32(data, base + 4).ok_or(ElfError::InvalidProgramHeaders)?;
+
+    let offset = read_u64(data, base + 8).ok_or(ElfError::InvalidProgramHeaders)?;
+
+    let virtual_address = read_u64(data, base + 16).ok_or(ElfError::InvalidProgramHeaders)?;
 
     let file_size = read_u64(data, base + 32).ok_or(ElfError::InvalidSegment)?;
 
-    let memory_size = read_u64(data, base + 40).ok_or(ElfError::InvalidSegment)?;
+    let memory_size = read_u64(data, base + 40).ok_or(ElfError::InvalidProgramHeaders)?;
 
-    let alignment = read_u64(data, base + 48).ok_or(ElfError::InvalidSegment)?;
+    let alignment = read_u64(data, base + 48).ok_or(ElfError::InvalidProgramHeaders)?;
+
+    crate::drivers::serial::println("ELF PH:");
+
+    crate::drivers::serial::print("  type=");
+    crate::drivers::serial::print_u64(segment_type as u64);
+    crate::drivers::serial::println("");
+
+    crate::drivers::serial::print("  flags=");
+    crate::drivers::serial::print_u64(flags as u64);
+    crate::drivers::serial::println("");
+
+    crate::drivers::serial::print("  offset=");
+    crate::drivers::serial::print_u64(offset);
+    crate::drivers::serial::println("");
+
+    crate::drivers::serial::print("  vaddr=0x");
+    crate::drivers::serial::print_u64(virtual_address);
+    crate::drivers::serial::println("");
+
+    crate::drivers::serial::print("  filesz=");
+    crate::drivers::serial::print_u64(file_size);
+    crate::drivers::serial::println("");
+
+    crate::drivers::serial::print("  memsz=");
+    crate::drivers::serial::print_u64(memory_size);
+    crate::drivers::serial::println("");
+
+    crate::drivers::serial::print("  align=");
+    crate::drivers::serial::print_u64(alignment);
+    crate::drivers::serial::println("");
 
     if file_size > memory_size {
+        crate::drivers::serial::println("ELF PH: filesz > memsz");
         return Err(ElfError::InvalidSegment);
     }
 
     let file_end = offset
         .checked_add(file_size)
-        .ok_or(ElfError::InvalidSegment)? as usize;
+        .ok_or(ElfError::InvalidSegment)?;
 
-    if file_end > data.len() {
+    if file_end > data.len() as u64 {
+        crate::drivers::serial::println("ELF PH: file outside ELF");
         return Err(ElfError::InvalidSegment);
     }
 
@@ -218,4 +419,14 @@ pub fn validate_load_segment(data: &[u8], segment: &Elf64ProgramHeader) -> Resul
     }
 
     Ok(())
+}
+
+pub fn align_down(value: u64) -> u64 {
+    value & !(PAGE_SIZE - 1)
+}
+
+pub fn align_up(value: u64) -> Option<u64> {
+    value
+        .checked_add(PAGE_SIZE - 1)
+        .map(|value| value & !(PAGE_SIZE - 1))
 }

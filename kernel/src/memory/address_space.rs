@@ -93,6 +93,16 @@ impl AddressSpace {
             None => return false,
         };
 
+        crate::drivers::serial::print("MAP: va=0x");
+        crate::drivers::serial::print_u64(virtual_address);
+        crate::drivers::serial::print(" pa=0x");
+        crate::drivers::serial::print_u64(physical_address);
+        crate::drivers::serial::print(" W=");
+        crate::drivers::serial::print_u64(writable as u64);
+        crate::drivers::serial::print(" X=");
+        crate::drivers::serial::print_u64(executable as u64);
+        crate::drivers::serial::println("");
+
         unsafe {
             let pml4 = &mut *(pml4_va as *mut PageTable);
 
