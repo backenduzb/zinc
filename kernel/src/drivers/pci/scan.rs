@@ -22,18 +22,24 @@ fn print_device(dev: &PciDevice) {
     crate::drivers::serial::print(".");
 
     crate::drivers::serial::print_u64(dev.function as u64);
-    crate::drivers::serial::print(" vendor=0x");
 
-    crate::drivers::serial::print_u64(dev.vendor_id as u64);
-    crate::drivers::serial::print(" device=0x");
+    crate::drivers::serial::print(" vendor=");
+    crate::drivers::serial::print_hex_u32(dev.vendor_id as u32);
 
-    crate::drivers::serial::print_u64(dev.device_id as u64);
-    crate::drivers::serial::print(" class=0x");
+    crate::drivers::serial::print(" device=");
+    crate::drivers::serial::print_hex_u32(dev.device_id as u32);
 
-    crate::drivers::serial::print_u64(dev.class as u64);
-    crate::drivers::serial::print(" subclass=0x");
+    crate::drivers::serial::print(" class=");
+    crate::drivers::serial::print_hex_u32(dev.class as u32);
 
-    crate::drivers::serial::print_u64(dev.subclass as u64);
+    crate::drivers::serial::print(" subclass=");
+    crate::drivers::serial::print_hex_u32(dev.subclass as u32);
+
+    crate::drivers::serial::print(" command=");
+    crate::drivers::serial::print_hex_u32(dev.command as u32);
+
+    crate::drivers::serial::print(" status=");
+    crate::drivers::serial::print_hex_u32(dev.status as u32);
 
     crate::drivers::serial::println("");
 

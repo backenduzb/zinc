@@ -23,6 +23,9 @@ pub struct PciDevice {
     pub prog_if: u8,
 
     pub header_type: u8,
+
+    pub command: u16,
+    pub status: u16, 
 }
 
 impl PciDevice {
@@ -43,6 +46,9 @@ impl PciDevice {
 
         let header_type = config::read8(bus, device, function, 0x0E);
 
+        let command = config::read16(bus, device, function, 0x04);
+        let status = config::read16(bus, device, function, 0x06);
+        
         Some(Self {
             bus,
             device,
@@ -53,6 +59,8 @@ impl PciDevice {
             subclass,
             prog_if,
             header_type,
+            command,
+            status
         })
     }
 
@@ -158,7 +166,6 @@ impl PciDevice {
             });
         }
 
-        // 32-bit Memory BAR
         config::write32(self.bus, self.device, self.function, offset, 0xFFFF_FFFF);
 
         let mask = config::read32(self.bus, self.device, self.function, offset);
