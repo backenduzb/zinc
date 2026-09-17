@@ -1,5 +1,7 @@
 use crate::arch::x86_64::paging::PageTable;
 use crate::memory::physical::{FrameAllocator, PhysFrame};
+use crate::memory::address_space::AddressSpace;
+use crate::memory::user_stack::{UserStack, USER_STACK_PAGES};
 
 const AP1_STACK_TOP: u64 = 0xFFFF_FFFF_A010_FFF8;
 const AP2_STACK_TOP: u64 = 0xFFFF_FFFF_A011_FFF8;
@@ -555,5 +557,65 @@ pub fn nx_test() {
         if unmapped.address == frame.address {
             crate::drivers::serial::println("NX cleanup: OK");
         }
+    }
+}
+
+pub fn user_stack_test() {
+    crate::drivers::serial::println("=== USER STACK TEST ===");
+
+    let mut allocator = FrameAllocator::new();
+
+    let Some(mut address_space) = AddressSpace::new_user(&mut allocator) else {
+        crate::drivers::serial::println("USER STACK: AddressSpace FAILED");
+        return;
+    };
+
+    let Some(stack) = UserStack::map(&mut address_space, &mut allocator) else {
+        crate::drivers::serial::println("USER STACK: MAP FAILED");
+        return;
+    };
+
+    crate::drivers::serial::print("Stack base: 0x");
+    crate::drivers::serial::print_u64(stack.base);
+    crate::drivers::serial::println("");
+
+    crate::drivers::serial::print("Stack top: 0x");
+    crate::drivers::serial::print_u64(stack.top);
+    crate::drivers::serial::println("");
+
+    crate::drivers::serial::print("Stack size: ");
+    crate::drivers::serial::print_u64(stack.size);
+    crate::drivers::serial::println("");
+
+    let mut passed = true;
+
+    for i in 0..USER_STACK_PAGES {
+        let va = stack.base + (i as u64 * PAGE_SIZE);
+
+        if address_space.translate_page(va).is_some() {
+            crate::drivers::serial::print("STACK page ");
+            crate::drivers::serial::print_u64(i as u64);
+            crate::drivers::serial::println(": mapped");
+        } else {
+            passed = false;
+
+            crate::drivers::serial::print("STACK page ");
+            crate::drivers::serial::print_u64(i as u64);
+            crate::drivers::serial::println(": FAILED");
+        }
+    }
+
+    if address_space.translate_page(stack.top).is_none() {
+        crate::drivers::serial::println("STACK top boundary: OK");
+    } else {
+        passed = false;
+
+        crate::drivers::serial::println("STACK top boundary: FAILED");
+    }
+
+    if passed {
+        crate::drivers::serial::println("USER STACK TEST: PASS");
+    } else {
+        crate::drivers::serial::println("USER STACK TEST: FAIL");
     }
 }
