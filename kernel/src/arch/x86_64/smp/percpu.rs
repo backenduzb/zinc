@@ -16,24 +16,26 @@ struct KernelStack([u8; KERNEL_STACK_SIZE]);
 static mut KERNEL_STACKS: [KernelStack; MAX_CPUS] =
     [const { KernelStack([0; KERNEL_STACK_SIZE]) }; MAX_CPUS];
 
-#[repr(C)]
-pub struct PerCpuGdt {
-    pub entries: [u64; 5],
-}
-
-impl PerCpuGdt {
-    pub const fn new() -> Self {
-        Self {
-            entries: [
-                0x0000000000000000,
-                0x00AF9A000000FFFF,
-                0x00AF92000000FFFF,
-                0,
-                0,
-            ],
+    #[repr(C)]
+    pub struct PerCpuGdt {
+        pub entries: [u64; 7],
+    }
+    
+    impl PerCpuGdt {
+        pub const fn new() -> Self {
+            Self {
+                entries: [
+                    0x0000000000000000, 
+                    0x00AF9A000000FFFF, 
+                    0x00AF92000000FFFF, 
+                    0,                  
+                    0,                  
+                    0x00AFFA000000FFFF, 
+                    0x00AFF2000000FFFF, 
+                ],
+            }
         }
     }
-}
 
 pub struct PerCpu {
     pub cpu_id: usize,

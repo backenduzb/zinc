@@ -1,6 +1,6 @@
-use alloc::vec::Vec;
-
 use super::thread::ThreadID;
+use crate::memory::{address_space::AddressSpace, physical::FrameAllocator};
+use alloc::vec::Vec;
 
 pub type ProcessID = u64;
 
@@ -15,6 +15,7 @@ pub enum ProcessState {
 pub struct Process {
     id: ProcessID,
     state: ProcessState,
+    address_space: Option<AddressSpace>,
     threads: Vec<ThreadID>,
 }
 
@@ -23,8 +24,42 @@ impl Process {
         Self {
             id,
             state: ProcessState::Ready,
+            address_space: None,
             threads: Vec::new(),
         }
+    }
+
+    pub fn new_user(id: ProcessID, address_space: AddressSpace) -> Self {
+        Self {
+            id,
+            state: ProcessState::Ready,
+            address_space: Some(address_space),
+            threads: Vec::new(),
+        }
+    }
+
+    pub fn address_space(&self) -> Option<&AddressSpace> {
+        self.address_space.as_ref()
+    }
+
+    pub fn address_space_mut(&mut self) -> Option<&mut AddressSpace> {
+        self.address_space.as_mut()
+    }
+
+    pub fn has_user_address_space(&self) -> bool {
+        self.address_space.is_some()
+    }
+
+    pub fn is_kernel(&self) -> bool {
+        self.address_space.is_none()
+    }
+
+    pub fn is_user(&self) -> bool {
+        self.address_space.is_some()
+    }
+
+    pub fn pml4_phys(&self) -> Option<u64> {
+        self.address_space.as_ref().map(|space| space.pml4().address)
     }
 
     pub fn id(&self) -> ProcessID {
@@ -75,6 +110,20 @@ impl ProcessManager {
             processes: Vec::new(),
             next_pid: 1,
         }
+    }
+
+    pub fn create_user(
+        &mut self,
+        frame_allocator: &mut FrameAllocator,
+    ) -> Option<ProcessID> {
+        let address_space = AddressSpace::new_user(frame_allocator)?;
+
+        let pid = self.next_pid;
+        self.next_pid += 1;
+
+        self.processes.push(Process::new_user(pid, address_space));
+
+        Some(pid)
     }
 
     pub fn create(&mut self) -> ProcessID {

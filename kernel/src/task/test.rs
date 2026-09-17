@@ -281,3 +281,191 @@ pub extern "C" fn ap_gamma() -> ! {
         crate::task::sleep(5);
     }
 }
+
+pub fn process_address_space_test() {
+    use crate::arch::x86_64::paging::PageTable;
+    use crate::boot::limine::physical_to_virtual;
+    use crate::memory::physical::FrameAllocator;
+    use super::process::{Process, ProcessManager};
+
+    crate::drivers::serial::println("=== PROCESS ADDRESS SPACE TEST ===");
+
+    let kernel = Process::new(0);
+    if !kernel.is_kernel() || kernel.has_user_address_space() {
+        crate::drivers::serial::println("PROCESS TEST: kernel distinction FAILED");
+        return;
+    }
+    if kernel.address_space().is_some() || kernel.pml4_phys().is_some() {
+        crate::drivers::serial::println("PROCESS TEST: kernel accessors FAILED");
+        return;
+    }
+    crate::drivers::serial::println("Kernel process (no AddressSpace): OK");
+
+    let mut allocator = FrameAllocator::new();
+    let mut manager = ProcessManager::new();
+
+    let pid = match manager.create_user(&mut allocator) {
+        Some(pid) => pid,
+        None => {
+            crate::drivers::serial::println("PROCESS TEST: create_user FAILED");
+            return;
+        }
+    };
+
+    let process = match manager.get(pid) {
+        Some(process) => process,
+        None => {
+            crate::drivers::serial::println("PROCESS TEST: lookup FAILED");
+            return;
+        }
+    };
+
+    if !process.is_user() || !process.has_user_address_space() {
+        crate::drivers::serial::println("PROCESS TEST: user flag FAILED");
+        return;
+    }
+
+    let pml4_phys = match process.pml4_phys() {
+        Some(addr) if addr != 0 && addr % 4096 == 0 => addr,
+        _ => {
+            crate::drivers::serial::println("PROCESS TEST: invalid PML4");
+            return;
+        }
+    };
+
+    crate::drivers::serial::print("User process PML4: 0x");
+    crate::drivers::serial::print_u64(pml4_phys);
+    crate::drivers::serial::println("");
+
+    let pml4_va = match physical_to_virtual(pml4_phys) {
+        Some(va) => va,
+        None => {
+            crate::drivers::serial::println("PROCESS TEST: HHDM unavailable");
+            return;
+        }
+    };
+
+    let present_upper = unsafe {
+        let table = &*(pml4_va as *const PageTable);
+        (256..512).filter(|&i| table.entries[i].is_present()).count()
+    };
+
+    if present_upper == 0 {
+        crate::drivers::serial::println("PROCESS TEST: kernel mappings MISSING");
+        return;
+    }
+
+    crate::drivers::serial::print("Kernel-half present entries: ");
+    crate::drivers::serial::print_u64(present_upper as u64);
+    crate::drivers::serial::println("");
+
+    if process.address_space().is_none() || manager.count() != 1 {
+        crate::drivers::serial::println("PROCESS TEST: accessor/count FAILED");
+        return;
+    }
+
+    crate::drivers::serial::println("PROCESS ADDRESS SPACE TEST: PASS");
+}
+
+pub fn user_thread_test() {
+    use super::thread::{Thread, ThreadKind};
+
+    crate::drivers::serial::println("=== USER THREAD TEST ===");
+
+    let process_id = 1;
+    let user_rip = 0x400000u64;
+    let user_rsp = 0x0000_7FFF_FFFF_FFF0u64;
+
+    let thread = Thread::new_user(100, 0, process_id, user_rip, user_rsp);
+
+    if thread.kind() != ThreadKind::User || !thread.is_user() || thread.is_kernel() {
+        crate::drivers::serial::println("USER THREAD TEST: kind FAILED");
+        return;
+    }
+    crate::drivers::serial::println("Kind: User OK");
+
+    if thread.process_id() != process_id {
+        crate::drivers::serial::println("USER THREAD TEST: process_id FAILED");
+        return;
+    }
+    crate::drivers::serial::println("Process ID: OK");
+
+    if thread.user_rip() != user_rip || thread.user_rsp() != user_rsp {
+        crate::drivers::serial::println("USER THREAD TEST: user rip/rsp FAILED");
+        return;
+    }
+    crate::drivers::serial::println("User RIP/RSP stored: OK");
+
+    if thread.stack_top() == 0 {
+        crate::drivers::serial::println("USER THREAD TEST: kernel stack MISSING");
+        return;
+    }
+    crate::drivers::serial::println("Kernel stack exists: OK");
+
+    let frame_rsp = thread.interrupt_rsp();
+    if frame_rsp == 0 || frame_rsp % 16 != 0 {
+        crate::drivers::serial::println("USER THREAD TEST: frame alignment FAILED");
+        return;
+    }
+    if thread.user_rsp() == frame_rsp {
+        crate::drivers::serial::println("USER THREAD TEST: stack aliasing FAILED");
+        return;
+    }
+    crate::drivers::serial::println("Frame alignment: OK");
+
+    let frame = unsafe { &*thread.user_frame_ptr() };
+
+    if frame.cs != 0x2B {
+        crate::drivers::serial::println("USER THREAD TEST: CS FAILED");
+        return;
+    }
+    if frame.ss != 0x33 {
+        crate::drivers::serial::println("USER THREAD TEST: SS FAILED");
+        return;
+    }
+    crate::drivers::serial::println("CS=0x2B SS=0x33: OK");
+
+    if frame.rflags & 0x2 == 0 || frame.rflags & (1 << 9) == 0 {
+        crate::drivers::serial::println("USER THREAD TEST: RFLAGS FAILED");
+        return;
+    }
+    crate::drivers::serial::print("RFLAGS=0x");
+    crate::drivers::serial::print_u64(frame.rflags);
+    crate::drivers::serial::println(" IF set: OK");
+
+    if frame.rip != user_rip || frame.rsp != user_rsp {
+        crate::drivers::serial::println("USER THREAD TEST: frame rip/rsp FAILED");
+        return;
+    }
+    crate::drivers::serial::println("Frame RIP/RSP: OK");
+
+    if frame.rax != 0
+        || frame.rbx != 0
+        || frame.rcx != 0
+        || frame.rdx != 0
+        || frame.rsi != 0
+        || frame.rdi != 0
+        || frame.rbp != 0
+        || frame.r8 != 0
+        || frame.r9 != 0
+        || frame.r10 != 0
+        || frame.r11 != 0
+        || frame.r12 != 0
+        || frame.r13 != 0
+        || frame.r14 != 0
+        || frame.r15 != 0
+    {
+        crate::drivers::serial::println("USER THREAD TEST: GPR zero FAILED");
+        return;
+    }
+    crate::drivers::serial::println("GPRs zero: OK");
+
+    let kernel_thread = Thread::new(101, 0, 0, thread_idle);
+    if kernel_thread.kind() != ThreadKind::Kernel || !kernel_thread.is_kernel() {
+        crate::drivers::serial::println("USER THREAD TEST: kernel kind FAILED");
+        return;
+    }
+    crate::drivers::serial::println("Kernel thread path unchanged: OK");
+
+    crate::drivers::serial::println("USER THREAD TEST: PASS");
+}

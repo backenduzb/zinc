@@ -11,12 +11,17 @@ const GDT_KERNEL_CODE: u16 = 0x08;
 const GDT_KERNEL_DATA: u16 = 0x10;
 const GDT_TSS: u16 = 0x18;
 
-static mut GDT: [u64; 5] = [
+pub const GDT_USER_CODE: u16 = 0x2B;
+pub const GDT_USER_DATA: u16 = 0x33;
+
+static mut GDT: [u64; 7] = [
     0x0000000000000000,
     0x00AF9A000000FFFF,
     0x00AF92000000FFFF,
     0x0000000000000000,
     0x0000000000000000,
+    0x00AFFA000000FFFF,
+    0x00AFF2000000FFFF,
 ];
 
 pub fn init() {
@@ -78,7 +83,7 @@ pub fn load_tss(tss: &'static crate::arch::x86_64::tss::TaskStateSegment) {
         GDT[4] = high;
 
         let pointer = GdtPointer {
-            limit: (core::mem::size_of::<[u64; 5]>() - 1) as u16,
+            limit: (core::mem::size_of::<[u64; 7]>() - 1) as u16,
             base: &raw const GDT as u64,
         };
 

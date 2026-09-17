@@ -386,6 +386,10 @@ extern "C" fn after_address_space_switch() -> ! {
         crate::drivers::serial::println("ERROR: Box allocation failed");
     }
 
+    crate::task::test::process_address_space_test();
+
+    crate::task::test::user_thread_test();
+
     crate::task::test::scheduler_test();
 }
 
