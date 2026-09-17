@@ -446,7 +446,7 @@ pub fn user_page_map_test() {
 
     let virtual_address = 0x0040_0000;
 
-    if address_space.map_page(&mut allocator, virtual_address, frame.address, true) {
+    if address_space.map_page(&mut allocator, virtual_address, frame.address, true, true) {
         crate::drivers::serial::println("User page mapping: OK");
     } else {
         crate::drivers::serial::println("User page mapping: FAILED");
@@ -472,7 +472,7 @@ pub fn user_page_unmap_test() {
 
     let virtual_address = 0x0040_0000;
 
-    if !address_space.map_page(&mut allocator, virtual_address, frame.address, true) {
+    if !address_space.map_page(&mut allocator, virtual_address, frame.address, true, true) {
         crate::drivers::serial::println("Mapping: FAILED");
         return;
     }
@@ -536,7 +536,7 @@ pub fn nx_test() {
 
     let va = 0x0040_0000;
 
-    if !address_space.map_page(&mut allocator, va, frame.address, false) {
+    if !address_space.map_page(&mut allocator, va, frame.address, false, true) {
         crate::drivers::serial::println("NX mapping: FAILED");
         return;
     }

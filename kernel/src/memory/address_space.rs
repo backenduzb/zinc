@@ -69,6 +69,7 @@ impl AddressSpace {
         virtual_address: u64,
         physical_address: u64,
         writable: bool,
+        executable: bool,
     ) -> bool {
         const USER_MAX: u64 = 0x0000_8000_0000_0000;
 
@@ -194,7 +195,7 @@ impl AddressSpace {
                 return false;
             }
 
-            pt.entries[pt_index].set(physical_address, true, writable, true);
+            pt.entries[pt_index].set(physical_address, writable, true,  executable);
         }
 
         true
@@ -219,7 +220,7 @@ impl AddressSpace {
             return false;
         }
 
-        self.map_page(frame_allocator, virtual_address, physical_address, writable)
+        self.map_page(frame_allocator, virtual_address, physical_address, writable, false)
     }
 
     pub fn translate_page(&self, virtual_address: u64) -> Option<u64> {

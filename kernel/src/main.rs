@@ -9,6 +9,7 @@ mod memory;
 mod panic;
 mod task;
 mod time;
+mod exec;
 
 extern crate alloc;
 
