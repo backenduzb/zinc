@@ -20,7 +20,7 @@ impl Scheduler {
             return;
         }
 
-        let idle = Thread::new(0, cpu_id, idle_thread);
+        let idle = Thread::new(0, cpu_id, 0, idle_thread);
 
         self.threads[IDLE_SLOT] = Some(idle);
         self.threads[IDLE_SLOT]

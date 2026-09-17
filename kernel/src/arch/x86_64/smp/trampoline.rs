@@ -1,6 +1,6 @@
 use core::sync::atomic::{AtomicBool, Ordering};
 
-use crate::arch::x86_64::{smp::percpu::MAX_CPUS};
+use crate::arch::x86_64::smp::percpu::MAX_CPUS;
 
 const TRAMPOLINE_PHYS: u64 = 0x8000;
 
@@ -84,19 +84,14 @@ pub extern "C" fn ap_main() -> ! {
     let apic_id = crate::arch::x86_64::lapic::id();
     let cpu_id = apic_id as usize;
 
-    crate::drivers::serial::print(
-        "AP: entered trampoline, LAPIC ID = ",
-    );
+    crate::drivers::serial::print("AP: entered trampoline, LAPIC ID = ");
     crate::drivers::serial::print_u64(apic_id as u64);
     crate::drivers::serial::println("");
 
     if cpu_id < MAX_CPUS {
         AP_STARTED[cpu_id].store(true, Ordering::Release);
 
-        crate::arch::x86_64::smp::percpu::init_ap(
-            cpu_id,
-            apic_id,
-        );
+        crate::arch::x86_64::smp::percpu::init_ap(cpu_id, apic_id);
     }
 
     let cpu = crate::arch::x86_64::smp::percpu::current();
@@ -110,17 +105,17 @@ pub extern "C" fn ap_main() -> ! {
     crate::drivers::serial::println("");
 
     let cpu = crate::arch::x86_64::smp::percpu::current();
-    
+
     crate::drivers::serial::print("AP: GS CPU ID = ");
     crate::drivers::serial::print_u64(cpu.cpu_id as u64);
     crate::drivers::serial::println("");
-    
+
     crate::drivers::serial::print("AP: GS APIC ID = ");
     crate::drivers::serial::print_u64(cpu.apic_id as u64);
     crate::drivers::serial::println("");
 
     let cpu = crate::arch::x86_64::smp::percpu::current();
-    
+
     crate::drivers::serial::print("SMP: GS current CPU = ");
     crate::drivers::serial::print_u64(cpu.cpu_id as u64);
     crate::drivers::serial::println("");
@@ -130,9 +125,7 @@ pub extern "C" fn ap_main() -> ! {
     crate::arch::x86_64::lapic::init_ap();
 
     crate::arch::x86_64::lapic::timer_init_ap();
-    crate::arch::x86_64::lapic::timer_start_ap(
-        crate::arch::x86_64::lapic::TIMER_INITIAL_COUNT,
-    );
+    crate::arch::x86_64::lapic::timer_start_ap(crate::arch::x86_64::lapic::TIMER_INITIAL_COUNT);
 
     let cpu = crate::arch::x86_64::smp::percpu::current();
     cpu.set_timer_initialized();
@@ -156,12 +149,36 @@ pub extern "C" fn ap_main() -> ! {
         crate::drivers::serial::println("");
 
         let (thread, name) = match cpu_id {
-            1 => (Thread::new(AP_BETA_ID, 1, crate::task::test::ap_beta), "AP_BETA"),
-            2 => (Thread::new(AP_SILF_ID, 2, crate::task::test::ap_silf), "AP_SILF"),
+            1 => (
+                Thread::new(
+                    AP_BETA_ID,
+                    0, 
+                    1, 
+                    crate::task::test::ap_beta,
+                ),
+                "AP_BETA",
+            ),
+
+            2 => (
+                Thread::new(
+                    AP_SILF_ID,
+                    0, 
+                    2, 
+                    crate::task::test::ap_silf,
+                ),
+                "AP_SILF",
+            ),
+
             3 => (
-                Thread::new(AP_GAMMA_ID, 3, crate::task::test::ap_gamma),
+                Thread::new(
+                    AP_GAMMA_ID,
+                    0, 
+                    3, 
+                    crate::task::test::ap_gamma,
+                ),
                 "AP_GAMMA",
             ),
+
             _ => {
                 crate::drivers::serial::print("AP Scheduler: no test thread for CPU=");
                 crate::drivers::serial::print_u64(cpu_id as u64);

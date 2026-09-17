@@ -114,9 +114,9 @@ pub extern "C" fn thread_silf() -> ! {
 pub fn scheduler_test() -> ! {
     crate::drivers::serial::println("=== SCHEDULER TEST ===");
 
-    let thread_a = Thread::new(1, 0, thread_alpha);
-    let thread_b = Thread::new(2, 0, thread_beta);
-    let thread_s = Thread::new(3, 0, thread_silf);
+    let thread_a = Thread::new(1, 0, 0, thread_alpha);
+    let thread_b = Thread::new(2, 0, 0, thread_beta);
+    let thread_s = Thread::new(3, 0, 0, thread_silf);
 
     unsafe {
         let scheduler = crate::task::scheduler();
