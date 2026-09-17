@@ -7,6 +7,7 @@ const HUGE_PAGE_SIZE: u64 = 2 * 1024 * 1024;
 const STACK_BASE: u64 = 0xFFFF_FFFF_A000_0000;
 const STACK_SIZE: u64 = 64 * 1024;
 const PAGE_SIZE: u64 = 4096;
+static mut KERNEL_PML4: Option<PhysFrame> = None;
 
 unsafe extern "C" {
     static _kernel_start: u8;
@@ -29,12 +30,14 @@ impl VirtualMemoryManager {
         let pml4 = frame_allocator.alloc_frame()?;
 
         unsafe {
+            KERNEL_PML4 = Some(pml4);
             let virtual_address =
                 crate::boot::limine::physical_to_virtual(pml4.address).expect("HHDM unavailable");
 
             let table = virtual_address as *mut PageTable;
 
             (*table).zero();
+
         }
 
         crate::drivers::serial::println("PML4 allocated");
@@ -433,4 +436,14 @@ impl VirtualMemoryManager {
     
         Some(base + size - 8)
     }
+}
+
+pub fn kernel_pml4() -> PhysFrame {
+    unsafe {
+        KERNEL_PML4.expect("Kernel PML4 is not initialized")
+    }
+}
+
+pub fn try_kernel_pml4() -> Option<PhysFrame> {
+    unsafe { KERNEL_PML4 }
 }

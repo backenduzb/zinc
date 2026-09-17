@@ -1,4 +1,4 @@
-const PAGE_SIZE: u64 = 4096;
+pub const PAGE_SIZE: u64 = 4096;
 const ENTRY_COUNT: usize = 512;
 const HUGE_PAGE: u64 = 1 << 7;
 

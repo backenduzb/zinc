@@ -40,6 +40,9 @@ pub extern "C" fn kmain() -> ! {
     drivers::pci::init();
     crate::drivers::serial::println("BEFORE PMM TEST");
 
+    crate::memory::test::address_space_test();
+    crate::memory::test::user_address_space_test();
+    crate::memory::test::user_page_map_test();
     memory::physical::test();
 
     crate::drivers::serial::println("AFTER PMM TEST");
@@ -47,7 +50,6 @@ pub extern "C" fn kmain() -> ! {
     time::clock::test();
 
     crate::drivers::serial::println("AFTER CLOCK TEST");
-
     unsafe {
         c_test();
     }

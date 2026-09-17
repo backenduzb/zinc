@@ -1,4 +1,8 @@
+use core::sync::atomic::{AtomicBool, Ordering};
+
 use crate::{boot::limine::MEMORY_MAP_REQUEST, memory};
+
+static ALLOCATOR_INITIALIZED: AtomicBool = AtomicBool::new(false);
 
 const PAGE_SIZE: u64 = 4096;
 
@@ -29,9 +33,17 @@ impl FrameAllocator {
     }
 
     pub fn new() -> Self {
+        // The bitmap is global. Rebuilding it on every `new()` would wipe
+        // all previous allocations (double-alloc of the same frame) and
+        // spam the serial log. Initialize only once.
+        if ALLOCATOR_INITIALIZED.swap(true, Ordering::SeqCst) {
+            return Self { initialized: true };
+        }
+
         let Some(response) = MEMORY_MAP_REQUEST.response() else {
             crate::drivers::serial::println("ERROR: memory map unavailable");
 
+            ALLOCATOR_INITIALIZED.store(false, Ordering::SeqCst);
             return Self::empty();
         };
 
