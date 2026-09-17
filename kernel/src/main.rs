@@ -43,6 +43,7 @@ pub extern "C" fn kmain() -> ! {
     crate::memory::test::address_space_test();
     crate::memory::test::user_address_space_test();
     crate::memory::test::user_page_map_test();
+    crate::memory::test::user_page_unmap_test();
     memory::physical::test();
 
     crate::drivers::serial::println("AFTER PMM TEST");

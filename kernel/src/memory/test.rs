@@ -307,7 +307,6 @@ extern "C" fn after_address_space_switch() -> ! {
 
         crate::drivers::serial::println("Kernel process: PID=0");
 
-
         unsafe {
             let pm = crate::task::process_manager();
 
@@ -388,14 +387,12 @@ extern "C" fn after_address_space_switch() -> ! {
     crate::task::test::scheduler_test();
 }
 
-
 pub fn address_space_test() {
     crate::drivers::serial::println("=== ADDRESS SPACE TEST ===");
 
     let mut allocator = crate::memory::physical::FrameAllocator::new();
 
-    let Some(address_space) =
-        crate::memory::address_space::AddressSpace::new(&mut allocator)
+    let Some(address_space) = crate::memory::address_space::AddressSpace::new(&mut allocator)
     else {
         crate::drivers::serial::println("AddressSpace: FAILED");
         return;
@@ -413,8 +410,7 @@ pub fn user_address_space_test() {
 
     let mut allocator = crate::memory::physical::FrameAllocator::new();
 
-    let Some(address_space) =
-        crate::memory::address_space::AddressSpace::new_user(&mut allocator)
+    let Some(address_space) = crate::memory::address_space::AddressSpace::new_user(&mut allocator)
     else {
         crate::drivers::serial::println("User AddressSpace: FAILED");
         return;
@@ -430,22 +426,17 @@ pub fn user_address_space_test() {
 pub fn user_page_map_test() {
     crate::drivers::serial::println("=== USER PAGE MAP TEST ===");
 
-    let mut allocator =
-        crate::memory::physical::FrameAllocator::new();
+    let mut allocator = crate::memory::physical::FrameAllocator::new();
 
     let Some(mut address_space) =
         crate::memory::address_space::AddressSpace::new_user(&mut allocator)
     else {
-        crate::drivers::serial::println(
-            "User AddressSpace: FAILED",
-        );
+        crate::drivers::serial::println("User AddressSpace: FAILED");
         return;
     };
 
     let Some(frame) = allocator.alloc_frame() else {
-        crate::drivers::serial::println(
-            "User page frame allocation: FAILED",
-        );
+        crate::drivers::serial::println("User page frame allocation: FAILED");
         return;
     };
 
@@ -455,18 +446,73 @@ pub fn user_page_map_test() {
 
     let virtual_address = 0x0040_0000;
 
-    if address_space.map_page(
-        &mut allocator,
-        virtual_address,
-        frame.address,
-        true,
-    ) {
-        crate::drivers::serial::println(
-            "User page mapping: OK",
-        );
+    if address_space.map_page(&mut allocator, virtual_address, frame.address, true) {
+        crate::drivers::serial::println("User page mapping: OK");
     } else {
-        crate::drivers::serial::println(
-            "User page mapping: FAILED",
-        );
+        crate::drivers::serial::println("User page mapping: FAILED");
+    }
+}
+
+pub fn user_page_unmap_test() {
+    crate::drivers::serial::println("=== USER PAGE UNMAP TEST ===");
+
+    let mut allocator = crate::memory::physical::FrameAllocator::new();
+
+    let Some(mut address_space) =
+        crate::memory::address_space::AddressSpace::new_user(&mut allocator)
+    else {
+        crate::drivers::serial::println("User AddressSpace: FAILED");
+        return;
+    };
+
+    let Some(frame) = allocator.alloc_frame() else {
+        crate::drivers::serial::println("Frame allocation: FAILED");
+        return;
+    };
+
+    let virtual_address = 0x0040_0000;
+
+    if !address_space.map_page(&mut allocator, virtual_address, frame.address, true) {
+        crate::drivers::serial::println("Mapping: FAILED");
+        return;
+    }
+
+    crate::drivers::serial::println("Mapping: OK");
+
+    match address_space.translate_page(virtual_address) {
+        Some(address) if address == frame.address => {
+            crate::drivers::serial::println("Translation: OK");
+        }
+
+        Some(address) => {
+            crate::drivers::serial::print("Translation: WRONG 0x");
+            crate::drivers::serial::print_u64(address);
+            crate::drivers::serial::println("");
+            return;
+        }
+
+        None => {
+            crate::drivers::serial::println("Translation: FAILED");
+            return;
+        }
+    }
+
+    let unmapped = address_space.unmap_page(&mut allocator, virtual_address);
+
+    match unmapped {
+        Some(unmapped_frame) if unmapped_frame.address == frame.address => {
+            crate::drivers::serial::println("Unmap: OK");
+        }
+
+        _ => {
+            crate::drivers::serial::println("Unmap: FAILED");
+            return;
+        }
+    }
+
+    if address_space.translate_page(virtual_address).is_none() {
+        crate::drivers::serial::println("Translation after unmap: OK");
+    } else {
+        crate::drivers::serial::println("Translation after unmap: FAILED");
     }
 }
