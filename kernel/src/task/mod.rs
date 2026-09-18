@@ -2,6 +2,7 @@ pub mod process;
 pub mod thread;
 pub mod scheduler;
 pub mod test;
+pub mod ring3;
 
 use scheduler::Scheduler;
 use thread::ThreadState;

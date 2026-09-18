@@ -133,7 +133,7 @@ pub fn init_bsp(apic_id: u32) {
     }
     crate::drivers::serial::println("TSS: LTR loaded");
 
-    let rsp0 = unsafe { (*cpu.tss.get()).rsp[0] };
+    let rsp0 = unsafe { (*cpu.tss.get()).kernel_stack() };
 
     let tss = unsafe { &*cpu.tss.get() };
 
@@ -174,7 +174,7 @@ pub fn init_ap(cpu_id: usize, apic_id: u32) {
 
     let cpu = get(cpu_id).expect("AP PerCpu missing");
 
-    let rsp0 = unsafe { (*cpu.tss.get()).rsp[0] };
+    let rsp0 = unsafe { (*cpu.tss.get()).kernel_stack() };
 
     crate::drivers::serial::print("CPU ");
     crate::drivers::serial::print_u64(cpu_id as u64);

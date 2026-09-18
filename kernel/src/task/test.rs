@@ -469,3 +469,167 @@ pub fn user_thread_test() {
 
     crate::drivers::serial::println("USER THREAD TEST: PASS");
 }
+
+pub fn user_process_cr3_test() {
+    use super::process::ProcessManager;
+    use super::thread::Thread;
+
+    crate::drivers::serial::println("=== USER PROCESS CR3 TEST ===");
+
+    let kernel_cr3 = crate::arch::x86_64::paging::read_cr3() & !0xFFF;
+
+    crate::drivers::serial::print("Kernel CR3: 0x");
+    crate::drivers::serial::print_u64(kernel_cr3);
+    crate::drivers::serial::println("");
+
+    if kernel_cr3 == 0 || kernel_cr3 % 4096 != 0 {
+        crate::drivers::serial::println("CR3 TEST: bad kernel CR3");
+        return;
+    }
+
+    let mut allocator = crate::memory::physical::FrameAllocator::new();
+    let mut manager = ProcessManager::new();
+
+    let pid = match manager.create_user(&mut allocator) {
+        Some(pid) => pid,
+        None => {
+            crate::drivers::serial::println("CR3 TEST: create_user FAILED");
+            return;
+        }
+    };
+
+    // UserThread -> Process -> AddressSpace -> pml4_phys() chain.
+    let thread = Thread::new_user(200, 0, pid, 0x400000, 0x0000_7FFF_FFFF_FFF0);
+
+    if thread.process_id() != pid {
+        crate::drivers::serial::println("CR3 TEST: thread process link FAILED");
+        return;
+    }
+    crate::drivers::serial::println("Thread -> Process link: OK");
+
+    let pml4_phys = match manager.get(thread.process_id()).and_then(|p| p.pml4_phys()) {
+        Some(addr) => addr,
+        None => {
+            crate::drivers::serial::println("CR3 TEST: pml4_phys MISSING");
+            return;
+        }
+    };
+
+    if pml4_phys == 0 {
+        crate::drivers::serial::println("CR3 TEST: pml4 zero FAILED");
+        return;
+    }
+    crate::drivers::serial::println("PML4 non-zero: OK");
+
+    if pml4_phys % 4096 != 0 {
+        crate::drivers::serial::println("CR3 TEST: pml4 alignment FAILED");
+        return;
+    }
+    crate::drivers::serial::println("PML4 page aligned: OK");
+
+    if pml4_phys == kernel_cr3 {
+        crate::drivers::serial::println("CR3 TEST: user PML4 == kernel CR3 FAILED");
+        return;
+    }
+
+    crate::drivers::serial::print("User PML4: 0x");
+    crate::drivers::serial::print_u64(pml4_phys);
+    crate::drivers::serial::println(" (differs from kernel CR3: OK)");
+
+    // Confirm the kernel half was copied entry-by-entry, so kernel code,
+    // HHDM, heap, LAPIC and stacks stay mapped after the switch.
+    let user_va = match crate::boot::limine::physical_to_virtual(pml4_phys) {
+        Some(va) => va,
+        None => {
+            crate::drivers::serial::println("CR3 TEST: HHDM unavailable");
+            return;
+        }
+    };
+
+    let kernel_va = match crate::boot::limine::physical_to_virtual(kernel_cr3) {
+        Some(va) => va,
+        None => {
+            crate::drivers::serial::println("CR3 TEST: kernel PML4 unmapped");
+            return;
+        }
+    };
+
+    let mut present = 0usize;
+
+    unsafe {
+        let user_table =
+            &*(user_va as *const crate::arch::x86_64::paging::PageTable);
+        let kernel_table =
+            &*(kernel_va as *const crate::arch::x86_64::paging::PageTable);
+
+        for index in 256..512 {
+            if user_table.entries[index].raw() != kernel_table.entries[index].raw() {
+                crate::drivers::serial::print("CR3 TEST: kernel-half mismatch at ");
+                crate::drivers::serial::print_u64(index as u64);
+                crate::drivers::serial::println("");
+                return;
+            }
+
+            if user_table.entries[index].is_present() {
+                present += 1;
+            }
+        }
+    }
+
+    if present == 0 {
+        crate::drivers::serial::println("CR3 TEST: kernel mappings MISSING");
+        return;
+    }
+
+    crate::drivers::serial::print("Kernel-half identical, present entries: ");
+    crate::drivers::serial::print_u64(present as u64);
+    crate::drivers::serial::println("");
+
+    // Load the user PML4, verify CR3 reads back, touch the stack while on
+    // the user address space (proves kernel-half is live), then restore.
+    // Interrupts are masked across the window; the thread is NOT added to
+    // the live scheduler and Ring 3 is NOT entered.
+    let canary: u64 = 0xC3A0_1234_5678_9ABC;
+
+    unsafe {
+        core::arch::asm!("cli", options(nomem, nostack, preserves_flags));
+
+        crate::arch::x86_64::paging::load_cr3(pml4_phys);
+
+        let loaded = crate::arch::x86_64::paging::read_cr3() & !0xFFF;
+
+        if loaded != pml4_phys {
+            crate::arch::x86_64::paging::load_cr3(kernel_cr3);
+            core::arch::asm!("sti", options(nomem, nostack, preserves_flags));
+            crate::drivers::serial::println("CR3 TEST: load/readback FAILED");
+            return;
+        }
+
+        // Stack access while running under the user PML4 (volatile forces
+        // real stack memory traffic, proving the kernel-half mapping live).
+        let mut probe: u64 = 0;
+        core::ptr::write_volatile(&mut probe, canary);
+        let check = core::ptr::read_volatile(&probe);
+
+        if check != canary {
+            crate::arch::x86_64::paging::load_cr3(kernel_cr3);
+            core::arch::asm!("sti", options(nomem, nostack, preserves_flags));
+            crate::drivers::serial::println("CR3 TEST: stack probe FAILED");
+            return;
+        }
+
+        crate::arch::x86_64::paging::load_cr3(kernel_cr3);
+
+        let restored = crate::arch::x86_64::paging::read_cr3() & !0xFFF;
+
+        core::arch::asm!("sti", options(nomem, nostack, preserves_flags));
+
+        if restored != kernel_cr3 {
+            crate::drivers::serial::println("CR3 TEST: restore FAILED");
+            return;
+        }
+    }
+
+    crate::drivers::serial::println("CR3 load/readback/restore: OK");
+    crate::drivers::serial::println("USER PROCESS CR3 TEST: PASS");
+}

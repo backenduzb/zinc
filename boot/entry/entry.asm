@@ -8,6 +8,7 @@ global lapic_timer_interrupt_stub
 global gp_fault_stub
 global page_fault_stub
 global double_fault_stub
+global ud_fault_stub
 
 extern kmain
 extern timer_handler
@@ -15,6 +16,7 @@ extern lapic_timer_handler
 extern gp_fault_handler
 extern page_fault_handler
 extern double_fault_handler
+extern ud_fault_handler
 
 
 _start:
@@ -74,6 +76,7 @@ timer_interrupt_stub:
 
 
 timer_fresh_thread:
+    mov rdi, rax
     cld
     jmp rdx
 
@@ -125,13 +128,24 @@ lapic_timer_interrupt_stub:
 
 
 lapic_timer_fresh_thread:
-
+    mov rdi, rax
     mov rsp, rax
     cld
     jmp rdx
     
+ud_fault_stub:
+    mov rdi, [rsp]
+    mov rsi, [rsp+8]
+    call ud_fault_handler
+
+ud_hang:
+    hlt
+    jmp ud_hang
+
 gp_fault_stub:
     pop rdi
+    mov rsi, [rsp]
+    mov rdx, [rsp+8]
     call gp_fault_handler
 
 gp_hang:
@@ -139,12 +153,10 @@ gp_hang:
     jmp gp_hang
 
 
-; ============================================================
-; Page Fault
-; ============================================================
-
 page_fault_stub:
     pop rdi
+    mov rsi, [rsp]
+    mov rdx, [rsp+8]
     call page_fault_handler
 
 pf_hang:
@@ -152,12 +164,10 @@ pf_hang:
     jmp pf_hang
 
 
-; ============================================================
-; Double Fault
-; ============================================================
-
 double_fault_stub:
     pop rdi
+    mov rsi, [rsp]
+    mov rdx, [rsp+8]
     call double_fault_handler
 
 df_hang:

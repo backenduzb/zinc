@@ -390,6 +390,10 @@ extern "C" fn after_address_space_switch() -> ! {
 
     crate::task::test::user_thread_test();
 
+    crate::task::test::user_process_cr3_test();
+
+    crate::task::ring3::prepare_ring3_user_thread();
+
     crate::task::test::scheduler_test();
 }
 

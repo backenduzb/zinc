@@ -52,6 +52,7 @@ pub fn init() {
             fn timer_interrupt_stub();
             fn lapic_timer_interrupt_stub();
 
+            fn ud_fault_stub();
             fn gp_fault_stub();
             fn page_fault_stub();
             fn double_fault_stub();
@@ -61,6 +62,10 @@ pub fn init() {
             crate::arch::x86_64::interrupts::divide_error
                 as *const ()
                 as usize,
+        );
+
+        IDT[6] = IdtEntry::new(
+            ud_fault_stub as *const () as usize
         );
 
         IDT[8] = IdtEntry::new(

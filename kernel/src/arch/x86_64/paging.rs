@@ -83,6 +83,14 @@ impl PageTableEntry {
     pub fn is_executable(&self) -> bool {
         self.0 & NO_EXECUTE == 0 
     }
+
+    pub fn is_user(&self) -> bool {
+        self.0 & USER != 0
+    }
+
+    pub fn is_writable(&self) -> bool {
+        self.0 & WRITABLE != 0
+    }
 }
 
 #[repr(C, align(4096))]

@@ -291,6 +291,67 @@ impl AddressSpace {
             Some(pt.entries[pt_index].address())
         }
     }
+
+    pub fn probe_page(&self, virtual_address: u64) -> Option<(bool, bool, bool)> {
+        const USER_MAX: u64 = 0x0000_8000_0000_0000;
+
+        if virtual_address >= USER_MAX {
+            return None;
+        }
+
+        let (pml4_index, pdpt_index, pd_index, pt_index) =
+            crate::arch::x86_64::paging::page_indices(virtual_address & !0xFFF);
+
+        let pml4_va = physical_to_virtual(self.pml4.address)?;
+
+        unsafe {
+            let pml4 = &*(pml4_va as *const PageTable);
+
+            if !pml4.entries[pml4_index].is_present() {
+                return None;
+            }
+
+            if !pml4.entries[pml4_index].is_user() {
+                return None;
+            }
+
+            let pdpt_frame = PhysFrame::new(pml4.entries[pml4_index].address());
+            let pdpt_va = physical_to_virtual(pdpt_frame.address)?;
+            let pdpt = &*(pdpt_va as *const PageTable);
+
+            if !pdpt.entries[pdpt_index].is_present() || pdpt.entries[pdpt_index].is_huge() {
+                return None;
+            }
+
+            if !pdpt.entries[pdpt_index].is_user() {
+                return None;
+            }
+
+            let pd_frame = PhysFrame::new(pdpt.entries[pdpt_index].address());
+            let pd_va = physical_to_virtual(pd_frame.address)?;
+            let pd = &*(pd_va as *const PageTable);
+
+            if !pd.entries[pd_index].is_present() || pd.entries[pd_index].is_huge() {
+                return None;
+            }
+
+            if !pd.entries[pd_index].is_user() {
+                return None;
+            }
+
+            let pt_frame = PhysFrame::new(pd.entries[pd_index].address());
+            let pt_va = physical_to_virtual(pt_frame.address)?;
+            let pt = &*(pt_va as *const PageTable);
+
+            if !pt.entries[pt_index].is_present() {
+                return None;
+            }
+
+            let entry = &pt.entries[pt_index];
+
+            Some((entry.is_user(), entry.is_writable(), entry.is_executable()))
+        }
+    }
     pub fn unmap_page(
         &mut self,
         frame_allocator: &mut FrameAllocator,
