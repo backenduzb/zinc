@@ -22,13 +22,13 @@ impl Scheduler {
         }
 
         let idle = Thread::new(0, cpu_id, 0, idle_thread);
-    
+
         self.threads[IDLE_SLOT] = Some(idle);
         self.threads[IDLE_SLOT]
             .as_mut()
             .unwrap()
             .set_state(ThreadState::Ready);
-    
+
         self.count += 1;
     }
 
@@ -130,23 +130,11 @@ impl Scheduler {
         self.current
     }
 
-    /// Trampoline for fresh user threads: the timer stubs jump here with
-    /// RDI = UserInterruptFrame pointer (see entry.asm fresh path).
-    /// `start_user_thread_context` does `mov rsp, rdi; pop GPRs; iretq`,
-    /// so the CPU takes CS/SS/RSP/RIP from the frame and drops to Ring 3.
-    /// Fresh kernel threads keep the old `(stack_top, entry)` + `jmp`
-    /// path unchanged.
     #[inline]
     fn user_entry_trampoline() -> u64 {
         crate::arch::x86_64::context::start_user_thread_context as usize as u64
     }
 
-    /// Validate a fresh user thread before the first Ring 3 entry.
-    ///
-    /// Denies any transition where RIP/RSP is outside the user half,
-    /// unmapped, or (for RIP) not user-executable. Kernel addresses are
-    /// never allowed as user RIP/RSP. Returns `None` on success, or a
-    /// static reason string on failure (caller logs + refuses entry).
     fn validate_fresh_user(&self, index: usize) -> Option<&'static str> {
         let thread = self.threads[index].as_ref()?;
 
@@ -216,7 +204,6 @@ impl Scheduler {
         None
     }
 
-    /// Log the observable Ring 3 entry context before `iretq`.
     fn log_user_entry(&self, index: usize) {
         let thread = match self.threads[index].as_ref() {
             Some(thread) => thread,
@@ -255,10 +242,6 @@ impl Scheduler {
         Self::debug_tss_delivery(rsp0);
     }
 
-    /// Pre-iretq delivery audit: decode the live TR/GDTR to the exact TSS
-    /// the CPU will use on the next CPL3->CPL0 interrupt, and page-walk
-    /// RSP0 under the current (user) CR3. Any mismatch here triple-faults
-    /// silently, so print everything before the first Ring 3 entry.
     fn debug_tss_delivery(rsp0: u64) {
         let tr_selector: u16;
         let gdtr_base: u64;
@@ -323,42 +306,29 @@ impl Scheduler {
             let true_tss = unsafe { cpu.tss.get() as u64 };
             let percpu_base = cpu as *const _ as u64;
 
-            crate::drivers::serial::print("TSS AUDIT: percpu base=0x");
+            crate::drivers::serial::print("TSS AUDIT: percpu=0x");
             crate::drivers::serial::print_hex_u64(percpu_base);
-            crate::drivers::serial::print(" true tss=0x");
+            crate::drivers::serial::print(" tss=0x");
             crate::drivers::serial::print_hex_u64(true_tss);
-            crate::drivers::serial::print(" desc base=0x");
+            crate::drivers::serial::print(" desc=0x");
             crate::drivers::serial::print_hex_u64(base);
-            crate::drivers::serial::println("");
 
-            let (e3, e4) = unsafe {
-                (
-                    core::ptr::read_volatile((gdtr_base + 24) as *const u64),
-                    core::ptr::read_volatile((gdtr_base + 32) as *const u64),
-                )
-            };
-
-            crate::drivers::serial::print("TSS AUDIT: gdt[3]=0x");
-            crate::drivers::serial::print_hex_u64(e3);
-            crate::drivers::serial::print(" gdt[4]=0x");
-            crate::drivers::serial::print_hex_u64(e4);
-            crate::drivers::serial::println("");
+            if base == true_tss && cpu_rsp0 == rsp0 {
+                crate::drivers::serial::println(" MATCH");
+            } else {
+                crate::drivers::serial::println(" MISMATCH");
+            }
         }
 
-        // Page-walk RSP0 under the current CR3 (user PML4 here).
         let cr3 = crate::arch::x86_64::paging::read_cr3() & !0xFFF;
-
-        crate::drivers::serial::print("TSS AUDIT: walk RSP0 under CR3=0x");
-        crate::drivers::serial::print_hex_u64(cr3);
-        crate::drivers::serial::println("");
 
         let hhdm = |phys: u64| crate::boot::limine::physical_to_virtual(phys);
 
         let mut table_phys = cr3;
         let mut ok = true;
 
-        for level in 0..4 {
-            let shift = 39 - level * 9;
+        for _level in 0..4 {
+            let shift = 39 - _level * 9;
             let idx = ((rsp0 >> shift) & 0x1FF) as usize;
 
             let va = match hhdm(table_phys) {
@@ -370,34 +340,13 @@ impl Scheduler {
             };
 
             let entry = unsafe { core::ptr::read_volatile((va + idx as u64 * 8) as *const u64) };
-            let present_bit = entry & 1;
-            let rw = (entry >> 1) & 1;
-            let us = (entry >> 2) & 1;
-            let nx = (entry >> 63) & 1;
-            let next_phys = entry & 0x000F_FFFF_FFFF_F000;
 
-            crate::drivers::serial::print("  L");
-            crate::drivers::serial::print_u64(level as u64);
-            crate::drivers::serial::print(" idx=");
-            crate::drivers::serial::print_u64(idx as u64);
-            crate::drivers::serial::print(" P=");
-            crate::drivers::serial::print_u64(present_bit);
-            crate::drivers::serial::print(" RW=");
-            crate::drivers::serial::print_u64(rw);
-            crate::drivers::serial::print(" US=");
-            crate::drivers::serial::print_u64(us);
-            crate::drivers::serial::print(" NX=");
-            crate::drivers::serial::print_u64(nx);
-            crate::drivers::serial::print(" next=0x");
-            crate::drivers::serial::print_hex_u64(next_phys);
-            crate::drivers::serial::println("");
-
-            if present_bit == 0 || (entry & (1 << 7) != 0) {
+            if entry & 1 == 0 || (entry & (1 << 7) != 0) {
                 ok = false;
                 break;
             }
 
-            table_phys = next_phys;
+            table_phys = entry & 0x000F_FFFF_FFFF_F000;
         }
 
         if ok {
@@ -408,9 +357,6 @@ impl Scheduler {
     }
 
     fn target_pml4(&self, index: usize) -> Option<u64> {
-        // Resolve the PML4 that `threads[index]` must run under.
-        // Kernel thread -> kernel PML4; user thread -> Process.address_space
-        // PML4 via process_id. None = keep current CR3.
         let thread = self.threads[index].as_ref()?;
 
         if thread.is_kernel() {
@@ -427,11 +373,6 @@ impl Scheduler {
     }
 
     fn switch_address_space_for(&self, next: usize) {
-        // Switch CR3 (+ TSS RSP0 for user threads) to the address space of
-        // `threads[next]`. Reuses the existing `paging::load_cr3`
-        // primitive. Safe for kernel threads (no-op when target == current).
-        // Every user AddressSpace copies the kernel half, so kernel
-        // code/stacks stay mapped across the switch.
         let target = match self.target_pml4(next) {
             Some(pml4) => pml4,
             None => return,
@@ -451,10 +392,16 @@ impl Scheduler {
             }
         }
 
-        let is_user = self.threads[next].as_ref().map(|t| t.is_user()).unwrap_or(false);
+        let is_user = self.threads[next]
+            .as_ref()
+            .map(|t| t.is_user())
+            .unwrap_or(false);
 
         if is_user {
-            let stack_top = self.threads[next].as_ref().map(|t| t.stack_top()).unwrap_or(0);
+            let stack_top = self.threads[next]
+                .as_ref()
+                .map(|t| t.stack_top())
+                .unwrap_or(0);
 
             if stack_top != 0 {
                 let cpu = crate::arch::x86_64::smp::percpu::current();
@@ -464,7 +411,9 @@ impl Scheduler {
                 }
 
                 crate::drivers::serial::print("TSS.RSP0 configured: CPU=");
-                crate::drivers::serial::print_u64(crate::arch::x86_64::smp::percpu::current_cpu_id() as u64);
+                crate::drivers::serial::print_u64(
+                    crate::arch::x86_64::smp::percpu::current_cpu_id() as u64,
+                );
                 crate::drivers::serial::print(" RSP0=0x");
                 crate::drivers::serial::print_hex_u64(stack_top);
                 crate::drivers::serial::println("");
@@ -490,23 +439,12 @@ impl Scheduler {
             thread.set_state(ThreadState::Running);
             thread.mark_started();
         }
-
-        // Fresh-thread dispatch split by ThreadKind: kernel keeps the
-        // legacy `start_first_thread(stack_top, entry)` + `jmp` path;
-        // user enters Ring 3 via `start_user_thread_context(frame)` +
-        // `iretq` (CS/SS/RSP/RIP come from the UserInterruptFrame).
         let is_user = self.threads[first]
             .as_ref()
             .map(|thread| thread.is_user())
             .unwrap_or(false);
 
         if is_user {
-            // Mask IRQs before going live: a tick anywhere in the user
-            // handoff (prologue prints, CR3+TSS switch, validation,
-            // iretq) would divert to another thread, abandon this
-            // prologue, and overwrite the fresh UserInterruptFrame
-            // pointer with a prologue frame. IF is restored atomically
-            // by the frame's RFLAGS on iretq.
             unsafe {
                 core::arch::asm!("cli", options(nomem, nostack, preserves_flags));
             }
@@ -517,10 +455,7 @@ impl Scheduler {
         crate::drivers::serial::println("");
 
         self.switch_address_space_for(first);
-
-        // From here the scheduler is live: ticks may divert into fresh
-        // threads (kernel entries are idempotent across this; the user
-        // path above is fully masked).
+        
         self.started = true;
 
         if is_user {
@@ -573,12 +508,6 @@ impl Scheduler {
         if self.count == 0 {
             return (frame as u64, 0);
         }
-
-        // Threads queued but start_first not reached yet (boot/AP bringup
-        // runs with IRQs live): stay on the interrupted context. Without
-        // this, a tick here would divert into a fresh thread, abandon the
-        // boot context, and overwrite fresh user UserInterruptFrame
-        // pointers with prologue frames.
         if !self.started {
             return (frame as u64, 0);
         }
@@ -591,9 +520,7 @@ impl Scheduler {
 
             if self.ticks % 100 == 0 {
                 crate::drivers::serial::print("AP Scheduler tick: CPU=");
-                crate::drivers::serial::print_u64(
-                    cpu as u64,
-                );
+                crate::drivers::serial::print_u64(cpu as u64);
                 crate::drivers::serial::print(" ticks=");
                 crate::drivers::serial::print_u64(self.ticks);
                 crate::drivers::serial::println("");
@@ -602,7 +529,7 @@ impl Scheduler {
             if let Some(thread) = self.threads[self.current].as_mut() {
                 thread.set_interrupt_rsp(frame as u64);
             }
-            
+
             let now = crate::arch::x86_64::lapic::ticks();
 
             for thread in self.threads.iter_mut() {
@@ -675,17 +602,9 @@ impl Scheduler {
                 _ => false,
             };
 
-            // Load the next thread's address space before returning to asm.
-            // Kernel threads restore the kernel CR3; user threads load their
-            // process PML4 (kernel half is present, so handler code/stacks
-            // stay mapped). No-op while only kernel threads are scheduled.
             self.switch_address_space_for(next);
 
             if fresh {
-                // Fresh-thread dispatch split by ThreadKind.
-                // Kernel: legacy (stack_top, entry) + stub `jmp entry`.
-                // User:   (frame, start_user_thread_context) + stub
-                //         `mov rdi, rax; jmp rdx` -> `iretq` to Ring 3.
                 let is_user = self.threads[next]
                     .as_ref()
                     .map(|thread| thread.is_user())
@@ -810,9 +729,6 @@ impl Scheduler {
         self.switch_address_space_for(next);
 
         if fresh {
-            // Same ThreadKind split as the AP path above. Kernel keeps
-            // the legacy (stack, entry) + `jmp`; user goes through
-            // start_user_thread_context + `iretq`.
             let is_user = self.threads[next]
                 .as_ref()
                 .map(|thread| thread.is_user())
@@ -955,7 +871,7 @@ impl Scheduler {
             if index == IDLE_SLOT {
                 continue;
             }
-            
+
             if index == self.current {
                 continue;
             }
