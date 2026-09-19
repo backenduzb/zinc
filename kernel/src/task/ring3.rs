@@ -15,23 +15,74 @@ static MARKER_PHYS: AtomicU64 = AtomicU64::new(0);
 static RING3_PID: AtomicU64 = AtomicU64::new(0);
 static PASS_PRINTED: AtomicBool = AtomicBool::new(false);
 
-fn build_user_blob() -> [u8; 25] {
-    let mut blob = [0u8; 25];
+fn build_user_blob() -> [u8; 82] {
+    let mut blob = [0u8; 82];
+    let mut off = 0;
 
-    blob[0] = 0x48;
-    blob[1] = 0xB8;
-    blob[2..10].copy_from_slice(&USER_MARKER.to_le_bytes());
+    blob[off] = 0x48;
+    blob[off + 1] = 0xBB;
+    blob[off + 2..off + 10].copy_from_slice(&USER_DATA_ADDR.to_le_bytes());
+    off += 10;
 
-    blob[10] = 0x48;
-    blob[11] = 0xBB;
-    blob[12..20].copy_from_slice(&USER_DATA_ADDR.to_le_bytes());
+    blob[off] = 0x48;
+    blob[off + 1] = 0xC7;
+    blob[off + 2] = 0x03;
+    blob[off + 3..off + 7].copy_from_slice(&1u32.to_le_bytes());
+    off += 7;
 
-    blob[20] = 0x48;
-    blob[21] = 0x89;
-    blob[22] = 0x03;
+    for progress in [2u32, 3u32] {
+        blob[off] = 0x48;
+        blob[off + 1] = 0xC7;
+        blob[off + 2] = 0xC0;
+        blob[off + 3..off + 7].copy_from_slice(&0u32.to_le_bytes());
+        off += 7;
 
-    blob[23] = 0xEB;
-    blob[24] = 0xFE;
+        blob[off] = 0xCD;
+        blob[off + 1] = 0x80;
+        off += 2;
+
+        blob[off] = 0x48;
+        blob[off + 1] = 0xC7;
+        blob[off + 2] = 0x03;
+        blob[off + 3..off + 7].copy_from_slice(&progress.to_le_bytes());
+        off += 7;
+    }
+
+    blob[off] = 0x48;
+    blob[off + 1] = 0xC7;
+    blob[off + 2] = 0xC0;
+    blob[off + 3..off + 7].copy_from_slice(&0u32.to_le_bytes());
+    off += 7;
+
+    blob[off] = 0xCD;
+    blob[off + 1] = 0x80;
+    off += 2;
+
+    blob[off] = 0x48;
+    blob[off + 1] = 0xB8;
+    blob[off + 2..off + 10].copy_from_slice(&USER_MARKER.to_le_bytes());
+    off += 10;
+
+    blob[off] = 0x48;
+    blob[off + 1] = 0x89;
+    blob[off + 2] = 0x03;
+    off += 3;
+
+    blob[off] = 0x48;
+    blob[off + 1] = 0xC7;
+    blob[off + 2] = 0xC0;
+    blob[off + 3..off + 7].copy_from_slice(&1u32.to_le_bytes());
+    off += 7;
+
+    blob[off] = 0xCD;
+    blob[off + 1] = 0x80;
+    off += 2;
+
+    blob[off] = 0xEB;
+    blob[off + 1] = 0xFE;
+    off += 2;
+
+    debug_assert_eq!(off, blob.len());
 
     blob
 }

@@ -10,6 +10,7 @@ mod panic;
 mod task;
 mod time;
 mod exec;
+mod syscall;
 
 extern crate alloc;
 

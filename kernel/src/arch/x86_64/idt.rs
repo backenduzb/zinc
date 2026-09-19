@@ -36,6 +36,20 @@ impl IdtEntry {
             reversed: 0,
         }
     }
+
+    fn new_user_callable(handler: usize) -> Self {
+        let address = handler as u64;
+
+        Self {
+            offset_low: address as u16,
+            selector: 0x08,
+            ist: 0,
+            flags: 0xEE,
+            offset_mid: (address >> 16) as u16,
+            offset_high: (address >> 32) as u32,
+            reversed: 0,
+        }
+    }
 }
 
 #[repr(C, packed)]
@@ -45,6 +59,7 @@ struct IdtPointer {
 }
 
 static mut IDT: [IdtEntry; 256] = [IdtEntry::MISSING; 256];
+
 
 pub fn init() {
     unsafe {
@@ -56,37 +71,24 @@ pub fn init() {
             fn gp_fault_stub();
             fn page_fault_stub();
             fn double_fault_stub();
+            fn syscall_stub();
         }
 
-        IDT[0] = IdtEntry::new(
-            crate::arch::x86_64::interrupts::divide_error
-                as *const ()
-                as usize,
-        );
+        IDT[0] = IdtEntry::new(crate::arch::x86_64::interrupts::divide_error as *const () as usize);
 
-        IDT[6] = IdtEntry::new(
-            ud_fault_stub as *const () as usize
-        );
+        IDT[6] = IdtEntry::new(ud_fault_stub as *const () as usize);
 
-        IDT[8] = IdtEntry::new(
-            double_fault_stub as *const () as usize
-        );
+        IDT[8] = IdtEntry::new(double_fault_stub as *const () as usize);
 
-        IDT[13] = IdtEntry::new(
-            gp_fault_stub as *const () as usize
-        );
+        IDT[13] = IdtEntry::new(gp_fault_stub as *const () as usize);
 
-        IDT[14] = IdtEntry::new(
-            page_fault_stub as *const () as usize
-        );
+        IDT[14] = IdtEntry::new(page_fault_stub as *const () as usize);
 
-        IDT[32] = IdtEntry::new(
-            timer_interrupt_stub as *const () as usize
-        );
+        IDT[32] = IdtEntry::new(timer_interrupt_stub as *const () as usize);
 
-        IDT[48] = IdtEntry::new(
-            lapic_timer_interrupt_stub as *const () as usize
-        );
+        IDT[48] = IdtEntry::new(lapic_timer_interrupt_stub as *const () as usize);
+
+        IDT[0x80] = IdtEntry::new_user_callable(syscall_stub as *const () as usize);
 
         let pointer = IdtPointer {
             limit: (size_of::<[IdtEntry; 256]>() - 1) as u16,

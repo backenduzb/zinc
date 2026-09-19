@@ -1,5 +1,5 @@
 use super::thread::Thread;
-use crate::arch::x86_64::context::{CpuContext, InterruptFrame};
+use crate::arch::x86_64::context::{CpuContext, InterruptFrame, SyscallFrame};
 use crate::drivers::serial;
 use crate::task::thread::{self, ThreadID, ThreadState};
 
@@ -786,6 +786,184 @@ impl Scheduler {
 
             (rsp, 0)
         }
+    }
+
+    pub fn syscall_yield(&mut self, frame: *mut SyscallFrame) -> (u64, u64) {
+        if self.count == 0 || !self.started {
+            return (frame as u64, 0);
+        }
+
+        if let Some(thread) = self.threads[self.current].as_mut() {
+            thread.set_interrupt_rsp(frame as u64);
+        }
+
+        let next = match self.next() {
+            Some(index) => index,
+            None => return (frame as u64, 0),
+        };
+
+        if next == self.current {
+            return (frame as u64, 0);
+        }
+
+        if let Some(thread) = self.threads[self.current].as_mut() {
+            if thread.state() == ThreadState::Running {
+                thread.set_state(ThreadState::Ready);
+            }
+        }
+
+        if let Some(thread) = self.threads[next].as_mut() {
+            thread.set_state(ThreadState::Running);
+        }
+
+        self.current = next;
+        self.switches = self.switches.wrapping_add(1);
+
+        let fresh = match self.threads[next].as_mut() {
+            Some(thread) if thread.is_fresh() => {
+                thread.mark_started();
+                true
+            }
+            _ => false,
+        };
+
+        self.switch_address_space_for(next);
+
+        if fresh {
+            let is_user = self.threads[next]
+                .as_ref()
+                .map(|thread| thread.is_user())
+                .unwrap_or(false);
+
+            if is_user {
+                if let Some(reason) = self.validate_fresh_user(next) {
+                    crate::drivers::serial::print("RING3 REFUSED (syscall yield): ");
+                    crate::drivers::serial::println(reason);
+
+                    if let Some(thread) = self.threads[next].as_mut() {
+                        thread.set_state(ThreadState::Terminated);
+                    }
+
+                    return (frame as u64, 0);
+                }
+
+                self.log_user_entry(next);
+
+                let rsp = self.threads[next].as_ref().unwrap().interrupt_rsp();
+
+                return (rsp, Self::user_entry_trampoline());
+            }
+
+            let thread = self.threads[next].as_ref().unwrap();
+
+            let stack = thread.stack_top();
+            let entry = thread.entry();
+
+            return (stack, entry);
+        }
+
+        let rsp = self.threads[next].as_ref().unwrap().interrupt_rsp();
+
+        (rsp, 0)
+    }
+
+    pub fn syscall_exit(&mut self, _frame: *mut SyscallFrame) -> (u64, u64) {
+        if self.count == 0 || !self.started {
+            loop {
+                unsafe {
+                    core::arch::asm!("hlt");
+                }
+            }
+        }
+
+        self.exit_current();
+
+        let next = match self.next() {
+            Some(index) => index,
+            None => {
+                if let Some(idle) = self.threads[IDLE_SLOT].as_ref().map(|_| IDLE_SLOT) {
+                    idle
+                } else {
+                    loop {
+                        unsafe {
+                            core::arch::asm!("hlt");
+                        }
+                    }
+                }
+            }
+        };
+
+        if let Some(thread) = self.threads[next].as_mut() {
+            thread.set_state(ThreadState::Running);
+        }
+
+        self.current = next;
+        self.switches = self.switches.wrapping_add(1);
+
+        let fresh = match self.threads[next].as_mut() {
+            Some(thread) if thread.is_fresh() => {
+                thread.mark_started();
+                true
+            }
+            _ => false,
+        };
+
+        self.switch_address_space_for(next);
+
+        if fresh {
+            let is_user = self.threads[next]
+                .as_ref()
+                .map(|thread| thread.is_user())
+                .unwrap_or(false);
+
+            if is_user {
+                if let Some(reason) = self.validate_fresh_user(next) {
+                    crate::drivers::serial::print("RING3 REFUSED (syscall exit): ");
+                    crate::drivers::serial::println(reason);
+
+                    if let Some(thread) = self.threads[next].as_mut() {
+                        thread.set_state(ThreadState::Terminated);
+                    }
+
+                    let fallback = match self.next() {
+                        Some(index) => index,
+                        None => loop {
+                            unsafe {
+                                core::arch::asm!("hlt");
+                            }
+                        },
+                    };
+
+                    if let Some(thread) = self.threads[fallback].as_mut() {
+                        thread.set_state(ThreadState::Running);
+                    }
+
+                    self.current = fallback;
+                    self.switch_address_space_for(fallback);
+
+                    let rsp = self.threads[fallback].as_ref().unwrap().interrupt_rsp();
+
+                    return (rsp, 0);
+                }
+
+                self.log_user_entry(next);
+
+                let rsp = self.threads[next].as_ref().unwrap().interrupt_rsp();
+
+                return (rsp, Self::user_entry_trampoline());
+            }
+
+            let thread = self.threads[next].as_ref().unwrap();
+
+            let stack = thread.stack_top();
+            let entry = thread.entry();
+
+            return (stack, entry);
+        }
+
+        let rsp = self.threads[next].as_ref().unwrap().interrupt_rsp();
+
+        (rsp, 0)
     }
 
     pub fn sleep_current(&mut self, ticks: u64) {
