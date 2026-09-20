@@ -59,6 +59,7 @@ iso: $(KERNEL)
 run: iso
 	qemu-system-x86_64 \
 		-cdrom $(ISO) \
+		-drive file=disk.img,format=raw,if=ide \
 		-m 512M \
 		-serial stdio \
 		-smp 4 \

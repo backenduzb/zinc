@@ -251,6 +251,8 @@ extern "C" fn after_address_space_switch() -> ! {
 
     crate::drivers::serial::println("Kernel heap initialized");
 
+    crate::drivers::storage::tests::test_create();
+
     let ap_entry = crate::arch::x86_64::smp::trampoline::ap_main as *const () as usize as u64;
 
     let aps = [

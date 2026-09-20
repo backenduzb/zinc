@@ -96,3 +96,18 @@ pub unsafe fn inl(port: u16) -> u32 {
 
     value
 }
+
+pub unsafe fn inw(port: u16) -> u16 {
+    let value: u16;
+
+    unsafe {
+        core::arch::asm!(
+            "in ax, dx",
+            out("ax") value,
+            in("dx") port,
+            options(nomem, nostack, preserves_flags)
+        );
+    }
+
+    value
+}

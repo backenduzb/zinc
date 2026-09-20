@@ -76,3 +76,11 @@ pub fn print_u64(mut value: u64) {
         putc(buffer[index]);
     }
 }
+
+pub fn print_char(c: char) {
+    let mut buf = [0u8; 4];
+    let bytes = c.encode_utf8(&mut buf);
+    for &byte in bytes.as_bytes() {
+        putc(byte);
+    }
+}
