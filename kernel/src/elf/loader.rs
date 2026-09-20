@@ -99,7 +99,7 @@ impl ElfLoader {
                 return Err(ElfError::MappingFailed);
             }
 
-            Self::zero_frame(frame.address);
+            Self::zero_frame(frame.address)?;
 
             Self::copy_segment_data(data, segment, virtual_address, frame.address)?;
 
@@ -111,17 +111,12 @@ impl ElfLoader {
 
     fn zero_frame(physical_address: u64) -> Result<(), ElfError> {
         let virtual_address =
-            physical_to_virtual(physical_address)
-                .ok_or(ElfError::InvalidSegment)?;
-    
+            physical_to_virtual(physical_address).ok_or(ElfError::InvalidSegment)?;
+
         unsafe {
-            core::ptr::write_bytes(
-                virtual_address as *mut u8,
-                0,
-                PAGE_SIZE as usize,
-            );
+            core::ptr::write_bytes(virtual_address as *mut u8, 0, PAGE_SIZE as usize);
         }
-    
+
         Ok(())
     }
 
@@ -173,12 +168,9 @@ impl ElfLoader {
 
         let physical_offset = copy_start - page_virtual_address;
 
-        let destination =
-            physical_to_virtual(
-                page_physical_address + physical_offset
-            )
+        let destination = physical_to_virtual(page_physical_address + physical_offset)
             .ok_or(ElfError::InvalidSegment)? as *mut u8;
-        
+
         unsafe {
             core::ptr::copy_nonoverlapping(source.as_ptr(), destination, size as usize);
         }
