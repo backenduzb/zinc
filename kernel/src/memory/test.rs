@@ -392,6 +392,17 @@ extern "C" fn after_address_space_switch() -> ! {
 
     crate::task::test::user_process_cr3_test();
 
+    crate::exec::test::test_loader();
+
+    crate::exec::test::test_process_reap();
+
+    let exec_runtime_ok = crate::exec::test::test_exec_runtime();
+    if exec_runtime_ok {
+        crate::drivers::serial::println("EXEC RUNTIME: ELF thread queued");
+    } else {
+        crate::drivers::serial::println("EXEC RUNTIME: FAILED, fallback to manual ring3");
+    }
+
     crate::task::ring3::prepare_ring3_user_thread();
 
     crate::task::test::scheduler_test();

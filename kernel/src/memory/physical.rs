@@ -33,9 +33,6 @@ impl FrameAllocator {
     }
 
     pub fn new() -> Self {
-        // The bitmap is global. Rebuilding it on every `new()` would wipe
-        // all previous allocations (double-alloc of the same frame) and
-        // spam the serial log. Initialize only once.
         if ALLOCATOR_INITIALIZED.swap(true, Ordering::SeqCst) {
             return Self { initialized: true };
         }
@@ -155,6 +152,28 @@ impl FrameAllocator {
         }
 
         true
+    }
+
+    pub fn free_count(&self) -> usize {
+        if !self.initialized {
+            return 0;
+        }
+        unsafe {
+            let mut count = 0usize;
+            for i in 0..BITMAP_SIZE {
+                let word = FRAME_BITMAP[i];
+                count += (!word).count_ones() as usize;
+            }
+            count
+        }
+    }
+
+    pub fn count_free_frames(&self) -> usize {
+        self.free_count()
+    }
+
+    pub fn free_frames(&self) -> usize {
+        self.free_count()
     }
 }
 

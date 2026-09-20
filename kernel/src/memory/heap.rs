@@ -27,6 +27,10 @@ impl KernelHeap {
         self.initialized.store(true, Ordering::Release);
     }
 
+    pub fn is_initialized(&self) -> bool {
+        self.initialized.load(Ordering::Acquire)
+    }
+
     pub fn used(&self) -> usize {
         self.offset.load(Ordering::Relaxed)
     }

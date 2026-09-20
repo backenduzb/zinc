@@ -205,7 +205,7 @@ impl AddressSpace {
                 return false;
             }
 
-            pt.entries[pt_index].set(physical_address, writable, true,  executable);
+            pt.entries[pt_index].set(physical_address, true, writable, executable);
         }
 
         true
@@ -230,7 +230,13 @@ impl AddressSpace {
             return false;
         }
 
-        self.map_page(frame_allocator, virtual_address, physical_address, writable, false)
+        self.map_page(
+            frame_allocator,
+            virtual_address,
+            physical_address,
+            writable,
+            false,
+        )
     }
 
     pub fn translate_page(&self, virtual_address: u64) -> Option<u64> {
@@ -352,6 +358,88 @@ impl AddressSpace {
             Some((entry.is_user(), entry.is_writable(), entry.is_executable()))
         }
     }
+    pub fn destroy(self, frame_allocator: &mut FrameAllocator) {
+        let pml4_phys = self.pml4.address;
+        let pml4_va = match physical_to_virtual(pml4_phys) {
+            Some(v) => v,
+            None => {
+                crate::drivers::serial::println("AddressSpace::destroy: HHDM unavailable, leaking");
+                return;
+            }
+        };
+
+        unsafe {
+            let pml4 = &mut *(pml4_va as *mut PageTable);
+            for pml4_idx in 0..KERNEL_PML4_START {
+                if !pml4.entries[pml4_idx].is_present() {
+                    continue;
+                }
+                if pml4.entries[pml4_idx].is_huge() {
+                    let leaf = pml4.entries[pml4_idx].address();
+                    frame_allocator.free_frame(PhysFrame::new(leaf));
+                    pml4.entries[pml4_idx].clear();
+                    continue;
+                }
+                let pdpt_phys = pml4.entries[pml4_idx].address();
+                let Some(pdpt_va) = physical_to_virtual(pdpt_phys) else {
+                    continue;
+                };
+                let pdpt = &mut *(pdpt_va as *mut PageTable);
+                for pdpt_idx in 0..512 {
+                    if !pdpt.entries[pdpt_idx].is_present() {
+                        continue;
+                    }
+                    if pdpt.entries[pdpt_idx].is_huge() {
+                        let leaf = pdpt.entries[pdpt_idx].address();
+                        frame_allocator.free_frame(PhysFrame::new(leaf));
+                        pdpt.entries[pdpt_idx].clear();
+                        continue;
+                    }
+                    let pd_phys = pdpt.entries[pdpt_idx].address();
+                    let Some(pd_va) = physical_to_virtual(pd_phys) else {
+                        continue;
+                    };
+                    let pd = &mut *(pd_va as *mut PageTable);
+                    for pd_idx in 0..512 {
+                        if !pd.entries[pd_idx].is_present() {
+                            continue;
+                        }
+                        if pd.entries[pd_idx].is_huge() {
+                            // 2 MiB huge page
+                            let leaf = pd.entries[pd_idx].address();
+                            frame_allocator.free_frame(PhysFrame::new(leaf));
+                            pd.entries[pd_idx].clear();
+                            continue;
+                        }
+                        let pt_phys = pd.entries[pd_idx].address();
+                        let Some(pt_va) = physical_to_virtual(pt_phys) else {
+                            continue;
+                        };
+                        let pt = &mut *(pt_va as *mut PageTable);
+                        for pt_idx in 0..512 {
+                            if !pt.entries[pt_idx].is_present() {
+                                continue;
+                            }
+                            let leaf = pt.entries[pt_idx].address();
+                            pt.entries[pt_idx].clear();
+                            frame_allocator.free_frame(PhysFrame::new(leaf));
+                        }
+                        pd.entries[pd_idx].clear();
+                        frame_allocator.free_frame(PhysFrame::new(pt_phys));
+                    }
+                    pdpt.entries[pdpt_idx].clear();
+                    frame_allocator.free_frame(PhysFrame::new(pd_phys));
+                }
+                pml4.entries[pml4_idx].clear();
+                frame_allocator.free_frame(PhysFrame::new(pdpt_phys));
+            }
+        }
+        crate::drivers::serial::print("AddressSpace: destroyed PML4=0x");
+        crate::drivers::serial::print_u64(pml4_phys);
+        crate::drivers::serial::println("");
+        frame_allocator.free_frame(PhysFrame::new(pml4_phys));
+    }
+
     pub fn unmap_page(
         &mut self,
         frame_allocator: &mut FrameAllocator,
@@ -413,6 +501,4 @@ impl AddressSpace {
             Some(frame)
         }
     }
-
-    
 }

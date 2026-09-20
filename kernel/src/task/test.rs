@@ -1,4 +1,8 @@
 use super::thread::Thread;
+use core::sync::atomic::{AtomicU64, Ordering};
+
+pub static ALPHA_TID: AtomicU64 = AtomicU64::new(1);
+pub static BETA_TID: AtomicU64 = AtomicU64::new(2);
 
 pub extern "C" fn thread_alpha() -> ! {
     unsafe {
@@ -44,7 +48,8 @@ pub extern "C" fn thread_beta() -> ! {
         if counter == 2 {
             crate::drivers::serial::println("BETA waiting for ALPHA...");
 
-            crate::task::join(1);
+            let tid = ALPHA_TID.load(Ordering::Relaxed);
+            crate::task::join(tid);
 
             crate::drivers::serial::println("BETA: ALPHA finished!");
 
@@ -75,7 +80,8 @@ pub extern "C" fn thread_silf() -> ! {
 
         if counter == 4 {
             crate::drivers::serial::println("SILF: killing BETA!");
-            crate::task::kill(2);
+            let tid = BETA_TID.load(Ordering::Relaxed);
+            crate::task::kill(tid);
         }
 
         if counter == 5 {
@@ -114,30 +120,37 @@ pub extern "C" fn thread_silf() -> ! {
 pub fn scheduler_test() -> ! {
     crate::drivers::serial::println("=== SCHEDULER TEST ===");
 
-    let thread_a = Thread::new(1, 0, 0, thread_alpha);
-    let thread_b = Thread::new(2, 0, 0, thread_beta);
-    let thread_s = Thread::new(3, 0, 0, thread_silf);
-
     unsafe {
-        let scheduler = crate::task::scheduler();
         let process_manager = crate::task::process_manager();
+        let tid_a = (*process_manager).allocate_thread_id();
+        let tid_b = (*process_manager).allocate_thread_id();
+        let tid_s = (*process_manager).allocate_thread_id();
+
+        ALPHA_TID.store(tid_a, Ordering::Relaxed);
+        BETA_TID.store(tid_b, Ordering::Relaxed);
+
+        let thread_a = Thread::new(tid_a, 0, 0, thread_alpha);
+        let thread_b = Thread::new(tid_b, 0, 0, thread_beta);
+        let thread_s = Thread::new(tid_s, 0, 0, thread_silf);
+
+        let scheduler = crate::task::scheduler();
 
         if !(*scheduler).add_thread(thread_a, 0) {
             crate::drivers::serial::println("ERROR: failed to add ALPHA");
         } else {
-            (*process_manager).add_thread(0, 1);
+            (*process_manager).add_thread(0, tid_a);
         }
 
         if !(*scheduler).add_thread(thread_b, 0) {
             crate::drivers::serial::println("ERROR: failed to add BETA");
         } else {
-            (*process_manager).add_thread(0, 2);
+            (*process_manager).add_thread(0, tid_b);
         }
 
         if !(*scheduler).add_thread(thread_s, 0) {
             crate::drivers::serial::println("ERROR: failed to add SILF");
         } else {
-            (*process_manager).add_thread(0, 3);
+            (*process_manager).add_thread(0, tid_s);
         }
 
         (*scheduler).init_idle(0);
@@ -188,7 +201,7 @@ pub extern "C" fn ap_beta() -> ! {
         if counter % 10 == 0 {
             crate::drivers::serial::print("AP BETA CPU=");
             crate::drivers::serial::print_u64(
-                crate::arch::x86_64::smp::percpu::current_cpu_id() as u64,
+                crate::arch::x86_64::smp::percpu::current_cpu_id() as u64
             );
             crate::drivers::serial::print(" counter=");
             crate::drivers::serial::print_u64(counter);
@@ -198,7 +211,7 @@ pub extern "C" fn ap_beta() -> ! {
         if counter == 30 {
             crate::drivers::serial::print("AP BETA exiting CPU=");
             crate::drivers::serial::print_u64(
-                crate::arch::x86_64::smp::percpu::current_cpu_id() as u64,
+                crate::arch::x86_64::smp::percpu::current_cpu_id() as u64
             );
             crate::drivers::serial::println("");
             crate::task::exit();
@@ -225,7 +238,7 @@ pub extern "C" fn ap_silf() -> ! {
         if counter % 10 == 0 {
             crate::drivers::serial::print("AP SILF CPU=");
             crate::drivers::serial::print_u64(
-                crate::arch::x86_64::smp::percpu::current_cpu_id() as u64,
+                crate::arch::x86_64::smp::percpu::current_cpu_id() as u64
             );
             crate::drivers::serial::print(" counter=");
             crate::drivers::serial::print_u64(counter);
@@ -235,7 +248,7 @@ pub extern "C" fn ap_silf() -> ! {
         if counter == 30 {
             crate::drivers::serial::print("AP SILF exiting CPU=");
             crate::drivers::serial::print_u64(
-                crate::arch::x86_64::smp::percpu::current_cpu_id() as u64,
+                crate::arch::x86_64::smp::percpu::current_cpu_id() as u64
             );
             crate::drivers::serial::println("");
             crate::task::exit();
@@ -262,7 +275,7 @@ pub extern "C" fn ap_gamma() -> ! {
         if counter % 10 == 0 {
             crate::drivers::serial::print("AP GAMMA CPU=");
             crate::drivers::serial::print_u64(
-                crate::arch::x86_64::smp::percpu::current_cpu_id() as u64,
+                crate::arch::x86_64::smp::percpu::current_cpu_id() as u64
             );
             crate::drivers::serial::print(" counter=");
             crate::drivers::serial::print_u64(counter);
@@ -272,7 +285,7 @@ pub extern "C" fn ap_gamma() -> ! {
         if counter == 30 {
             crate::drivers::serial::print("AP GAMMA exiting CPU=");
             crate::drivers::serial::print_u64(
-                crate::arch::x86_64::smp::percpu::current_cpu_id() as u64,
+                crate::arch::x86_64::smp::percpu::current_cpu_id() as u64
             );
             crate::drivers::serial::println("");
             crate::task::exit();
@@ -283,10 +296,10 @@ pub extern "C" fn ap_gamma() -> ! {
 }
 
 pub fn process_address_space_test() {
+    use super::process::{Process, ProcessManager};
     use crate::arch::x86_64::paging::PageTable;
     use crate::boot::limine::physical_to_virtual;
     use crate::memory::physical::FrameAllocator;
-    use super::process::{Process, ProcessManager};
 
     crate::drivers::serial::println("=== PROCESS ADDRESS SPACE TEST ===");
 
@@ -347,7 +360,9 @@ pub fn process_address_space_test() {
 
     let present_upper = unsafe {
         let table = &*(pml4_va as *const PageTable);
-        (256..512).filter(|&i| table.entries[i].is_present()).count()
+        (256..512)
+            .filter(|&i| table.entries[i].is_present())
+            .count()
     };
 
     if present_upper == 0 {
@@ -498,7 +513,6 @@ pub fn user_process_cr3_test() {
         }
     };
 
-    // UserThread -> Process -> AddressSpace -> pml4_phys() chain.
     let thread = Thread::new_user(200, 0, pid, 0x400000, 0x0000_7FFF_FFFF_FFF0);
 
     if thread.process_id() != pid {
@@ -536,8 +550,6 @@ pub fn user_process_cr3_test() {
     crate::drivers::serial::print_u64(pml4_phys);
     crate::drivers::serial::println(" (differs from kernel CR3: OK)");
 
-    // Confirm the kernel half was copied entry-by-entry, so kernel code,
-    // HHDM, heap, LAPIC and stacks stay mapped after the switch.
     let user_va = match crate::boot::limine::physical_to_virtual(pml4_phys) {
         Some(va) => va,
         None => {
@@ -557,10 +569,8 @@ pub fn user_process_cr3_test() {
     let mut present = 0usize;
 
     unsafe {
-        let user_table =
-            &*(user_va as *const crate::arch::x86_64::paging::PageTable);
-        let kernel_table =
-            &*(kernel_va as *const crate::arch::x86_64::paging::PageTable);
+        let user_table = &*(user_va as *const crate::arch::x86_64::paging::PageTable);
+        let kernel_table = &*(kernel_va as *const crate::arch::x86_64::paging::PageTable);
 
         for index in 256..512 {
             if user_table.entries[index].raw() != kernel_table.entries[index].raw() {
@@ -585,10 +595,6 @@ pub fn user_process_cr3_test() {
     crate::drivers::serial::print_u64(present as u64);
     crate::drivers::serial::println("");
 
-    // Load the user PML4, verify CR3 reads back, touch the stack while on
-    // the user address space (proves kernel-half is live), then restore.
-    // Interrupts are masked across the window; the thread is NOT added to
-    // the live scheduler and Ring 3 is NOT entered.
     let canary: u64 = 0xC3A0_1234_5678_9ABC;
 
     unsafe {
@@ -605,8 +611,6 @@ pub fn user_process_cr3_test() {
             return;
         }
 
-        // Stack access while running under the user PML4 (volatile forces
-        // real stack memory traffic, proving the kernel-half mapping live).
         let mut probe: u64 = 0;
         core::ptr::write_volatile(&mut probe, canary);
         let check = core::ptr::read_volatile(&probe);

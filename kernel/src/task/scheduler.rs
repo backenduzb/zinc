@@ -455,7 +455,7 @@ impl Scheduler {
         crate::drivers::serial::println("");
 
         self.switch_address_space_for(first);
-        
+
         self.started = true;
 
         if is_user {
@@ -993,8 +993,8 @@ impl Scheduler {
     }
 
     pub fn exit_current(&mut self) {
-        let exiting_id = match self.threads[self.current].as_ref() {
-            Some(thread) => thread.id(),
+        let (exiting_id, pid) = match self.threads[self.current].as_ref() {
+            Some(thread) => (thread.id(), thread.process_id()),
             None => return,
         };
 
@@ -1004,6 +1004,11 @@ impl Scheduler {
             serial::print("EXIT thread=");
             serial::print_u64(exiting_id);
             serial::println("");
+        }
+
+        unsafe {
+            let pm = crate::task::process_manager();
+            (*pm).notify_thread_terminated(pid, exiting_id);
         }
 
         for index in 0..MAX_THREADS {
@@ -1027,20 +1032,28 @@ impl Scheduler {
     }
 
     pub fn kill(&mut self, id: ThreadID) -> bool {
+        let mut pid_opt = None;
         for index in 0..MAX_THREADS {
             if let Some(thread) = self.threads[index].as_mut() {
                 if thread.id() == id {
                     thread.set_state(ThreadState::Terminated);
+                    pid_opt = Some(thread.process_id());
 
                     crate::drivers::serial::print("KILL thread=");
                     crate::drivers::serial::print_u64(id);
                     crate::drivers::serial::println("");
 
-                    return true;
+                    break;
                 }
             }
         }
-
+        if let Some(pid) = pid_opt {
+            unsafe {
+                let pm = crate::task::process_manager();
+                (*pm).notify_thread_terminated(pid, id);
+            }
+            return true;
+        }
         false
     }
 
@@ -1064,9 +1077,16 @@ impl Scheduler {
                     .as_ref()
                     .map(|thread| thread.id())
                     .unwrap_or(0);
-
+                let pid = self.threads[index]
+                    .as_ref()
+                    .map(|t| t.process_id())
+                    .unwrap_or(0);
+                unsafe {
+                    let pm = crate::task::process_manager();
+                    (*pm).notify_thread_terminated(pid, id);
+                }
                 self.threads[index] = None;
-                self.count -= 1;
+                self.count = self.count.saturating_sub(1);
 
                 crate::drivers::serial::print("Scheduler: reaped thread=");
                 crate::drivers::serial::print_u64(id);
@@ -1117,6 +1137,51 @@ impl Scheduler {
                 break;
             }
         }
+    }
+
+    pub fn remove_thread_by_id(&mut self, id: ThreadID) -> bool {
+        for slot in self.threads.iter_mut() {
+            if let Some(thread) = slot {
+                if thread.id() == id {
+                    *slot = None;
+                    self.count = self.count.saturating_sub(1);
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
+    pub fn create_user_thread(
+        &mut self,
+        cpu_id: usize,
+        process_manager: &mut crate::task::process::ProcessManager,
+        process_id: crate::task::process::ProcessID,
+        user_rip: u64,
+        user_rsp: u64,
+    ) -> Option<ThreadID> {
+        if self.count >= MAX_THREADS {
+            return None;
+        }
+
+        if process_manager.get(process_id).is_none() {
+            return None;
+        }
+
+        let thread_id = process_manager.allocate_thread_id();
+
+        let thread = Thread::new_user(thread_id, cpu_id, process_id, user_rip, user_rsp);
+
+        if !self.add_thread(thread, cpu_id) {
+            return None;
+        }
+
+        if !process_manager.add_thread(process_id, thread_id) {
+            self.remove_thread_by_id(thread_id);
+            return None;
+        }
+
+        Some(thread_id)
     }
 }
 

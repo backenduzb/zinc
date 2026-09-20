@@ -49,6 +49,7 @@ pub extern "C" fn kmain() -> ! {
     crate::memory::test::user_page_map_test();
     crate::memory::test::user_page_unmap_test();
     crate::memory::physical::test();
+    crate::elf::test::test_loader();
     crate::memory::test::user_stack_test();
     crate::exec::test::test_loader();
 
@@ -57,6 +58,7 @@ pub extern "C" fn kmain() -> ! {
     time::clock::test();
 
     crate::drivers::serial::println("AFTER CLOCK TEST");
+
     unsafe {
         c_test();
     }
