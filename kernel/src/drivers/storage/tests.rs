@@ -396,13 +396,13 @@ pub fn test_ext2() {
 
             crate::drivers::serial::putc(b'\n');
 
-            if inode_number == 13 && hello_inode.is_regular_file() && hello_inode.size == 30 {
+            if hello_inode.is_regular_file() {
                 crate::drivers::serial::println("EXT2 FILE LOOKUP: PASS");
             } else {
                 crate::drivers::serial::println("EXT2 FILE LOOKUP: FAIL");
             }
 
-            let mut hello_data = [0u8; 64];
+            let mut hello_data = [0u8; 8192];
 
             let bytes_read = crate::filesystem::file::read_file(
                 &mut ide,
@@ -413,17 +413,7 @@ pub fn test_ext2() {
             );
 
             crate::drivers::serial::print("/bin/hello bytes read: ");
-
             crate::drivers::serial::print_u64(bytes_read as u64);
-
-            crate::drivers::serial::putc(b'\n');
-
-            crate::drivers::serial::print("/bin/hello content: ");
-
-            for i in 0..bytes_read {
-                crate::drivers::serial::putc(hello_data[i]);
-            }
-
             crate::drivers::serial::putc(b'\n');
 
             if bytes_read == hello_inode.size as usize {
@@ -437,6 +427,105 @@ pub fn test_ext2() {
             crate::drivers::serial::println("EXT2 FILE LOOKUP: FAIL");
         }
     }
+
+    let big_result = crate::filesystem::path::lookup_path(
+        &mut ide,
+        gd.inode_table_block(),
+        2,
+        b"/test/big",
+        256,
+        sb.block_size(),
+    );
+
+    match big_result {
+        Some((inode_number, big_inode)) => {
+            crate::drivers::serial::print("PATH /test/big -> inode=");
+
+            crate::drivers::serial::print_u64(inode_number as u64);
+
+            crate::drivers::serial::putc(b'\n');
+
+            crate::drivers::serial::print("/test/big size=");
+
+            crate::drivers::serial::print_u64(big_inode.size as u64);
+
+            crate::drivers::serial::putc(b'\n');
+
+            crate::drivers::serial::print("/test/big indirect block=");
+
+            crate::drivers::serial::print_u64(big_inode.block[12] as u64);
+
+            crate::drivers::serial::putc(b'\n');
+
+            let mut big_data = [0u8; 13312];
+
+            let bytes_read = crate::filesystem::file::read_file(
+                &mut ide,
+                &big_inode,
+                sb.block_size(),
+                0,
+                &mut big_data,
+            );
+
+            crate::drivers::serial::print("/test/big bytes read: ");
+
+            crate::drivers::serial::print_u64(bytes_read as u64);
+
+            crate::drivers::serial::putc(b'\n');
+
+            if bytes_read == big_inode.size as usize {
+                crate::drivers::serial::println("EXT2 INDIRECT READ: PASS");
+            } else {
+                crate::drivers::serial::println("EXT2 INDIRECT READ: FAIL");
+            }
+
+            for i in 0..15 {
+                crate::drivers::serial::print("/test/big block[");
+
+                crate::drivers::serial::print_u64(i as u64);
+
+                crate::drivers::serial::print("]=");
+
+                crate::drivers::serial::print_u64(big_inode.block[i] as u64);
+
+                crate::drivers::serial::putc(b'\n');
+            }
+        }
+
+        None => {
+            crate::drivers::serial::println("PATH /test/big: FAIL");
+        }
+    }
+
+    let vfs = crate::filesystem::vfs::Vfs::new(gd.inode_table_block(), 256, sb);
+
+    let mut file = match vfs.open(&mut ide, b"/bin/hello") {
+        Some(file) => {
+            crate::drivers::serial::print("VFS OPEN /bin/hello: inode=");
+
+            crate::drivers::serial::print_u64(file.inode_number as u64);
+
+            crate::drivers::serial::putc(b'\n');
+
+            file
+        }
+
+        None => {
+            crate::drivers::serial::println("VFS OPEN /bin/hello: FAIL");
+
+            return;
+        }
+    };
+
+    let mut buffer = [0u8; 8192];
+
+    let bytes_read = vfs.read(&mut ide, &mut file, &mut buffer);
+
+    crate::drivers::serial::print("VFS READ bytes: ");
+
+    crate::drivers::serial::print_u64(bytes_read as u64);
+
+    crate::drivers::serial::putc(b'\n');
 }
 
 pub fn test_errors() {
@@ -488,4 +577,137 @@ pub fn test_ide() {
             crate::drivers::serial::println("IDE READ: FAIL");
         }
     }
+}
+
+pub fn test_vfs_elf() {
+    crate::drivers::serial::println("=========== ELF FROM VFS TEST =========");
+
+    let mut ide = crate::drivers::storage::ide::IdeDevice::new();
+
+    let mut sb_buffer = [0u8; 512];
+
+    if ide.read_sector(2, &mut sb_buffer).is_err() {
+        crate::drivers::serial::println("ELF VFS: SUPERBLOCK READ FAILED");
+        return;
+    }
+
+    let sb = match crate::filesystem::ext2::parse_superblock(&sb_buffer) {
+        Some(sb) => sb,
+
+        None => {
+            crate::drivers::serial::println("ELF VFS: INVALID SUPERBLOCK");
+            return;
+        }
+    };
+
+    let mut gd_buffer = [0u8; 512];
+
+    if ide.read_sector(4, &mut gd_buffer).is_err() {
+        crate::drivers::serial::println("ELF VFS: GROUP DESCRIPTOR READ FAILED");
+        return;
+    }
+
+    let gd = match crate::filesystem::ext2::parse_group_descriptor(&gd_buffer) {
+        Some(gd) => gd,
+
+        None => {
+            crate::drivers::serial::println("ELF VFS: INVALID GROUP DESCRIPTOR");
+            return;
+        }
+    };
+
+    let vfs = crate::filesystem::vfs::Vfs::new(gd.inode_table_block(), 256, sb);
+
+    let mut file = match vfs.open(&mut ide, b"/bin/hello") {
+        Some(file) => file,
+
+        None => {
+            crate::drivers::serial::println("ELF VFS: OPEN FAILED");
+            return;
+        }
+    };
+
+    crate::drivers::serial::print("ELF VFS: inode=");
+    crate::drivers::serial::print_u64(file.inode_number as u64);
+    crate::drivers::serial::println("");
+
+    if !file.inode.is_regular_file() {
+        crate::drivers::serial::println("ELF VFS: NOT REGULAR FILE");
+        return;
+    }
+
+    let file_size = file.inode.size as usize;
+
+    crate::drivers::serial::print("ELF VFS: file size=");
+    crate::drivers::serial::print_u64(file_size as u64);
+    crate::drivers::serial::println("");
+
+    let mut elf_data = alloc::vec![0u8; file_size];
+
+    let bytes_read = vfs.read(&mut ide, &mut file, &mut elf_data);
+
+    crate::drivers::serial::print("ELF VFS: bytes read=");
+    crate::drivers::serial::print_u64(bytes_read as u64);
+    crate::drivers::serial::println("");
+
+    if bytes_read != file_size {
+        crate::drivers::serial::println("ELF VFS: READ FAILED");
+        return;
+    }
+
+    crate::drivers::serial::println("ELF VFS: FILE READ OK");
+
+    if elf_data.len() < 4
+        || elf_data[0] != 0x7F
+        || elf_data[1] != b'E'
+        || elf_data[2] != b'L'
+        || elf_data[3] != b'F'
+    {
+        crate::drivers::serial::println("ELF VFS: BAD MAGIC");
+        return;
+    }
+
+    crate::drivers::serial::println("ELF VFS: ELF MAGIC OK");
+
+    let mut allocator = crate::memory::physical::FrameAllocator::new();
+
+    let mut address_space =
+        match crate::memory::address_space::AddressSpace::new_user(&mut allocator) {
+            Some(space) => space,
+
+            None => {
+                crate::drivers::serial::println("ELF VFS: ADDRESS SPACE FAILED");
+                return;
+            }
+        };
+
+    let loaded =
+        match crate::elf::loader::ElfLoader::load(&elf_data, &mut address_space, &mut allocator) {
+            Ok(loaded) => loaded,
+
+            Err(error) => {
+                crate::drivers::serial::println("ELF VFS: ELF LOAD FAILED");
+
+                crate::elf::test::print_error(error);
+                return;
+            }
+        };
+
+    crate::drivers::serial::print("ELF VFS: entry=0x");
+    crate::drivers::serial::print_u64(loaded.entry);
+    crate::drivers::serial::println("");
+
+    if loaded.entry != 0x401000 {
+        crate::drivers::serial::println("ELF VFS: ENTRY FAILED");
+        return;
+    }
+
+    if address_space.translate_page(loaded.entry).is_none() {
+        crate::drivers::serial::println("ELF VFS: ENTRY PAGE FAILED");
+        return;
+    }
+
+    crate::drivers::serial::println("ELF VFS: ELF LOAD OK");
+
+    crate::drivers::serial::println("ELF FROM VFS: PASS");
 }

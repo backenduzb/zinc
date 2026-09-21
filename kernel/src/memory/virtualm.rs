@@ -356,8 +356,8 @@ impl VirtualMemoryManager {
     }
 
     pub fn map_heap(&mut self) -> bool {
-        const HEAP_START: u64 = 0xFFFF_FFFF_9000_0000;
-        const HEAP_SIZE: u64 = 1024 * 1024;
+        const HEAP_START: u64 = crate::memory::heap::HEAP_START as u64;
+        const HEAP_SIZE: u64 = crate::memory::heap::HEAP_SIZE as u64;
         const PAGE_SIZE: u64 = 4096;
 
         let page_count = HEAP_SIZE / PAGE_SIZE;

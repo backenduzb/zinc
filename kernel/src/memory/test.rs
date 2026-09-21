@@ -1,7 +1,7 @@
 use crate::arch::x86_64::paging::PageTable;
-use crate::memory::physical::{FrameAllocator, PhysFrame};
 use crate::memory::address_space::AddressSpace;
-use crate::memory::user_stack::{UserStack, USER_STACK_PAGES};
+use crate::memory::physical::{FrameAllocator, PhysFrame};
+use crate::memory::user_stack::{USER_STACK_PAGES, UserStack};
 
 const AP1_STACK_TOP: u64 = 0xFFFF_FFFF_A010_FFF8;
 const AP2_STACK_TOP: u64 = 0xFFFF_FFFF_A011_FFF8;
@@ -250,8 +250,13 @@ extern "C" fn after_address_space_switch() -> ! {
     crate::memory::heap::KERNEL_HEAP.init();
 
     crate::drivers::serial::println("Kernel heap initialized");
+    crate::drivers::serial::print("Heap remaining: ");
+    crate::drivers::serial::print_u64(crate::memory::heap::KERNEL_HEAP.remaining() as u64);
+    crate::drivers::serial::println(" bytes");
 
     crate::drivers::storage::tests::test_create();
+
+    crate::drivers::storage::tests::test_vfs_elf();
 
     let ap_entry = crate::arch::x86_64::smp::trampoline::ap_main as *const () as usize as u64;
 

@@ -1,92 +1,248 @@
 use core::alloc::{GlobalAlloc, Layout};
 use core::ptr::null_mut;
-use core::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use core::sync::atomic::{AtomicBool, Ordering};
 
-const HEAP_START: usize = 0xFFFF_FFFF_9000_0000;
-const HEAP_SIZE: usize = 1024 * 1024;
+pub const HEAP_START: usize = 0xFFFF_FFFF_9000_0000;
+pub const HEAP_SIZE: usize = 8 * 1024 * 1024; 
 
-pub struct KernelHeap {
-    start: usize,
+struct FreeBlock {
     size: usize,
-    offset: AtomicUsize,
-    initialized: AtomicBool,
+    next: *mut FreeBlock,
 }
+
+struct HeapInner {
+    start: usize,
+    end: usize,
+    free_head: *mut FreeBlock,
+    initialized: bool,
+}
+
+impl HeapInner {
+    const fn new() -> Self {
+        Self {
+            start: 0,
+            end: 0,
+            free_head: null_mut(),
+            initialized: false,
+        }
+    }
+}
+
+static mut HEAP_INNER: HeapInner = HeapInner::new();
+static HEAP_LOCK: AtomicBool = AtomicBool::new(false);
+static HEAP_INIT_FLAG: AtomicBool = AtomicBool::new(false);
+
+fn acquire_lock() {
+    while HEAP_LOCK
+        .compare_exchange(false, true, Ordering::Acquire, Ordering::Relaxed)
+        .is_err()
+    {
+        core::hint::spin_loop();
+    }
+}
+
+fn release_lock() {
+    HEAP_LOCK.store(false, Ordering::Release);
+}
+
+fn align_up(addr: usize, align: usize) -> usize {
+    (addr + align - 1) & !(align - 1)
+}
+
+pub struct KernelHeap;
 
 impl KernelHeap {
     pub const fn new() -> Self {
-        Self {
-            start: HEAP_START,
-            size: HEAP_SIZE,
-            offset: AtomicUsize::new(0),
-            initialized: AtomicBool::new(false),
-        }
+        Self
     }
 
     pub fn init(&self) {
-        self.offset.store(0, Ordering::Relaxed);
-        self.initialized.store(true, Ordering::Release);
+        acquire_lock();
+        unsafe {
+            let inner = &raw mut HEAP_INNER;
+            if (*inner).initialized {
+                release_lock();
+                return;
+            }
+            (*inner).start = HEAP_START;
+            (*inner).end = HEAP_START + HEAP_SIZE;
+            let head = HEAP_START as *mut FreeBlock;
+            (*head).size = HEAP_SIZE;
+            (*head).next = null_mut();
+            (*inner).free_head = head;
+            (*inner).initialized = true;
+        }
+        HEAP_INIT_FLAG.store(true, Ordering::Release);
+        release_lock();
     }
 
     pub fn is_initialized(&self) -> bool {
-        self.initialized.load(Ordering::Acquire)
+        HEAP_INIT_FLAG.load(Ordering::Acquire)
     }
 
     pub fn used(&self) -> usize {
-        self.offset.load(Ordering::Relaxed)
+        acquire_lock();
+        let used = unsafe {
+            if !(&raw const HEAP_INNER).as_ref().unwrap().initialized {
+                0
+            } else {
+                let mut free = 0usize;
+                let mut cur = (&raw const HEAP_INNER).as_ref().unwrap().free_head;
+                while !cur.is_null() {
+                    free += (*cur).size;
+                    cur = (*cur).next;
+                }
+                HEAP_SIZE - free
+            }
+        };
+        release_lock();
+        used
     }
 
     pub fn remaining(&self) -> usize {
-        self.size.saturating_sub(self.used())
+        HEAP_SIZE.saturating_sub(self.used())
     }
 }
 
 unsafe impl GlobalAlloc for KernelHeap {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        if !self.initialized.load(Ordering::Acquire) {
+        if layout.size() == 0 {
             return null_mut();
         }
-
+        if !HEAP_INIT_FLAG.load(Ordering::Acquire) {
+            return null_mut();
+        }
         let size = layout.size();
-        let align = layout.align();
+        let align = layout.align().max(core::mem::align_of::<FreeBlock>());
 
-        if size == 0 {
-            return null_mut();
-        }
-
-        let mut current = self.offset.load(Ordering::Relaxed);
-
-        loop {
-            let aligned = match current.checked_add(align - 1) {
-                Some(value) => value & !(align - 1),
-                None => return null_mut(),
-            };
-
-            let new_offset = match aligned.checked_add(size) {
-                Some(value) => value,
-                None => return null_mut(),
-            };
-
-            if new_offset > self.size {
+        acquire_lock();
+        let mut result = null_mut();
+        let mut found = false;
+        unsafe {
+            let inner = &raw mut HEAP_INNER;
+            if !(*inner).initialized {
+                release_lock();
                 return null_mut();
             }
-
-            match self.offset.compare_exchange_weak(
-                current,
-                new_offset,
-                Ordering::Relaxed,
-                Ordering::Relaxed,
-            ) {
-                Ok(_) => {
-                    return (self.start + aligned) as *mut u8;
+            let mut prev: *mut *mut FreeBlock = &raw mut (*inner).free_head;
+            let mut cur = (*inner).free_head;
+            while !cur.is_null() {
+                let block_start = cur as usize;
+                let block_size = (*cur).size;
+                let block_end = block_start + block_size;
+                let aligned_start = align_up(block_start, align);
+                let aligned_end = match aligned_start.checked_add(size) {
+                    Some(v) => v,
+                    None => {
+                        prev = &mut (*cur).next as *mut *mut FreeBlock;
+                        cur = (*cur).next;
+                        continue;
+                    }
+                };
+                if aligned_end > block_end {
+                    prev = &mut (*cur).next as *mut *mut FreeBlock;
+                    cur = (*cur).next;
+                    continue;
                 }
-                Err(actual) => {
-                    current = actual;
+                let next = (*cur).next;
+                *prev = next;
+
+                if aligned_start > block_start {
+                    let prefix_size = aligned_start - block_start;
+                    let prefix = block_start as *mut FreeBlock;
+                    (*prefix).size = prefix_size;
+                    (*prefix).next = *prev;
+                    *prev = prefix;
+                    prev = &mut (*prefix).next as *mut *mut FreeBlock;
+                }
+                
+                let suffix_size = block_end - aligned_end;
+                if suffix_size >= core::mem::size_of::<FreeBlock>() {
+                    let suffix = aligned_end as *mut FreeBlock;
+                    (*suffix).size = suffix_size;
+                    (*suffix).next = *prev;
+                    *prev = suffix;
+                } else if suffix_size > 0 {
+                }
+                result = aligned_start as *mut u8;
+                found = true;
+                break;
+            }
+        }
+        release_lock();
+        if !found {
+            return null_mut();
+        }
+        result
+    }
+
+    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
+        if ptr.is_null() || layout.size() == 0 {
+            return;
+        }
+        if !HEAP_INIT_FLAG.load(Ordering::Acquire) {
+            return;
+        }
+        let size = layout.size();
+        acquire_lock();
+        unsafe {
+            let inner = &raw mut HEAP_INNER;
+            if !(*inner).initialized {
+                release_lock();
+                return;
+            }
+            let block_start = ptr as usize;
+            let block_size = {
+                let min = core::mem::size_of::<FreeBlock>();
+                if size < min { min } else { size }
+            };
+            let mut prev: *mut *mut FreeBlock = &raw mut (*inner).free_head;
+            let mut cur = (*inner).free_head;
+            while !cur.is_null() && (cur as usize) < block_start {
+                prev = &mut (*cur).next as *mut *mut FreeBlock;
+                cur = (*cur).next;
+            }
+            let new_block = block_start as *mut FreeBlock;
+            (*new_block).size = block_size;
+            (*new_block).next = cur;
+            *prev = new_block;
+
+            if !cur.is_null() {
+                let new_end = block_start + block_size;
+                let next_start = cur as usize;
+                if new_end == next_start {
+                    (*new_block).size += (*cur).size;
+                    (*new_block).next = (*cur).next;
+                } else if new_end > next_start {
+                    let overlap_end = (cur as usize) + (*cur).size;
+                    let merged_end = core::cmp::max(new_end, overlap_end);
+                    (*new_block).size = merged_end - block_start;
+                    (*new_block).next = (*cur).next;
+                }
+            }
+
+            let mut scan_prev: *mut FreeBlock = null_mut();
+            let mut scan = (*inner).free_head;
+            while !scan.is_null() && scan != new_block {
+                scan_prev = scan;
+                scan = (*scan).next;
+            }
+            if !scan_prev.is_null() {
+                let prev_start = scan_prev as usize;
+                let prev_end = prev_start + (*scan_prev).size;
+                if prev_end == block_start {
+                    (*scan_prev).size += (*new_block).size;
+                    (*scan_prev).next = (*new_block).next;
+                } else if prev_end > block_start {
+                    let new_end = block_start + (*new_block).size;
+                    let merged_end = core::cmp::max(prev_end, new_end);
+                    (*scan_prev).size = merged_end - prev_start;
+                    (*scan_prev).next = (*new_block).next;
                 }
             }
         }
+        release_lock();
     }
-
-    unsafe fn dealloc(&self, _ptr: *mut u8, _layout: Layout) {}
 }
 
 #[global_allocator]

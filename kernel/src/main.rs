@@ -52,7 +52,13 @@ pub extern "C" fn kmain() -> ! {
     crate::memory::physical::test();
     crate::elf::test::test_loader();
     crate::memory::test::user_stack_test();
-    crate::exec::test::test_loader();
+    crate::elf::test::test_loader();
+    if crate::memory::heap::KERNEL_HEAP.is_initialized() {
+        crate::drivers::storage::tests::test_vfs_elf();
+        crate::exec::test::test_loader();
+    } else {
+        crate::drivers::serial::println("SKIP ELF VFS / EXEC tests before heap (defer after init)");
+    }
 
     crate::drivers::serial::println("AFTER PMM TEST");
 

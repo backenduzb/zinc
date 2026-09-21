@@ -5,8 +5,17 @@ const SECTOR_SIZE: u64 = 512;
 const DIRECT_BLOCKS: usize = 12;
 
 fn read_block(ide: &mut IdeDevice, block: u32, block_size: u32, buffer: &mut [u8]) -> bool {
-    if block == 0 || block_size == 0 {
+    if block_size == 0 {
         return false;
+    }
+    
+    if block == 0 {
+        if buffer.len() < block_size as usize {
+            return false;
+        }
+    
+        buffer[..block_size as usize].fill(0);
+        return true;
     }
 
     let sectors_per_block = block_size / 512;
@@ -114,6 +123,8 @@ pub fn read_file(
 
     let requested = core::cmp::min(available, buffer.len() as u64) as usize;
 
+    
+    
     let block_size_u64 = block_size as u64;
 
     let mut total_read = 0usize;
