@@ -12,6 +12,7 @@ mod time;
 mod exec;
 mod elf;
 mod syscall;
+mod filesystem;
 
 extern crate alloc;
 
