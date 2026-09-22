@@ -42,6 +42,11 @@ pub extern "C" fn kmain() -> ! {
     time::init();
     memory::init();
     drivers::pci::init();
+    if crate::filesystem::context::init() {
+        crate::drivers::serial::println("FILESYSTEM: INIT OK");
+    } else {
+        crate::drivers::serial::println("FILESYSTEM: INIT FAILED");
+    }
     crate::drivers::serial::println("BEFORE PMM TEST");
 
     crate::memory::test::address_space_test();

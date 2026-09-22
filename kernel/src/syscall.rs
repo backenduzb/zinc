@@ -6,6 +6,10 @@ pub const SYS_YIELD: u64 = 0;
 pub const SYS_EXIT: u64 = 1;
 pub const SYS_EXECVE: u64 = 2;
 pub const SYS_WRITE: u64 = 3;
+pub const SYS_OPEN: u64 = 4;
+pub const SYS_READ: u64 = 5;
+pub const SYS_CLOSE: u64 = 6;
+const MAX_PATH: usize = 256;
 
 const USER_MAX: u64 = 0x0000_8000_0000_0000;
 const MAX_WRITE: usize = 1024;
@@ -63,11 +67,36 @@ fn handle_write(frame: &mut SyscallFrame) -> (u64, u64) {
     crate::drivers::serial::print_u64(len);
     crate::drivers::serial::println("");
 
-    if fd != 1 && fd != 2 {
+    let fd_ok = unsafe {
+        let sched = crate::task::scheduler();
+
+        let pid = match (*sched).current().map(|t| t.process_id()) {
+            Some(pid) => pid,
+            None => {
+                crate::drivers::serial::println("SYSCALL WRITE: no current thread");
+                frame.rax = u64::MAX;
+                return (frame as *mut SyscallFrame as u64, 0);
+            }
+        };
+
+        let pm = crate::task::process_manager();
+
+        match (*pm).get(pid) {
+            Some(process) => process.fd_table().is_standard_output(fd as usize),
+            None => {
+                crate::drivers::serial::println("SYSCALL WRITE: process not found");
+                frame.rax = u64::MAX;
+                return (frame as *mut SyscallFrame as u64, 0);
+            }
+        }
+    };
+
+    if !fd_ok {
         crate::drivers::serial::println("SYSCALL WRITE: bad fd");
         frame.rax = u64::MAX;
         return (frame as *mut SyscallFrame as u64, 0);
     }
+
     if len == 0 {
         frame.rax = 0;
         return (frame as *mut SyscallFrame as u64, 0);
@@ -117,7 +146,7 @@ fn handle_write(frame: &mut SyscallFrame) -> (u64, u64) {
     for &b in &kbuf[..ulen] {
         crate::drivers::serial::putc(b);
     }
-    
+
     frame.rax = len;
     (frame as *mut SyscallFrame as u64, 0)
 }
@@ -166,6 +195,8 @@ pub extern "C" fn syscall_handler(frame: *mut SyscallFrame) -> (u64, u64) {
 
         SYS_WRITE => handle_write(frame),
 
+        SYS_OPEN => handle_open(frame),
+
         SYS_EXECVE => {
             crate::drivers::serial::println("SYSCALL: EXECVE");
 
@@ -204,4 +235,139 @@ pub extern "C" fn syscall_handler(frame: *mut SyscallFrame) -> (u64, u64) {
             (frame as *mut SyscallFrame as u64, 0)
         }
     }
+}
+
+fn copy_user_path(space: &AddressSpace, user_ptr: u64, out: &mut [u8; MAX_PATH]) -> Option<usize> {
+    for i in 0..MAX_PATH {
+        if !is_user_range(user_ptr + i as u64, 1) {
+            return None;
+        }
+
+        let mut byte = [0u8; 1];
+
+        if !copy_from_user(space, user_ptr + i as u64, 1, &mut byte) {
+            return None;
+        }
+
+        out[i] = byte[0];
+
+        if byte[0] == 0 {
+            return Some(i);
+        }
+    }
+
+    None
+}
+
+fn handle_open(frame: &mut SyscallFrame) -> (u64, u64) {
+    let path_ptr = frame.rdi;
+
+    crate::drivers::serial::println("SYSCALL: OPEN");
+
+    let pid = unsafe {
+        match (*crate::task::scheduler()).current() {
+            Some(thread) => thread.process_id(),
+            None => {
+                frame.rax = u64::MAX;
+                return (frame as *mut SyscallFrame as u64, 0);
+            }
+        }
+    };
+
+    let space_ptr = unsafe {
+        let pm = crate::task::process_manager();
+
+        match (*pm).get(pid) {
+            Some(process) => match process.address_space() {
+                Some(space) => space as *const AddressSpace,
+                None => {
+                    frame.rax = u64::MAX;
+                    return (frame as *mut SyscallFrame as u64, 0);
+                }
+            },
+            None => {
+                frame.rax = u64::MAX;
+                return (frame as *mut SyscallFrame as u64, 0);
+            }
+        }
+    };
+
+    let space = unsafe { &*space_ptr };
+
+    let mut path_buffer = [0u8; MAX_PATH];
+
+    let path_len = match copy_user_path(space, path_ptr, &mut path_buffer) {
+        Some(len) => len,
+        None => {
+            crate::drivers::serial::println("SYSCALL OPEN: invalid user path");
+
+            frame.rax = u64::MAX;
+            return (frame as *mut SyscallFrame as u64, 0);
+        }
+    };
+
+    if path_len == 0 {
+        crate::drivers::serial::println("SYSCALL OPEN: empty path");
+
+        frame.rax = u64::MAX;
+        return (frame as *mut SyscallFrame as u64, 0);
+    }
+
+    crate::drivers::serial::print("OPEN path: ");
+
+    for &byte in &path_buffer[..path_len] {
+        crate::drivers::serial::putc(byte);
+    }
+
+    crate::drivers::serial::println("");
+
+    let fs_ptr = crate::filesystem::context::filesystem();
+
+    if fs_ptr.is_null() {
+        crate::drivers::serial::println("SYSCALL OPEN: filesystem unavailable");
+
+        frame.rax = u64::MAX;
+        return (frame as *mut SyscallFrame as u64, 0);
+    }
+
+    let file = unsafe { (*fs_ptr).open(&path_buffer[..path_len]) };
+
+    let file = match file {
+        Some(file) => file,
+        None => {
+            crate::drivers::serial::println("SYSCALL OPEN: file not found");
+
+            frame.rax = u64::MAX;
+            return (frame as *mut SyscallFrame as u64, 0);
+        }
+    };
+
+    let fd = unsafe {
+        let pm = crate::task::process_manager();
+
+        match (*pm).get_mut(pid) {
+            Some(process) => match process.fd_table_mut().alloc(file) {
+                Some(fd) => fd,
+                None => {
+                    crate::drivers::serial::println("SYSCALL OPEN: fd table full");
+
+                    frame.rax = u64::MAX;
+                    return (frame as *mut SyscallFrame as u64, 0);
+                }
+            },
+
+            None => {
+                frame.rax = u64::MAX;
+                return (frame as *mut SyscallFrame as u64, 0);
+            }
+        }
+    };
+
+    crate::drivers::serial::print("OPEN fd: ");
+    crate::drivers::serial::print_u64(fd as u64);
+    crate::drivers::serial::println("");
+
+    frame.rax = fd as u64;
+
+    (frame as *mut SyscallFrame as u64, 0)
 }

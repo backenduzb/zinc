@@ -1,6 +1,7 @@
 use super::thread::ThreadID;
 use crate::memory::{address_space::AddressSpace, physical::FrameAllocator};
 use alloc::vec::Vec;
+use crate::filesystem::fd::FdTable;
 
 pub type ProcessID = u64;
 
@@ -17,6 +18,7 @@ pub struct Process {
     state: ProcessState,
     address_space: Option<AddressSpace>,
     threads: Vec<ThreadID>,
+    pub fd_table: FdTable,
 }
 
 impl Process {
@@ -26,6 +28,7 @@ impl Process {
             state: ProcessState::Ready,
             address_space: None,
             threads: Vec::new(),
+            fd_table: FdTable::new(),
         }
     }
 
@@ -35,6 +38,7 @@ impl Process {
             state: ProcessState::Ready,
             address_space: Some(address_space),
             threads: Vec::new(),
+            fd_table: FdTable::new(),
         }
     }
 
@@ -104,6 +108,14 @@ impl Process {
 
     pub fn is_terminated(&self) -> bool {
         self.state == ProcessState::Terminated
+    }
+
+    pub fn fd_table(&self) -> &FdTable {
+        &self.fd_table
+    }
+
+    pub fn fd_table_mut(&mut self) -> &mut FdTable {
+        &mut self.fd_table
     }
 }
 

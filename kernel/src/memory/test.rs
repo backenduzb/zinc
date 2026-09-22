@@ -416,16 +416,22 @@ extern "C" fn after_address_space_switch() -> ! {
         crate::drivers::serial::println("VFS EXEC: FAILED");
     }
 
-    if crate::exec::vfs::test_init_exec() {
+    if crate::exec::test::test_init_exec() {
         crate::drivers::serial::println("VFS EXEC: /bin/init queued for Ring3 (boot path)");
     } else {
         crate::drivers::serial::println("VFS EXEC INIT: FAILED");
     }
 
-    if crate::exec::vfs::test_badptr_exec() {
+    if crate::exec::test::test_badptr_exec() {
         crate::drivers::serial::println("VFS EXEC: /bin/badptr queued for Ring3");
     } else {
         crate::drivers::serial::println("VFS EXEC BADPTR: FAILED");
+    }
+
+    if !crate::exec::vfs::test_open_test_exec() {
+        crate::drivers::serial::println(
+            "VFS EXEC OPEN TEST: FAILED"
+        );
     }
 
     crate::task::ring3::prepare_ring3_user_thread();

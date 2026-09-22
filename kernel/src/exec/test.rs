@@ -1,5 +1,9 @@
 use crate::elf::program::{PF_R, PF_X};
 use crate::exec::elf::ElfExecutor;
+use crate::exec::vfs::{
+    BADPTR_CPU, BADPTR_PATH, HELLO_CPU, INIT_CPU, INIT_PATH, REAP_BADPTR_PID, REAP_INIT_PID,
+    badptr_reaper, exec_path, init_reaper, spawn_reaper,
+};
 use crate::memory::physical::FrameAllocator;
 
 const TEST_ENTRY: u64 = 0x400000;
@@ -80,7 +84,11 @@ fn read_user_byte(space: &crate::memory::address_space::AddressSpace, va: u64) -
     Some(unsafe { core::ptr::read_volatile(hva as *const u8) })
 }
 
-fn read_user_cstr(space: &crate::memory::address_space::AddressSpace, va: u64, max_len: usize) -> Option<alloc::vec::Vec<u8>> {
+fn read_user_cstr(
+    space: &crate::memory::address_space::AddressSpace,
+    va: u64,
+    max_len: usize,
+) -> Option<alloc::vec::Vec<u8>> {
     let mut out = alloc::vec::Vec::new();
     let mut cur = va;
     for _ in 0..max_len {
@@ -217,7 +225,9 @@ pub fn test_loader() {
         crate::drivers::serial::println("");
 
         if user_rsp == stack.top - 16 {
-            crate::drivers::serial::println("EXEC TEST: WARNING RSP still top-16 (should be argv stack)");
+            crate::drivers::serial::println(
+                "EXEC TEST: WARNING RSP still top-16 (should be argv stack)",
+            );
         }
 
         if user_rsp % 16 != 0 {
@@ -229,7 +239,7 @@ pub fn test_loader() {
             Some((user, writable, exec)) if user && writable && !exec => {
                 crate::drivers::serial::println("EXEC TEST: user stack writable U=1 W=1 X=0 OK");
             }
-            Some((u,w,x)) => {
+            Some((u, w, x)) => {
                 crate::drivers::serial::print("EXEC TEST: stack perms U=");
                 crate::drivers::serial::print_u64(u as u64);
                 crate::drivers::serial::print(" W=");
@@ -264,7 +274,7 @@ pub fn test_loader() {
         let argv_start = user_rsp + 8;
         let mut argv_addrs = alloc::vec::Vec::new();
         for i in 0..argv.len() {
-            let ptr_va = argv_start + (i as u64)*8;
+            let ptr_va = argv_start + (i as u64) * 8;
             let ptr = match read_user_u64(space, ptr_va) {
                 Some(v) => v,
                 None => {
@@ -292,15 +302,17 @@ pub fn test_loader() {
                 return;
             }
             match space.probe_page(ptr) {
-                Some((u,w,_)) if u && w => {},
+                Some((u, w, _)) if u && w => {}
                 _ => {
-                    crate::drivers::serial::println("ARGV TEST: argv string page not mapped FAILED");
+                    crate::drivers::serial::println(
+                        "ARGV TEST: argv string page not mapped FAILED",
+                    );
                     return;
                 }
             }
             argv_addrs.push(ptr);
         }
-        let null_va = argv_start + (argv.len() as u64)*8;
+        let null_va = argv_start + (argv.len() as u64) * 8;
         let null_ptr = match read_user_u64(space, null_va) {
             Some(v) => v,
             None => {
@@ -437,7 +449,8 @@ pub fn test_loader() {
     let mut global_alloc = FrameAllocator::new();
     let pm_ptr = crate::task::process_manager();
     let argv_global: &[&str] = &["zinc", "hello"];
-    let exec_res = unsafe { ElfExecutor::exec_with_argv(&elf, argv_global, &mut *pm_ptr, &mut global_alloc) };
+    let exec_res =
+        unsafe { ElfExecutor::exec_with_argv(&elf, argv_global, &mut *pm_ptr, &mut global_alloc) };
     match exec_res {
         Ok(res) => {
             crate::drivers::serial::print("GLOBAL EXEC: PID=");
@@ -459,8 +472,12 @@ pub fn test_loader() {
             } else {
                 crate::drivers::serial::println("GLOBAL EXEC: RSP 16-aligned OK");
             }
-            // Verify global structures own the thread
-            let pm_has = unsafe { (*pm_ptr).get(res.process_id).map(|p| p.threads().contains(&res.thread_id)).unwrap_or(false) };
+            let pm_has = unsafe {
+                (*pm_ptr)
+                    .get(res.process_id)
+                    .map(|p| p.threads().contains(&res.thread_id))
+                    .unwrap_or(false)
+            };
             let sched_has_global = unsafe {
                 let sched = crate::task::scheduler();
                 let mut ok = false;
@@ -483,9 +500,9 @@ pub fn test_loader() {
                 if let Some(proc) = (*pm_ptr).get(res.process_id) {
                     if let Some(space) = proc.address_space() {
                         let argc = read_user_u64(space, res.user_stack_top).unwrap_or(99);
-                        let a0 = read_user_u64(space, res.user_stack_top+8).unwrap_or(0);
-                        let a1 = read_user_u64(space, res.user_stack_top+16).unwrap_or(0);
-                        let an = read_user_u64(space, res.user_stack_top+24).unwrap_or(99);
+                        let a0 = read_user_u64(space, res.user_stack_top + 8).unwrap_or(0);
+                        let a1 = read_user_u64(space, res.user_stack_top + 16).unwrap_or(0);
+                        let an = read_user_u64(space, res.user_stack_top + 24).unwrap_or(99);
                         crate::drivers::serial::print("GLOBAL ARGV: argc=");
                         crate::drivers::serial::print_u64(argc);
                         crate::drivers::serial::print(" argv0=0x");
@@ -495,9 +512,13 @@ pub fn test_loader() {
                         crate::drivers::serial::print(" argv2=");
                         crate::drivers::serial::print_u64(an);
                         crate::drivers::serial::println("");
-                        argc==2 && a0!=0 && a1!=0 && an==0
-                    } else { false }
-                } else { false }
+                        argc == 2 && a0 != 0 && a1 != 0 && an == 0
+                    } else {
+                        false
+                    }
+                } else {
+                    false
+                }
             };
             if argv_ok {
                 crate::drivers::serial::println("GLOBAL EXEC: argv verification OK");
@@ -522,7 +543,9 @@ pub fn test_exec_runtime() -> bool {
     let mut allocator = FrameAllocator::new();
     let pm_ptr = crate::task::process_manager();
 
-    crate::drivers::serial::println("RUNTIME EXEC: creating user process via ElfExecutor with argv");
+    crate::drivers::serial::println(
+        "RUNTIME EXEC: creating user process via ElfExecutor with argv",
+    );
 
     let argv: &[&str] = &["zinc", "hello"];
     let res = unsafe { ElfExecutor::exec_with_argv(&elf, argv, &mut *pm_ptr, &mut allocator) };
@@ -551,8 +574,12 @@ pub fn test_exec_runtime() -> bool {
                         crate::drivers::serial::print_u64(argc);
                         crate::drivers::serial::println("");
                         argc == 2
-                    } else { false }
-                } else { false }
+                    } else {
+                        false
+                    }
+                } else {
+                    false
+                }
             };
             if !ok {
                 crate::drivers::serial::println("RUNTIME EXEC: argv check FAILED");
@@ -671,7 +698,12 @@ pub fn test_process_reap() {
     crate::drivers::serial::print_u64(tid);
     crate::drivers::serial::println("");
 
-    let has_thread = (0..8).any(|i| local_sched.thread(i).map(|t| t.id()==tid).unwrap_or(false));
+    let has_thread = (0..8).any(|i| {
+        local_sched
+            .thread(i)
+            .map(|t| t.id() == tid)
+            .unwrap_or(false)
+    });
     if !has_thread {
         crate::drivers::serial::println("REAP TEST: thread not in scheduler FAILED");
         return;
@@ -691,7 +723,10 @@ pub fn test_process_reap() {
     let mut found_idx = None;
     for i in 0..8 {
         if let Some(t) = local_sched.thread(i) {
-            if t.id()==tid { found_idx = Some(i); break; }
+            if t.id() == tid {
+                found_idx = Some(i);
+                break;
+            }
         }
     }
     let idx = match found_idx {
@@ -737,14 +772,12 @@ pub fn test_process_reap() {
     crate::drivers::serial::print_u64(tid);
     crate::drivers::serial::println("");
 
-    // Reap process: destroy AddressSpace and free frames
     let free_before_reap = allocator.free_count();
     let ok = local_pm.reap(pid, &mut allocator);
     if !ok {
         crate::drivers::serial::println("REAP TEST: ProcessManager::reap FAILED");
         return;
     }
-    // reap already prints PROCESS reaped and ADDRESS SPACE destroyed
 
     if local_pm.get(pid).is_some() {
         crate::drivers::serial::println("REAP TEST: process still exists after reap FAILED");
@@ -782,7 +815,9 @@ pub fn test_process_reap() {
         let rsp2 = stack.setup_argv(space, argv).unwrap();
         let tid2 = local_sched.create_user_thread(cpu, &mut local_pm, pid2, entry, rsp2);
         if tid2.is_none() {
-            crate::drivers::serial::println("REAP TEST: second thread creation FAILED (slot not reusable)");
+            crate::drivers::serial::println(
+                "REAP TEST: second thread creation FAILED (slot not reusable)",
+            );
             return;
         }
         crate::drivers::serial::print("REAP TEST: second THREAD created TID=");
@@ -791,7 +826,7 @@ pub fn test_process_reap() {
         let tid2 = tid2.unwrap();
         for i in 0..8 {
             if let Some(t) = local_sched.thread(i) {
-                if t.id()==tid2 {
+                if t.id() == tid2 {
                     if let Some(th) = local_sched.thread_mut(i) {
                         th.set_state(crate::task::thread::ThreadState::Terminated);
                     }
@@ -810,4 +845,78 @@ pub fn test_process_reap() {
     crate::drivers::serial::println("");
 
     crate::drivers::serial::println("PROCESS REAP TEST: PASS");
+}
+
+pub fn test_init_exec() -> bool {
+    crate::drivers::serial::println("=== VFS EXEC INIT TEST ===");
+
+    let cpu = if crate::arch::x86_64::smp::percpu::is_online(INIT_CPU) {
+        INIT_CPU
+    } else {
+        HELLO_CPU
+    };
+
+    let argv: &[&str] = &["init"];
+
+    let res = match exec_path(INIT_PATH, argv, cpu) {
+        Ok(r) => r,
+        Err(e) => {
+            crate::drivers::serial::print("VFS EXEC INIT FAILED: ");
+            crate::drivers::serial::println(alloc::format!("{:?}", e).as_str());
+            return false;
+        }
+    };
+
+    if res.entry != 0x401000 {
+        crate::drivers::serial::println("VFS EXEC INIT: unexpected entry FAILED");
+        return false;
+    }
+
+    crate::drivers::serial::println("VFS EXEC INIT: ELF LOAD OK");
+
+    if !spawn_reaper(res.process_id, cpu, init_reaper, &REAP_INIT_PID) {
+        crate::drivers::serial::println("VFS EXEC INIT: reaper spawn FAILED");
+        return false;
+    }
+
+    crate::drivers::serial::println("VFS EXEC: /bin/init queued for Ring3");
+
+    true
+}
+
+pub fn test_badptr_exec() -> bool {
+    crate::drivers::serial::println("=== VFS EXEC BADPTR TEST ===");
+
+    let cpu = if crate::arch::x86_64::smp::percpu::is_online(BADPTR_CPU) {
+        BADPTR_CPU
+    } else {
+        HELLO_CPU
+    };
+
+    let argv: &[&str] = &["badptr"];
+
+    let res = match exec_path(BADPTR_PATH, argv, cpu) {
+        Ok(r) => r,
+        Err(e) => {
+            crate::drivers::serial::print("VFS EXEC BADPTR FAILED: ");
+            crate::drivers::serial::println(alloc::format!("{:?}", e).as_str());
+            return false;
+        }
+    };
+
+    if res.entry != 0x401000 {
+        crate::drivers::serial::println("VFS EXEC BADPTR: unexpected entry FAILED");
+        return false;
+    }
+
+    crate::drivers::serial::println("VFS EXEC BADPTR: ELF LOAD OK");
+
+    if !spawn_reaper(res.process_id, cpu, badptr_reaper, &REAP_BADPTR_PID) {
+        crate::drivers::serial::println("VFS EXEC BADPTR: reaper spawn FAILED");
+        return false;
+    }
+
+    crate::drivers::serial::println("VFS EXEC: /bin/badptr queued for Ring3");
+
+    true
 }
