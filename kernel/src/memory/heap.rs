@@ -102,6 +102,50 @@ impl KernelHeap {
     pub fn remaining(&self) -> usize {
         HEAP_SIZE.saturating_sub(self.used())
     }
+
+    pub fn stats(&self) -> (usize, usize, usize) {
+        acquire_lock();
+        let out = unsafe {
+            if !(&raw const HEAP_INNER).as_ref().unwrap().initialized {
+                (0, 0, 0)
+            } else {
+                let mut free = 0usize;
+                let mut largest = 0usize;
+                let mut count = 0usize;
+                let mut cur = (&raw const HEAP_INNER).as_ref().unwrap().free_head;
+                let mut guard = 0usize;
+                while !cur.is_null() && guard < 100000 {
+                    let sz = (*cur).size;
+                    free = free.saturating_add(sz);
+                    if sz > largest {
+                        largest = sz;
+                    }
+                    count += 1;
+                    cur = (*cur).next;
+                    guard += 1;
+                }
+                (free, largest, count)
+            }
+        };
+        release_lock();
+        out
+    }
+
+    pub fn log_state(&self, tag: &str) {
+        let (free_total, largest, blocks) = self.stats();
+        let used = HEAP_SIZE.saturating_sub(free_total);
+        crate::drivers::serial::print("HEAP[");
+        crate::drivers::serial::print(tag);
+        crate::drivers::serial::print("] used=");
+        crate::drivers::serial::print_u64(used as u64);
+        crate::drivers::serial::print(" free=");
+        crate::drivers::serial::print_u64(free_total as u64);
+        crate::drivers::serial::print(" largest=");
+        crate::drivers::serial::print_u64(largest as u64);
+        crate::drivers::serial::print(" blocks=");
+        crate::drivers::serial::print_u64(blocks as u64);
+        crate::drivers::serial::println("");
+    }
 }
 
 unsafe impl GlobalAlloc for KernelHeap {
@@ -112,8 +156,9 @@ unsafe impl GlobalAlloc for KernelHeap {
         if !HEAP_INIT_FLAG.load(Ordering::Acquire) {
             return null_mut();
         }
-        let size = layout.size();
+        let raw_size = layout.size();
         let align = layout.align().max(core::mem::align_of::<FreeBlock>());
+        let size = raw_size.max(core::mem::size_of::<FreeBlock>());
 
         acquire_lock();
         let mut result = null_mut();
@@ -149,11 +194,14 @@ unsafe impl GlobalAlloc for KernelHeap {
 
                 if aligned_start > block_start {
                     let prefix_size = aligned_start - block_start;
-                    let prefix = block_start as *mut FreeBlock;
-                    (*prefix).size = prefix_size;
-                    (*prefix).next = *prev;
-                    *prev = prefix;
-                    prev = &mut (*prefix).next as *mut *mut FreeBlock;
+                    if prefix_size >= core::mem::size_of::<FreeBlock>() {
+                        let prefix = block_start as *mut FreeBlock;
+                        (*prefix).size = prefix_size;
+                        (*prefix).next = *prev;
+                        *prev = prefix;
+                        prev = &mut (*prefix).next as *mut *mut FreeBlock;
+                    } else if prefix_size > 0 {
+                    }
                 }
                 
                 let suffix_size = block_end - aligned_end;
@@ -171,6 +219,12 @@ unsafe impl GlobalAlloc for KernelHeap {
         }
         release_lock();
         if !found {
+            crate::drivers::serial::print("HEAP ALLOC FAIL size=");
+            crate::drivers::serial::print_u64(size as u64);
+            crate::drivers::serial::print(" align=");
+            crate::drivers::serial::print_u64(align as u64);
+            crate::drivers::serial::println("");
+            KERNEL_HEAP.log_state("alloc-fail");
             return null_mut();
         }
         result

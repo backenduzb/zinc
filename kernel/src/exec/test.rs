@@ -40,9 +40,6 @@ fn build_test_elf(payload: &[u8]) -> [u8; 8192] {
 }
 
 fn build_ring3_payload() -> [u8; 16] {
-    // Minimal payload that performs syscall yield then loops.
-    // mov rax, 0  (SYS_YIELD) ; int 0x80 ; jmp $
-    // 48 C7 C0 00 00 00 00  CD 80  EB FE
     let mut p = [0u8; 16];
     p[0] = 0x48;
     p[1] = 0xC7;
@@ -94,7 +91,6 @@ fn read_user_cstr(space: &crate::memory::address_space::AddressSpace, va: u64, m
         out.push(b);
         cur = cur.checked_add(1)?;
     }
-    // verify null terminator present
     let term = read_user_byte(space, cur)?;
     if term != 0 {
         return None;
@@ -102,7 +98,6 @@ fn read_user_cstr(space: &crate::memory::address_space::AddressSpace, va: u64, m
     Some(out)
 }
 
-/// Integration test for ELF -> Process -> AddressSpace -> PT_LOAD -> UserStack -> Thread
 pub fn test_loader() {
     crate::drivers::serial::println("=== ELF EXEC TEST ===");
 
@@ -137,13 +132,10 @@ pub fn test_loader() {
         return;
     }
 
-    // Full executor pipeline test using LOCAL managers (isolated)
     crate::drivers::serial::println("EXEC TEST: heap ready, full pipeline");
-
     let mut allocator = FrameAllocator::new();
     let mut local_pm = crate::task::process::ProcessManager::new();
     let mut local_sched = crate::task::scheduler::Scheduler::new();
-
     let argv: &[&str] = &["zinc", "hello"];
 
     let pid = match local_pm.create_user(&mut allocator) {
@@ -213,7 +205,6 @@ pub fn test_loader() {
         crate::drivers::serial::print_hex_u64(stack.top);
         crate::drivers::serial::println("");
 
-        // Build argv on stack
         let user_rsp = match stack.setup_argv(space, argv) {
             Some(r) => r,
             None => {
@@ -234,7 +225,6 @@ pub fn test_loader() {
             return;
         }
         crate::drivers::serial::println("EXEC TEST: RSP 16-aligned OK");
-
         match space.probe_page(user_rsp) {
             Some((user, writable, exec)) if user && writable && !exec => {
                 crate::drivers::serial::println("EXEC TEST: user stack writable U=1 W=1 X=0 OK");
@@ -255,8 +245,6 @@ pub fn test_loader() {
             }
         }
 
-        // Verify argc/argv via reading back
-        // We do full ARGV TEST here
         crate::drivers::serial::println("=== ARGV TEST ===");
         let argc = match read_user_u64(space, user_rsp) {
             Some(v) => v,
@@ -303,7 +291,6 @@ pub fn test_loader() {
                 crate::drivers::serial::println("ARGV TEST: argv pointer outside stack FAILED");
                 return;
             }
-            // verify mapped writable? strings are in stack which is writable
             match space.probe_page(ptr) {
                 Some((u,w,_)) if u && w => {},
                 _ => {
@@ -332,7 +319,6 @@ pub fn test_loader() {
         }
         crate::drivers::serial::println("ARGV TEST: argv[2]=NULL OK");
 
-        // Verify string contents
         let mut strings_ok = true;
         for (i, &expected) in argv.iter().enumerate() {
             let va = argv_addrs[i];
@@ -361,17 +347,13 @@ pub fn test_loader() {
         crate::drivers::serial::print("ARGV TEST: initial RSP=0x");
         crate::drivers::serial::print_hex_u64(user_rsp);
         crate::drivers::serial::println("");
-        // Additional checks: stack perms, RIP, RSP, thread ownership will be after
         crate::drivers::serial::println("ARGV TEST: PASS");
-
         let e = loaded.entry;
         let b = stack.base;
         let t = stack.top;
         let r = user_rsp;
         (e, b, t, r)
     };
-
-    // Stage 4: Thread creation via local scheduler + process registration
     let cpu_id = crate::arch::x86_64::smp::percpu::current_cpu_id();
     let tid = match local_sched.create_user_thread(cpu_id, &mut local_pm, pid, entry, rsp) {
         Some(t) => t,
@@ -407,7 +389,6 @@ pub fn test_loader() {
         return;
     }
 
-    // Verify thread's RIP/RSP match expectations
     let mut found = false;
     for i in 0..8 {
         if let Some(t) = local_sched.thread(i) {
@@ -432,7 +413,6 @@ pub fn test_loader() {
                 } else {
                     crate::drivers::serial::println("EXEC TEST: thread frame FAILED");
                 }
-                // Validate RSP within stack bounds
                 if t.user_rsp() < stack_base || t.user_rsp() >= stack_top {
                     crate::drivers::serial::println("EXEC TEST: RSP outside stack FAILED");
                     return;
@@ -453,7 +433,6 @@ pub fn test_loader() {
     crate::drivers::serial::println("EXEC TEST: process ready");
     crate::drivers::serial::println("ELF EXEC TEST: PASS");
 
-    // Also test global ElfExecutor path with argv
     crate::drivers::serial::println("=== ELF EXEC GLOBAL TEST ===");
     let mut global_alloc = FrameAllocator::new();
     let pm_ptr = crate::task::process_manager();
@@ -500,7 +479,6 @@ pub fn test_loader() {
             } else {
                 crate::drivers::serial::println("GLOBAL EXEC: manager ownership FAILED");
             }
-            // Read back argc/argv from global process
             let argv_ok = unsafe {
                 if let Some(proc) = (*pm_ptr).get(res.process_id) {
                     if let Some(space) = proc.address_space() {
@@ -535,9 +513,6 @@ pub fn test_loader() {
     }
 }
 
-/// Runtime helper that uses ElfExecutor to create a real user process/thread
-/// ready for Ring3 execution. Called after heap init, before scheduler start.
-/// Returns true if process ready, and leaves the thread queued in global scheduler.
 pub fn test_exec_runtime() -> bool {
     crate::drivers::serial::println("=== ELF EXEC RUNTIME TEST ===");
 
@@ -568,7 +543,6 @@ pub fn test_exec_runtime() -> bool {
                 crate::drivers::serial::println("RUNTIME EXEC: RSP not 16-aligned FAILED");
                 return false;
             }
-            // Verify argv from runtime process
             let ok = unsafe {
                 if let Some(proc) = (*pm_ptr).get(r.process_id) {
                     if let Some(space) = proc.address_space() {
@@ -595,19 +569,15 @@ pub fn test_exec_runtime() -> bool {
     }
 }
 
-/// Integration test for Process / AddressSpace destruction and reaping.
-/// Uses local managers to avoid polluting global scheduler before Ring3.
 pub fn test_process_reap() {
     crate::drivers::serial::println("=== PROCESS REAP TEST ===");
 
-    // Memory accounting via FrameAllocator free count
     let mut allocator = FrameAllocator::new();
     let free_before = allocator.free_count();
     crate::drivers::serial::print("REAP TEST: free_before=");
     crate::drivers::serial::print_u64(free_before as u64);
     crate::drivers::serial::println("");
 
-    // Error-path must not leak: try invalid ELF
     {
         let mut local_pm = crate::task::process::ProcessManager::new();
         let bad = [0u8; 64];
@@ -629,7 +599,6 @@ pub fn test_process_reap() {
         } else {
             crate::drivers::serial::println("REAP TEST: error cleanup OK (no leak)");
         }
-        // Ensure local_pm has no leaked process
         if local_pm.count() != 0 {
             crate::drivers::serial::println("REAP TEST: leaked process after bad ELF FAILED");
             return;
@@ -702,7 +671,6 @@ pub fn test_process_reap() {
     crate::drivers::serial::print_u64(tid);
     crate::drivers::serial::println("");
 
-    // Verify thread exists
     let has_thread = (0..8).any(|i| local_sched.thread(i).map(|t| t.id()==tid).unwrap_or(false));
     if !has_thread {
         crate::drivers::serial::println("REAP TEST: thread not in scheduler FAILED");
@@ -720,8 +688,6 @@ pub fn test_process_reap() {
         crate::drivers::serial::println("REAP TEST: frames allocated OK");
     }
 
-    // Terminate thread: mark Terminated and notify ProcessManager
-    // Find scheduler slot
     let mut found_idx = None;
     for i in 0..8 {
         if let Some(t) = local_sched.thread(i) {
@@ -738,13 +704,11 @@ pub fn test_process_reap() {
     if let Some(th) = local_sched.thread_mut(idx) {
         th.set_state(crate::task::thread::ThreadState::Terminated);
     }
-    // Notify ProcessManager
     local_pm.notify_thread_terminated(pid, tid);
     crate::drivers::serial::print("THREAD terminated TID=");
     crate::drivers::serial::print_u64(tid);
     crate::drivers::serial::println("");
 
-    // Verify process has no live threads and becomes Terminated
     if local_pm.has_live_threads(pid) {
         crate::drivers::serial::println("REAP TEST: process still has live threads FAILED");
         return;
@@ -764,7 +728,6 @@ pub fn test_process_reap() {
     crate::drivers::serial::print_u64(pid);
     crate::drivers::serial::println("");
 
-    // Simulate scheduler reap: free slot
     let removed = local_sched.remove_thread_by_id(tid);
     if !removed {
         crate::drivers::serial::println("REAP TEST: scheduler remove FAILED");
@@ -801,7 +764,6 @@ pub fn test_process_reap() {
     }
     crate::drivers::serial::println("FRAMES returned");
 
-    // Scheduler slot reuse: create another process after reap
     let pid2 = match local_pm.create_user(&mut allocator) {
         Some(p) => p,
         None => {
@@ -812,7 +774,6 @@ pub fn test_process_reap() {
     crate::drivers::serial::print("REAP TEST: second PROCESS created PID=");
     crate::drivers::serial::print_u64(pid2);
     crate::drivers::serial::println("");
-    // Create thread for second process to prove slot reuse
     {
         let proc = local_pm.get_mut(pid2).unwrap();
         let space = proc.address_space_mut().unwrap();
@@ -827,9 +788,7 @@ pub fn test_process_reap() {
         crate::drivers::serial::print("REAP TEST: second THREAD created TID=");
         crate::drivers::serial::print_u64(tid2.unwrap());
         crate::drivers::serial::println(" (slot reuse OK)");
-        // Cleanup second process for cleanliness (not required but free)
         let tid2 = tid2.unwrap();
-        // terminate and reap quickly
         for i in 0..8 {
             if let Some(t) = local_sched.thread(i) {
                 if t.id()==tid2 {

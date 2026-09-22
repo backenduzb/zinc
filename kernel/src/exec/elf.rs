@@ -47,6 +47,19 @@ impl ElfExecutor {
         process_manager: &mut ProcessManager,
         frame_allocator: &mut FrameAllocator,
     ) -> Result<ExecResult, ExecError> {
+        let cpu_id = crate::arch::x86_64::smp::percpu::current_cpu_id();
+        Self::exec_with_argv_on_cpu(data, argv, process_manager, frame_allocator, cpu_id)
+    }
+
+    /// Exec with argv on an explicit target CPU (its scheduler must have a
+    /// free slot). Used by VFS exec to place threads on APs.
+    pub fn exec_with_argv_on_cpu(
+        data: &[u8],
+        argv: &[&str],
+        process_manager: &mut ProcessManager,
+        frame_allocator: &mut FrameAllocator,
+        cpu_id: usize,
+    ) -> Result<ExecResult, ExecError> {
         crate::drivers::serial::println("EXEC: creating user process");
 
         let pid = process_manager
@@ -104,18 +117,17 @@ impl ElfExecutor {
             }
         };
 
-        let cpu_id = crate::arch::x86_64::smp::percpu::current_cpu_id();
-
         crate::drivers::serial::print("EXEC: creating user thread on CPU=");
         crate::drivers::serial::print_u64(cpu_id as u64);
         crate::drivers::serial::println("");
 
-        let tid = {
-            let scheduler_ptr = crate::task::scheduler();
-
+        let tid = if cpu_id < crate::arch::x86_64::smp::percpu::MAX_CPUS {
             unsafe {
-                (*scheduler_ptr).create_user_thread(cpu_id, process_manager, pid, entry, user_rsp)
+                (&mut crate::task::SCHEDULERS[cpu_id])
+                    .create_user_thread(cpu_id, process_manager, pid, entry, user_rsp)
             }
+        } else {
+            None
         };
         let tid = match tid {
             Some(t) => t,

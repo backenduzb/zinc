@@ -410,6 +410,24 @@ extern "C" fn after_address_space_switch() -> ! {
         crate::drivers::serial::println("EXEC RUNTIME: FAILED, fallback to manual ring3");
     }
 
+    if crate::exec::vfs::test_hello_exec() {
+        crate::drivers::serial::println("VFS EXEC: /bin/hello queued for Ring3");
+    } else {
+        crate::drivers::serial::println("VFS EXEC: FAILED");
+    }
+
+    if crate::exec::vfs::test_init_exec() {
+        crate::drivers::serial::println("VFS EXEC: /bin/init queued for Ring3 (boot path)");
+    } else {
+        crate::drivers::serial::println("VFS EXEC INIT: FAILED");
+    }
+
+    if crate::exec::vfs::test_badptr_exec() {
+        crate::drivers::serial::println("VFS EXEC: /bin/badptr queued for Ring3");
+    } else {
+        crate::drivers::serial::println("VFS EXEC BADPTR: FAILED");
+    }
+
     crate::task::ring3::prepare_ring3_user_thread();
 
     crate::task::test::scheduler_test();
