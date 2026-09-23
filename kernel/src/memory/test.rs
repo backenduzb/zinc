@@ -169,6 +169,101 @@ pub fn virtual_memory_test() -> ! {
     }
 }
 
+use core::sync::atomic::{AtomicBool, Ordering};
+
+/// Dump CPU3 scheduler slot occupancy for diagnosing "scheduler full".
+/// Prints slot / TID / PID / ThreadState / cpu_id per occupied slot.
+fn log_cpu3_slots(reason: &str) {
+    crate::drivers::serial::print("CPU3 SLOTS (");
+    crate::drivers::serial::print(reason);
+    crate::drivers::serial::println(")");
+    unsafe {
+        for slot in 0..8 {
+            match crate::task::SCHEDULERS[3].thread(slot) {
+                Some(t) => {
+                    let state = match t.state() {
+                        crate::task::thread::ThreadState::Ready => "Ready",
+                        crate::task::thread::ThreadState::Running => "Running",
+                        crate::task::thread::ThreadState::Waiting => "Waiting",
+                        crate::task::thread::ThreadState::Sleeping => "Sleeping",
+                        crate::task::thread::ThreadState::Terminated => "Terminated",
+                    };
+                    crate::drivers::serial::print("  slot=");
+                    crate::drivers::serial::print_u64(slot as u64);
+                    crate::drivers::serial::print(" TID=");
+                    crate::drivers::serial::print_u64(t.id());
+                    crate::drivers::serial::print(" PID=");
+                    crate::drivers::serial::print_u64(t.process_id());
+                    crate::drivers::serial::print(" state=");
+                    crate::drivers::serial::println(state);
+                    crate::drivers::serial::print("  cpu_id=");
+                    crate::drivers::serial::print_u64(t.cpu_id() as u64);
+                    crate::drivers::serial::println("");
+                }
+                None => {
+                    crate::drivers::serial::print("  slot=");
+                    crate::drivers::serial::print_u64(slot as u64);
+                    crate::drivers::serial::println(" empty");
+                }
+            }
+        }
+        crate::drivers::serial::print("  count=");
+        crate::drivers::serial::print_u64(crate::task::SCHEDULERS[3].count() as u64);
+        crate::drivers::serial::println("");
+    }
+}
+
+/// Wait until the CPU3 test's reaper signals completion.
+///
+/// The reaper sets its flag only after the full lifecycle finished:
+/// process terminated -> ProcessManager::reap() -> AddressSpace
+/// destroyed -> process removed -> completion=true -> task::exit().
+///
+/// Intentionally spin-based with NO hlt/sleep here. This runs on the
+/// BSP before its scheduler starts, so `crate::task::sleep` is a no-op
+/// and a missed hlt wakeup would deadlock boot. APs run on their own
+/// vCPUs, so a bounded pause-spin cannot deadlock them. Bounded +
+/// fail-open: on timeout dumps CPU3 slots and returns so boot always
+/// continues. Only atomics are polled (no cross-CPU struct walks).
+fn wait_for_vfs_complete(flag: &AtomicBool, name: &str) {
+    crate::drivers::serial::print("VFS EXEC WAIT: ");
+    crate::drivers::serial::println(name);
+
+    const INNER_SPINS: u64 = 4096;
+    const HEARTBEAT_OUTER: u64 = 65536;
+    const TIMEOUT_OUTER: u64 = 600_000;
+
+    let mut outer = 0u64;
+    let done = loop {
+        for _ in 0..INNER_SPINS {
+            core::hint::spin_loop();
+        }
+        outer += 1;
+        if flag.load(Ordering::Acquire) {
+            break true;
+        }
+        if outer % HEARTBEAT_OUTER == 0 {
+            crate::drivers::serial::print("VFS EXEC WAIT ALIVE: ");
+            crate::drivers::serial::print(name);
+            crate::drivers::serial::print(" ticks=");
+            crate::drivers::serial::print_u64(crate::arch::x86_64::lapic::ticks());
+            crate::drivers::serial::println("");
+        }
+        if outer >= TIMEOUT_OUTER {
+            break false;
+        }
+    };
+
+    if done {
+        crate::drivers::serial::print("VFS EXEC WAIT DONE: ");
+        crate::drivers::serial::println(name);
+    } else {
+        crate::drivers::serial::print("VFS EXEC WAIT TIMEOUT: ");
+        crate::drivers::serial::println(name);
+        log_cpu3_slots(name);
+    }
+}
+
 extern "C" fn after_address_space_switch() -> ! {
     crate::drivers::serial::println("Entered new address space!");
 
@@ -424,6 +519,7 @@ extern "C" fn after_address_space_switch() -> ! {
 
     if crate::exec::test::test_badptr_exec() {
         crate::drivers::serial::println("VFS EXEC: /bin/badptr queued for Ring3");
+        wait_for_vfs_complete(&crate::exec::vfs::BADPTR_COMPLETE, "badptr");
     } else {
         crate::drivers::serial::println("VFS EXEC BADPTR: FAILED");
     }
@@ -432,18 +528,24 @@ extern "C" fn after_address_space_switch() -> ! {
         crate::drivers::serial::println(
             "VFS EXEC OPEN TEST: FAILED"
         );
+    } else {
+        wait_for_vfs_complete(&crate::exec::vfs::OPEN_TEST_COMPLETE, "open_test");
     }
-    
+
     if !crate::exec::vfs::test_read_test_exec() {
         crate::drivers::serial::println(
             "VFS EXEC READ TEST: FAILED"
         );
+    } else {
+        wait_for_vfs_complete(&crate::exec::vfs::READ_TEST_COMPLETE, "read_test");
     }
-    
+
     if !crate::exec::vfs::test_close_test_exec() {
         crate::drivers::serial::println(
             "VFS EXEC CLOSE TEST: FAILED"
         );
+    } else {
+        wait_for_vfs_complete(&crate::exec::vfs::CLOSE_TEST_COMPLETE, "close_test");
     }
     
     crate::task::ring3::prepare_ring3_user_thread();

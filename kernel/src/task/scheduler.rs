@@ -1161,25 +1161,72 @@ impl Scheduler {
         user_rsp: u64,
     ) -> Option<ThreadID> {
         if self.count >= MAX_THREADS {
-            return None;
+            serial::print("CREATE USER THREAD: scheduler full, reaping cpu=");
+            serial::print_u64(cpu_id as u64);
+            serial::println("");
+
+            self.reap_terminated();
+
+            if self.count >= MAX_THREADS {
+                serial::print("CREATE USER THREAD FAIL: scheduler still full cpu=");
+                serial::print_u64(cpu_id as u64);
+                serial::print(" count=");
+                serial::print_u64(self.count as u64);
+                serial::print(" max=");
+                serial::print_u64(MAX_THREADS as u64);
+                serial::println("");
+                return None;
+            }
         }
 
         if process_manager.get(process_id).is_none() {
+            serial::print("CREATE USER THREAD FAIL: process missing pid=");
+            serial::print_u64(process_id);
+            serial::println("");
             return None;
         }
 
         let thread_id = process_manager.allocate_thread_id();
 
+        serial::print("CREATE USER THREAD: allocated tid=");
+        serial::print_u64(thread_id);
+        serial::print(" cpu=");
+        serial::print_u64(cpu_id as u64);
+        serial::print(" pid=");
+        serial::print_u64(process_id);
+        serial::println("");
+
         let thread = Thread::new_user(thread_id, cpu_id, process_id, user_rip, user_rsp);
 
+        serial::println("CREATE USER THREAD: Thread::new_user OK");
+
         if !self.add_thread(thread, cpu_id) {
+            serial::print("CREATE USER THREAD FAIL: add_thread cpu=");
+            serial::print_u64(cpu_id as u64);
+            serial::print(" count=");
+            serial::print_u64(self.count as u64);
+            serial::println("");
             return None;
         }
 
+        serial::print("CREATE USER THREAD: scheduler add OK tid=");
+        serial::print_u64(thread_id);
+        serial::println("");
+
         if !process_manager.add_thread(process_id, thread_id) {
+            serial::print("CREATE USER THREAD FAIL: process add_thread pid=");
+            serial::print_u64(process_id);
+            serial::print(" tid=");
+            serial::print_u64(thread_id);
+            serial::println("");
+
             self.remove_thread_by_id(thread_id);
             return None;
         }
+
+        serial::print("CREATE USER THREAD: process registration OK tid=");
+        serial::print_u64(thread_id);
+        serial::println("");
 
         Some(thread_id)
     }
