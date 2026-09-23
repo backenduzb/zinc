@@ -15,8 +15,14 @@ pub const INIT_CPU: usize = 2;
 pub const BADPTR_PATH: &[u8] = b"/bin/badptr";
 pub const BADPTR_CPU: usize = 3;
 
+pub const READ_TEST_PATH: &[u8] = b"/bin/read_test";
+pub const READ_TEST_CPU: usize = 3;
+
 pub const OPEN_TEST_PATH: &[u8] = b"/bin/open_test";
 pub const OPEN_TEST_CPU: usize = 3;
+
+pub const CLOSE_TEST_PATH: &[u8] = b"/bin/close_test";
+pub const CLOSE_TEST_CPU: usize = 3;
 
 const MAX_EXEC_BYTES: usize = 1024 * 1024;
 
@@ -39,6 +45,8 @@ pub(crate) static REAP_PID: AtomicU64 = AtomicU64::new(0);
 pub static REAP_INIT_PID: AtomicU64 = AtomicU64::new(0);
 pub static REAP_BADPTR_PID: AtomicU64 = AtomicU64::new(0);
 pub(crate) static REAP_OPEN_TEST_PID: AtomicU64 = AtomicU64::new(0);
+static REAP_READ_TEST_PID: AtomicU64 = AtomicU64::new(0);
+static REAP_CLOSE_TEST_PID: AtomicU64 = AtomicU64::new(0);
 
 fn open_root_vfs() -> Result<(IdeDevice, Vfs), VfsExecError> {
     let mut ide = IdeDevice::new();
@@ -405,4 +413,117 @@ pub extern "C" fn badptr_reaper() -> ! {
 
         crate::task::sleep(20);
     }
+}
+
+extern "C" fn read_test_reaper() -> ! {
+    loop {
+        let pid = REAP_READ_TEST_PID.load(Ordering::Relaxed);
+
+        if pid != 0 {
+            let alive = unsafe { (*crate::task::process_manager()).get(pid).is_some() };
+
+            if !alive {
+                crate::drivers::serial::println("VFS EXEC: read_test PROCESS REAP OK");
+                REAP_READ_TEST_PID.store(0, Ordering::Relaxed);
+            }
+        }
+        unsafe {
+            core::arch::asm!("hlt");
+        }
+    }
+}
+
+pub fn test_read_test_exec() -> bool {
+    crate::drivers::serial::println("=== VFS EXEC READ TEST ===");
+
+    let cpu = if crate::arch::x86_64::smp::percpu::is_online(READ_TEST_CPU) {
+        READ_TEST_CPU
+    } else {
+        HELLO_CPU
+    };
+
+    let argv: &[&str] = &["read_test"];
+
+    let res = match exec_path(READ_TEST_PATH, argv, cpu) {
+        Ok(r) => r,
+        Err(e) => {
+            crate::drivers::serial::print("VFS EXEC READ TEST FAILED: ");
+            crate::drivers::serial::println(alloc::format!("{:?}", e).as_str());
+            return false;
+        }
+    };
+
+    if res.entry != 0x401000 {
+        crate::drivers::serial::println("VFS EXEC READ TEST: unexpected entry FAILED");
+        return false;
+    }
+
+    crate::drivers::serial::println("VFS EXEC READ TEST: ELF LOAD OK");
+
+    if !spawn_reaper(res.process_id, cpu, read_test_reaper, &REAP_READ_TEST_PID) {
+        crate::drivers::serial::println("VFS EXEC READ TEST: reaper spawn FAILED");
+        return false;
+    }
+
+    crate::drivers::serial::println("VFS EXEC: /bin/read_test queued for Ring3");
+
+    true
+}
+
+extern "C" fn close_test_reaper() -> ! {
+    loop {
+        let pid = REAP_CLOSE_TEST_PID.load(Ordering::Relaxed);
+
+        if pid != 0 {
+            let alive = unsafe { (*crate::task::process_manager()).get(pid).is_some() };
+
+            if !alive {
+                crate::drivers::serial::println("VFS EXEC: close_test PROCESS REAP OK");
+
+                REAP_CLOSE_TEST_PID.store(0, Ordering::Relaxed);
+            }
+        }
+
+        unsafe {
+            core::arch::asm!("hlt");
+        }
+    }
+}
+
+pub fn test_close_test_exec() -> bool {
+    crate::drivers::serial::println("=== VFS EXEC CLOSE TEST ===");
+
+    let cpu = if crate::arch::x86_64::smp::percpu::is_online(CLOSE_TEST_CPU) {
+        CLOSE_TEST_CPU
+    } else {
+        HELLO_CPU
+    };
+
+    let argv: &[&str] = &["close_test"];
+
+    let res = match exec_path(CLOSE_TEST_PATH, argv, cpu) {
+        Ok(r) => r,
+
+        Err(e) => {
+            crate::drivers::serial::print("VFS EXEC CLOSE TEST FAILED: ");
+            crate::drivers::serial::println(alloc::format!("{:?}", e).as_str());
+            return false;
+        }
+    };
+
+    if res.entry != 0x401000 {
+        crate::drivers::serial::println("VFS EXEC CLOSE TEST: unexpected entry FAILED");
+        return false;
+    }
+
+    crate::drivers::serial::println("VFS EXEC CLOSE TEST: ELF LOAD OK");
+
+    if !spawn_reaper(res.process_id, cpu, close_test_reaper, &REAP_CLOSE_TEST_PID) {
+        crate::drivers::serial::println("VFS EXEC CLOSE TEST: reaper spawn FAILED");
+        return false;
+    }
+
+    crate::drivers::serial::println("VFS EXEC: /bin/close_test queued for Ring3");
+
+    true
 }

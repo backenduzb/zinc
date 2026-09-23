@@ -433,7 +433,19 @@ extern "C" fn after_address_space_switch() -> ! {
             "VFS EXEC OPEN TEST: FAILED"
         );
     }
-
+    
+    if !crate::exec::vfs::test_read_test_exec() {
+        crate::drivers::serial::println(
+            "VFS EXEC READ TEST: FAILED"
+        );
+    }
+    
+    if !crate::exec::vfs::test_close_test_exec() {
+        crate::drivers::serial::println(
+            "VFS EXEC CLOSE TEST: FAILED"
+        );
+    }
+    
     crate::task::ring3::prepare_ring3_user_thread();
 
     crate::task::test::scheduler_test();

@@ -1,3 +1,5 @@
+use core::u64;
+
 use crate::arch::x86_64::context::SyscallFrame;
 use crate::boot::limine::physical_to_virtual;
 use crate::memory::address_space::AddressSpace;
@@ -197,6 +199,10 @@ pub extern "C" fn syscall_handler(frame: *mut SyscallFrame) -> (u64, u64) {
 
         SYS_OPEN => handle_open(frame),
 
+        SYS_READ => handle_read(frame),
+
+        SYS_CLOSE => handle_close(frame),
+
         SYS_EXECVE => {
             crate::drivers::serial::println("SYSCALL: EXECVE");
 
@@ -368,6 +374,229 @@ fn handle_open(frame: &mut SyscallFrame) -> (u64, u64) {
     crate::drivers::serial::println("");
 
     frame.rax = fd as u64;
+
+    (frame as *mut SyscallFrame as u64, 0)
+}
+
+fn handle_read(frame: &mut SyscallFrame) -> (u64, u64) {
+    let fd = frame.rdi as usize;
+    let buf = frame.rsi;
+    let len = frame.rdx as usize;
+
+    crate::drivers::serial::print("SYSCALL: READ fd=");
+    crate::drivers::serial::print_u64(fd as u64);
+    crate::drivers::serial::print(" len=");
+    crate::drivers::serial::print_u64(len as u64);
+    crate::drivers::serial::println("");
+
+    if len == 0 {
+        frame.rax = 0;
+        return (frame as *mut SyscallFrame as u64, 0);
+    }
+
+    if len > MAX_WRITE {
+        crate::drivers::serial::println("SYSCALL READ: len too large");
+        frame.rax = u64::MAX;
+        return (frame as *mut SyscallFrame as u64, 0);
+    }
+
+    if !is_user_range(buf, len as u64) {
+        crate::drivers::serial::println("SYSCALL READ: bad user range");
+        frame.rax = u64::MAX;
+        return (frame as *mut SyscallFrame as u64, 0);
+    }
+
+    let pid = unsafe {
+        match (*crate::task::scheduler()).current() {
+            Some(thread) => thread.process_id(),
+            None => {
+                crate::drivers::serial::println("SYSCALL READ: no current thread");
+                frame.rax = u64::MAX;
+                return (frame as *mut SyscallFrame as u64, 0);
+            }
+        }
+    };
+
+    let space_ptr = unsafe {
+        let pm = crate::task::process_manager();
+
+        match (*pm).get(pid).and_then(|p| p.address_space()) {
+            Some(space) => space as *const AddressSpace,
+            None => {
+                crate::drivers::serial::println("SYSCALL READ: no address space");
+                frame.rax = u64::MAX;
+                return (frame as *mut SyscallFrame as u64, 0);
+            }
+        }
+    };
+
+    let space = unsafe { &*space_ptr };
+
+    let mut file = unsafe {
+        let pm = crate::task::process_manager();
+
+        match (*pm).get_mut(pid) {
+            Some(process) => match process.fd_table_mut().get_mut(fd) {
+                Some(crate::filesystem::fd::FileDescriptor::File(file)) => core::mem::replace(
+                    file,
+                    crate::filesystem::vfs::VfsFile {
+                        inode_number: file.inode_number,
+                        inode: file.inode,
+                        offset: file.offset,
+                    },
+                ),
+
+                _ => {
+                    crate::drivers::serial::println("SYSCALL READ: bad fd");
+                    frame.rax = u64::MAX;
+                    return (frame as *mut SyscallFrame as u64, 0);
+                }
+            },
+
+            None => {
+                crate::drivers::serial::println("SYSCALL READ: process not found");
+                frame.rax = u64::MAX;
+                return (frame as *mut SyscallFrame as u64, 0);
+            }
+        }
+    };
+
+    let mut kbuf = [0u8; MAX_WRITE];
+
+    let bytes_read = {
+        let fs_ptr = crate::filesystem::context::filesystem();
+
+        if fs_ptr.is_null() {
+            crate::drivers::serial::println("SYSCALL READ: filesystem unavailable");
+
+            frame.rax = u64::MAX;
+            return (frame as *mut SyscallFrame as u64, 0);
+        }
+
+        unsafe { (*fs_ptr).read(&mut file, &mut kbuf[..len]) }
+    };
+
+    if !copy_to_user(space, buf, bytes_read, &kbuf[..bytes_read]) {
+        crate::drivers::serial::println("SYSCALL READ: copy_to_user failed");
+
+        frame.rax = u64::MAX;
+        return (frame as *mut SyscallFrame as u64, 0);
+    }
+
+    unsafe {
+        let pm = crate::task::process_manager();
+
+        if let Some(process) = (*pm).get_mut(pid) {
+            if let Some(crate::filesystem::fd::FileDescriptor::File(slot)) =
+                process.fd_table_mut().get_mut(fd)
+            {
+                *slot = file;
+            }
+        }
+    }
+
+    crate::drivers::serial::print("READ bytes=");
+    crate::drivers::serial::print_u64(bytes_read as u64);
+    crate::drivers::serial::println("");
+
+    frame.rax = bytes_read as u64;
+
+    (frame as *mut SyscallFrame as u64, 0)
+}
+
+fn copy_to_user(space: &AddressSpace, user_ptr: u64, len: usize, input: &[u8]) -> bool {
+    if len == 0 {
+        return true;
+    }
+
+    if len > input.len() {
+        return false;
+    }
+
+    if !is_user_range(user_ptr, len as u64) {
+        return false;
+    }
+
+    for i in 0..len {
+        let va = user_ptr + i as u64;
+        let page = va & !0xFFF;
+
+        match space.probe_page(page) {
+            Some((user, writable, _)) if user && writable => {}
+            _ => return false,
+        }
+
+        let phys_base = match space.translate_page(page) {
+            Some(p) => p,
+            None => return false,
+        };
+
+        let phys = phys_base + (va & 0xFFF);
+
+        let hva = match physical_to_virtual(phys) {
+            Some(v) => v,
+            None => return false,
+        };
+
+        unsafe {
+            core::ptr::write_volatile(hva as *mut u8, input[i]);
+        }
+    }
+
+    true
+}
+
+fn handle_close(frame: &mut SyscallFrame) -> (u64, u64) {
+    let fd = frame.rdi as usize;
+
+    crate::drivers::serial::print("SYSCALL: CLOSE fd=");
+    crate::drivers::serial::print_u64(fd as u64);
+    crate::drivers::serial::println("");
+
+    if fd < 3 {
+        crate::drivers::serial::println("SYSCALL CLOSE: cannot close stdio");
+        frame.rax = u64::MAX;
+        return (frame as *mut SyscallFrame as u64, 0);
+    }
+
+    let pid = unsafe {
+        match (*crate::task::scheduler()).current() {
+            Some(thread) => thread.process_id(),
+            None => {
+                crate::drivers::serial::println("SYSCALL CLOSE: no current thread");
+                frame.rax = u64::MAX;
+                return (frame as *mut SyscallFrame as u64, 0);
+            }
+        }
+    };
+
+    let result = unsafe {
+        let pm = crate::task::process_manager();
+
+        match (*pm).get_mut(pid) {
+            Some(process) => process.fd_table_mut().close(fd),
+            None => {
+                crate::drivers::serial::println("SYSCALL CLOSE: process not found");
+                None
+            }
+        }
+    };
+
+    match result {
+        Some(_) => {
+            crate::drivers::serial::print("CLOSE: fd=");
+            crate::drivers::serial::print_u64(fd as u64);
+            crate::drivers::serial::println(" closed");
+
+            frame.rax = 0;
+        }
+
+        None => {
+            crate::drivers::serial::println("SYSCALL CLOSE: bad fd");
+
+            frame.rax = u64::MAX;
+        }
+    }
 
     (frame as *mut SyscallFrame as u64, 0)
 }

@@ -51,8 +51,6 @@ impl ElfExecutor {
         Self::exec_with_argv_on_cpu(data, argv, process_manager, frame_allocator, cpu_id)
     }
 
-    /// Exec with argv on an explicit target CPU (its scheduler must have a
-    /// free slot). Used by VFS exec to place threads on APs.
     pub fn exec_with_argv_on_cpu(
         data: &[u8],
         argv: &[&str],
