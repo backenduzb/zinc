@@ -63,7 +63,8 @@ run: iso
 		-m 512M \
 		-serial stdio \
 		-smp 4 \
-		-boot d
+		-boot d \
+		2>&1 | tee qemu.log
 
 clean:
 	rm -rf $(BUILD)

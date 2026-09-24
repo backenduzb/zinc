@@ -19,6 +19,8 @@ pub struct Process {
     address_space: Option<AddressSpace>,
     threads: Vec<ThreadID>,
     pub fd_table: FdTable,
+
+    parent: Option<ProcessID>
 }
 
 impl Process {
@@ -29,19 +31,29 @@ impl Process {
             address_space: None,
             threads: Vec::new(),
             fd_table: FdTable::new(),
+            parent: None,
         }
     }
 
-    pub fn new_user(id: ProcessID, address_space: AddressSpace) -> Self {
+    pub fn new_user(id: ProcessID, address_space: AddressSpace, parent: Option<ProcessID>) -> Self {
         Self {
             id,
             state: ProcessState::Ready,
             address_space: Some(address_space),
             threads: Vec::new(),
             fd_table: FdTable::new(),
+            parent: parent,
         }
     }
 
+    pub fn parent(&self) -> Option<ProcessID> {
+        self.parent
+    }
+
+    pub fn set_parent(&mut self, parent: Option<ProcessID>) {
+        self.parent = parent
+    }
+    
     pub fn address_space(&self) -> Option<&AddressSpace> {
         self.address_space.as_ref()
     }
@@ -106,6 +118,13 @@ impl Process {
         self.address_space.take()
     }
 
+    pub fn replace_address_space(
+        &mut self,
+        address_space: AddressSpace,
+    ) -> Option<AddressSpace> {
+        self.address_space.replace(address_space)
+    }
+
     pub fn is_terminated(&self) -> bool {
         self.state == ProcessState::Terminated
     }
@@ -146,14 +165,31 @@ impl ProcessManager {
     pub fn create_user(
         &mut self,
         frame_allocator: &mut FrameAllocator,
+        parent: Option<ProcessID>
     ) -> Option<ProcessID> {
         let address_space = AddressSpace::new_user(frame_allocator)?;
 
         let pid = self.next_pid;
         self.next_pid += 1;
 
-        self.processes.push(Process::new_user(pid, address_space));
+        self.processes.push(Process::new_user(pid, address_space, parent));
+        Some(pid)
+    }
 
+    pub fn create_user_with_pid(
+        &mut self,
+        pid: ProcessID,
+        frame_allocator: &mut FrameAllocator,
+        parent: Option<ProcessID>,
+    ) -> Option<ProcessID> {
+        if self.get(pid).is_some() {
+            return None;
+        }
+        let address_space = AddressSpace::new_user(frame_allocator)?;
+        self.processes.push(Process::new_user(pid, address_space, parent));
+        if pid >= self.next_pid {
+            self.next_pid = pid + 1;
+        }
         Some(pid)
     }
 
@@ -223,15 +259,10 @@ impl ProcessManager {
         }
     }
 
-    /// Remove TID from process and if no threads remain, mark Terminated.
-    /// Returns true if process became Terminated.
     pub fn notify_thread_terminated(&mut self, pid: ProcessID, tid: ThreadID) -> bool {
         if let Some(process) = self.get_mut(pid) {
             process.remove_thread(tid);
             if process.threads.is_empty() && !process.is_terminated() {
-                // Only auto-terminate user processes with no threads;
-                // kernel process (no addr space) with no threads should not auto-terminate unless explicitly.
-                // But for simplicity, mark any empty process Terminated if it had an address space or was user.
                 process.set_state(ProcessState::Terminated);
                 crate::drivers::serial::print("PROCESS terminated PID=");
                 crate::drivers::serial::print_u64(pid);
@@ -251,13 +282,11 @@ impl ProcessManager {
         }
     }
 
-    /// Reap a terminated process with no live threads. Destroys AddressSpace and frees frames.
     pub fn reap(&mut self, pid: ProcessID, frame_allocator: &mut FrameAllocator) -> bool {
         let idx = match self.processes.iter().position(|p| p.id() == pid) {
             Some(i) => i,
             None => return false,
         };
-        // Verify terminated
         if !self.processes[idx].is_terminated() {
             crate::drivers::serial::print("REAP FAILED: PID=");
             crate::drivers::serial::print_u64(pid);
@@ -270,7 +299,6 @@ impl ProcessManager {
             crate::drivers::serial::println(" has live threads");
             return false;
         }
-        // Take address space ownership
         let space = self.processes[idx].take_address_space();
         if let Some(s) = space {
             crate::drivers::serial::print("REAP: destroying AddressSpace PID=");
@@ -286,7 +314,6 @@ impl ProcessManager {
         true
     }
 
-    /// Forced removal for error cleanup: destroy AddressSpace regardless of state and remove process.
     pub fn remove_process(&mut self, pid: ProcessID, frame_allocator: &mut FrameAllocator) -> bool {
         let idx = match self.processes.iter().position(|p| p.id() == pid) {
             Some(i) => i,
@@ -305,5 +332,38 @@ impl ProcessManager {
 
     pub fn count(&self) -> usize {
         self.processes.len()
+    }
+
+    pub fn find_terminated_child(&self, parent: ProcessID) -> Option<ProcessID> {
+        self.processes
+            .iter()
+            .find(|process| {
+                process.parent() == Some(parent) && process.state() == ProcessState::Terminated
+            }).map(|process| process.id())
+    }
+
+    pub fn parent_of(&self, pid: ProcessID) -> Option<ProcessID> {
+        self.get(pid).and_then(|process| process.parent())
+    }
+
+    pub fn has_child(&self, parent: ProcessID) -> bool {
+        self.processes.iter().any(|process| process.parent() == Some(parent))
+    }
+
+    pub fn find_child(&self, parent: ProcessID) -> Option<ProcessID> {
+        self.processes
+            .iter().find(|process| {
+                process.parent() == Some(parent) && !process.is_terminated()
+            })
+            .map(|process| process.id())
+    }
+
+    pub fn find_live_child(&self, parent: ProcessID) -> Option<ProcessID> {
+        self.processes
+            .iter()
+            .find(|process| {
+                process.parent() == Some(parent) && !process.is_terminated()
+            })
+            .map(|process| process.id())
     }
 }

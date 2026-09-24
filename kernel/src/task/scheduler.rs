@@ -32,6 +32,20 @@ impl Scheduler {
         self.count += 1;
     }
 
+    pub fn wait_for_child(&mut self, process_id: crate::task::process::ProcessID) {
+        if let Some(thread) = self.threads[self.current].as_mut() {
+            thread.set_waiting_for_process(Some(process_id));
+            thread.set_state(ThreadState::Waiting);
+        }
+    }
+
+    pub fn wait_for_any_child(&mut self) {
+        if let Some(thread) = self.threads[self.current].as_mut() {
+            thread.set_waiting_for_process(None);
+            thread.set_state(ThreadState::Waiting);
+        }
+    }
+
     pub const fn new() -> Self {
         Self {
             threads: [const { None }; MAX_THREADS],
@@ -1006,26 +1020,88 @@ impl Scheduler {
             serial::println("");
         }
 
+        let mut process_terminated = false;
+
         unsafe {
             let pm = crate::task::process_manager();
-            (*pm).notify_thread_terminated(pid, exiting_id);
+
+            process_terminated = (*pm).notify_thread_terminated(pid, exiting_id);
         }
 
-        for index in 0..MAX_THREADS {
-            if index == self.current {
-                continue;
+        if process_terminated {
+            let parent_of_terminated = unsafe {
+                let pm = crate::task::process_manager();
+                (*pm).parent_of(pid)
+            };
+            let current_cpu = crate::arch::x86_64::smp::percpu::current_cpu_id();
+            for cpu_id in 0..crate::arch::x86_64::smp::percpu::MAX_CPUS {
+                let sched_ptr = unsafe { core::ptr::addr_of_mut!(crate::task::SCHEDULERS[cpu_id]) };
+                let sched = unsafe { &mut *sched_ptr };
+                for index in 0..MAX_THREADS {
+                    if cpu_id == current_cpu && index == self.current {
+                        continue;
+                    }
+                    if let Some(thread) = sched.threads[index].as_mut() {
+                        let specific = thread.state() == ThreadState::Waiting
+                            && thread.waiting_for_process() == Some(pid);
+                        let generic = thread.state() == ThreadState::Waiting
+                            && thread.waiting_for_process().is_none()
+                            && parent_of_terminated == Some(thread.process_id());
+                        if specific || generic
+                        {
+                            let frame_ptr = thread.interrupt_rsp() as *mut SyscallFrame;
+                            if !frame_ptr.is_null() {
+                                unsafe {
+                                    (*frame_ptr).rax = pid;
+                                }
+                            }
+                            thread.set_waiting_for_process(None);
+                            thread.set_state(ThreadState::Ready);
+                            serial::print("WAIT: waking parent thread=");
+                            serial::print_u64(thread.id());
+                            serial::print(" child PID=");
+                            serial::print_u64(pid);
+                            serial::println("");
+                            serial::print("WAIT: waking parent PID=");
+                            serial::print_u64(thread.process_id());
+                            serial::print(" TID=");
+                            serial::print_u64(thread.id());
+                            serial::print(" child PID=");
+                            serial::print_u64(pid);
+                            serial::println("");
+                            serial::print("WAIT: parent resumed RAX=");
+                            serial::print_u64(pid);
+                            serial::println("");
+                            serial::print("WAIT: child PID=");
+                            serial::print_u64(pid);
+                            serial::print(" terminated");
+                            serial::println("");
+                        }
+                    }
+                }
             }
+        }
 
-            if let Some(thread) = self.threads[index].as_mut() {
-                if thread.state() == ThreadState::Waiting
-                    && thread.waiting_for() == Some(exiting_id)
-                {
-                    thread.set_waiting_for(None);
-                    thread.set_state(ThreadState::Ready);
-
-                    serial::print("JOIN: waking thread=");
-                    serial::print_u64(thread.id());
-                    serial::println("");
+        {
+            let current_cpu = crate::arch::x86_64::smp::percpu::current_cpu_id();
+            for cpu_id in 0..crate::arch::x86_64::smp::percpu::MAX_CPUS {
+                let sched_ptr = unsafe { core::ptr::addr_of_mut!(crate::task::SCHEDULERS[cpu_id]) };
+                let sched = unsafe { &mut *sched_ptr };
+                for index in 0..MAX_THREADS {
+                    if cpu_id == current_cpu && index == self.current {
+                        continue;
+                    }
+                    if let Some(thread) = sched.threads[index].as_mut() {
+                        if thread.state() == ThreadState::Waiting
+                            && thread.waiting_for() == Some(exiting_id)
+                        {
+                            thread.set_waiting_for(None);
+                            thread.set_state(ThreadState::Ready);
+                            serial::print("JOIN: waking thread=");
+                            serial::print_u64(thread.id());
+                            serial::println("");
+                        }
+                    }
                 }
             }
         }

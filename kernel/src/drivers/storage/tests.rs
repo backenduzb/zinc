@@ -35,6 +35,121 @@ pub fn test_create() {
     test_errors();
     test_ext2();
     // test_ide();
+    test_wait();
+}
+
+pub fn test_wait() {
+    crate::drivers::serial::println("=== WAIT TEST ===");
+
+    let mut frame_allocator =
+        crate::memory::physical::FrameAllocator::new();
+
+    let parent_pid;
+    let child_pid;
+
+    unsafe {
+        let pm = crate::task::process_manager();
+
+        parent_pid = match (*pm).create_user(
+            &mut frame_allocator,
+            None,
+        ) {
+            Some(pid) => pid,
+            None => {
+                crate::drivers::serial::println("WAIT TEST: parent create FAILED");
+                return;
+            }
+        };
+
+        child_pid = match (*pm).create_user(
+            &mut frame_allocator,
+            Some(parent_pid),
+        ) {
+            Some(pid) => pid,
+            None => {
+                crate::drivers::serial::println("WAIT TEST: child create FAILED");
+                return;
+            }
+        };
+    }
+
+    crate::drivers::serial::print("WAIT TEST: parent PID=");
+    crate::drivers::serial::print_u64(parent_pid);
+    crate::drivers::serial::println("");
+
+    crate::drivers::serial::print("WAIT TEST: child PID=");
+    crate::drivers::serial::print_u64(child_pid);
+    crate::drivers::serial::println("");
+
+    unsafe {
+        let pm = crate::task::process_manager();
+
+        if !(*pm).terminate(child_pid) {
+            crate::drivers::serial::println(
+                "WAIT TEST: child terminate FAILED"
+            );
+            return;
+        }
+    }
+
+    crate::drivers::serial::println(
+        "WAIT TEST: child terminated"
+    );
+
+    let found = unsafe {
+        let pm = crate::task::process_manager();
+
+        (*pm).find_terminated_child(parent_pid)
+    };
+
+    if found != Some(child_pid) {
+        crate::drivers::serial::println(
+            "WAIT TEST: child lookup FAILED"
+        );
+        return;
+    }
+
+    crate::drivers::serial::println(
+        "WAIT TEST: terminated child found"
+    );
+
+    let reaped = unsafe {
+        let pm = crate::task::process_manager();
+
+        (*pm).reap(
+            child_pid,
+            &mut frame_allocator,
+        )
+    };
+
+    if !reaped {
+        crate::drivers::serial::println(
+            "WAIT TEST: reap FAILED"
+        );
+        return;
+    }
+
+    crate::drivers::serial::print(
+        "WAIT TEST: reaped child PID="
+    );
+    crate::drivers::serial::print_u64(child_pid);
+    crate::drivers::serial::println("");
+
+    let exists = unsafe {
+        let pm = crate::task::process_manager();
+        (*pm).get(child_pid).is_some()
+    };
+
+    if exists {
+        crate::drivers::serial::println(
+            "WAIT TEST: child still exists FAIL"
+        );
+        return;
+    }
+
+    crate::drivers::serial::println(
+        "WAIT TEST: PASS"
+    );
 }
 
 pub fn test_ext2() {

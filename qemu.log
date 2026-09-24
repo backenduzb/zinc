@@ -1,0 +1,2687 @@
+ZincOS started!
+Limine OK
+ACPI RSDP found
+RSDP address: 18446603336222205168
+IDT initalized
+SMP: initializing ACPI
+SMP: RSDP found
+SMP: RSDP address: 0xFFFF8000000F64F0
+SMP: RSDP signature OK
+SMP: RSDP revision: 0
+SMP: ACPI 1.0 RSDT detected
+SMP: RSDT address: 0x000000001FFE2440
+SMP: RSDT checksum: OK
+SMP: RSDT entries: 4
+SMP: RSDT entry 0: FACP
+SMP: RSDT entry 1: APIC
+SMP: MADT found
+SMP: Local APIC address: 0x00000000FEE00000
+CPU 0: Processor ID = 0, APIC ID = 0CPU 0: Processor ID = 0, APIC ID = 0 [enabled]
+CPU 1: Processor ID = 1, APIC ID = 1CPU 1: Processor ID = 1, APIC ID = 1 [enabled]
+CPU 2: Processor ID = 2, APIC ID = 2CPU 2: Processor ID = 2, APIC ID = 2 [enabled]
+CPU 3: Processor ID = 3, APIC ID = 3CPU 3: Processor ID = 3, APIC ID = 3 [enabled]
+SMP: Enabled CPUs: 4
+SMP: RSDP checksum: OK
+LAPIC disabled, using PIC
+PIC initialized
+PIT frequency: 100Hz
+Timer driver initalized
+TIMER IRQ: FIRST
+x86_64 architecture registered
+CPU Vendor: AuthenticAMD
+CPU Family: 15
+CPU Model: 107
+CPU Stepping: 1
+CPUID.1:
+  EAX: 0x00060FB1
+  EBX: 0x00040800
+  ECX: 0x80002001
+  EDX: 0x178BF9FD
+
+CPU Features:
+  SSE: YES
+  SSE2: YES
+  SSE3: YES
+  SSSE3: NO
+  SSE4.1: NO
+  SSE4.2: NO
+  APIC: NO
+  x2APIC: NO
+  HTT: YES
+  AVX: NO
+  OSXSAVE: NO
+  AVX usable (OS): NO
+  RDRAND: NO
+
+CPU Topology:
+  CPUID max logical (EBX[23:16]): 4
+  CPUID logical CPUs: 4
+  Initial APIC ID: 0
+  APIC supported: NO
+  LAPIC enabled: NO
+  x2APIC supported: NO
+  x2APIC enabled: NO
+Clock initalized
+Clock frequency: 100hz
+Memory map entries: 17
+Usable memory: 508Mib
+Physical memory manager initialized
+PCI: scanning ...
+=========== PCI =========== 0:0.0 vendor=00008086 device=00001237 class=00000006 subclass=00000000 command=00000103 status=00000000
+=========== PCI =========== 0:1.0 vendor=00008086 device=00007000 class=00000006 subclass=00000001 command=00000103 status=00000200
+=========== PCI =========== 0:1.1 vendor=00008086 device=00007010 class=00000001 subclass=00000001 command=00000103 status=00000280
+  BAR4: IO 0x49216 size=0x16
+=========== PCI =========== 0:1.3 vendor=00008086 device=00007113 class=00000006 subclass=00000080 command=00000103 status=00000280
+=========== PCI =========== 0:2.0 vendor=00001234 device=00001111 class=00000003 subclass=00000000 command=00000103 status=00000000
+  BAR0: MMIO 0x4244635648 size=0x16777216
+  BAR2: MMIO 0x4273930240 size=0x4096
+=========== PCI =========== 0:3.0 vendor=00008086 device=0000100E class=00000002 subclass=00000000 command=00000103 status=00000000
+  BAR0: MMIO 0x4273733632 size=0x131072
+  BAR1: IO 0x49152 size=0x64
+PCI: scan complete
+FILESYSTEM: INIT OK
+BEFORE PMM TEST
+=== ADDRESS SPACE TEST ===
+PMM usable frames: 130097
+Frame allocator initialized
+AddressSpace: new PML4 = 0x471040
+AddressSpace PML4: 0x471040
+AddressSpace: OK
+=== USER ADDRESS SPACE TEST ===
+AddressSpace: user PML4 = 0x475136
+AddressSpace: kernel mappings copied
+User PML4: 0x475136
+User AddressSpace: OK
+=== NX PAGE TEST ===
+AddressSpace: user PML4 = 0x479232
+AddressSpace: kernel mappings copied
+MAP: va=0x4194304 pa=0x483328 W=0 X=1
+NX mapping: OK
+NX cleanup: OK
+=== USER PAGE MAP TEST ===
+AddressSpace: user PML4 = 0x483328
+AddressSpace: kernel mappings copied
+User frame: 0x499712
+MAP: va=0x4194304 pa=0x499712 W=1 X=1
+User page mapping: OK
+=== USER PAGE UNMAP TEST ===
+AddressSpace: user PML4 = 0x516096
+AddressSpace: kernel mappings copied
+MAP: va=0x4194304 pa=0x520192 W=1 X=1
+Mapping: OK
+Translation: OK
+Unmap: OK
+Translation after unmap: OK
+Frame allocator test
+Allocated frame 1: 0x520192
+Allocated frame 2: 0x536576
+Allocated frame 3: 0x540672
+Frame 2 freed
+Reallocated frame: 0x536576
+=== ELF LOADER TEST ===
+ELF test image created
+AddressSpace: user PML4 = 0x544768
+AddressSpace: kernel mappings copied
+ELF TEST: AddressSpace created
+MAP: va=0x4194304 pa=0x548864 W=0 X=1
+ELF TEST: LOAD OK
+ELF entry: 0x4194304
+ELF TEST: entry OK
+ELF mapped physical page: 0x548864
+ELF permissions: U=1 W=0 X=1
+ELF TEST: data copy OK
+ELF TEST: BSS zero OK
+ELF LOADER TEST: PASS
+=== USER STACK TEST ===
+AddressSpace: user PML4 = 0x565248
+AddressSpace: kernel mappings copied
+MAP: va=0x140737488338944 pa=0x569344 W=1 X=0
+MAP: va=0x140737488343040 pa=0x585728 W=1 X=0
+MAP: va=0x140737488347136 pa=0x589824 W=1 X=0
+MAP: va=0x140737488351232 pa=0x593920 W=1 X=0
+User stack: mapped
+Stack base: 0x140737488338944
+Stack top: 0x140737488355328
+Stack size: 16384
+STACK page 0: mapped
+STACK page 1: mapped
+STACK page 2: mapped
+STACK page 3: mapped
+STACK top boundary: OK
+USER STACK TEST: PASS
+=== ELF LOADER TEST ===
+ELF test image created
+AddressSpace: user PML4 = 0x598016
+AddressSpace: kernel mappings copied
+ELF TEST: AddressSpace created
+MAP: va=0x4194304 pa=0x602112 W=0 X=1
+ELF TEST: LOAD OK
+ELF entry: 0x4194304
+ELF TEST: entry OK
+ELF mapped physical page: 0x602112
+ELF permissions: U=1 W=0 X=1
+ELF TEST: data copy OK
+ELF TEST: BSS zero OK
+ELF LOADER TEST: PASS
+SKIP ELF VFS / EXEC tests before heap (defer after init)
+AFTER PMM TEST
+CLOCK TEST: ENTER
+CLOCK TEST: TICKS READ
+TIMER IRQ: 100
+Clock test: 100 ticks PASS (ticks=103)
+AFTER CLOCK TEST
+C integration OK
+Framebuffer: 1280x720 @ 32bpp
+Virtual memory test
+PML4 allocated
+PML4 physical address: 0x618496
+Virtual memory manager created
+PML4 address: 0x618496
+Identity map: 512 MiB
+PML4 -> PDPT -> PD: OK
+HHDM offset: 0x18446603336221196288
+HHDM mapping created
+HHDM mapping: OK
+Kernel size: 1766232 bytes
+Kernel 4 KiB mapping created
+Kernel higher-half mapping: OK
+SMP: LAPIC MMIO mapping OK
+4 KiB page mapping: OK
+Bootstrap stack: OK
+Stack top: 0x18446744072099004408
+AP stack 1: 0x18446744072100052984
+AP stack 2: 0x18446744072100118520
+AP stack 3: 0x18446744072100184056
+Entering new address space...
+Kernel heap mapping created
+Kernel heap mapping: OK
+Entered new address space!
+New CR3: 0x618496
+APIC MSR before enable: 0x00000000FEE00100
+APIC MSR after enable: 0x00000000FEE00900
+LAPIC: initializing
+LAPIC physical base: 0x00000000FEE00000
+LAPIC virtual base: 0xFFFF8000FEE00000
+LAPIC: enabled
+LAPIC ID: 0
+LAPIC version: 0x00050014
+LAPIC ID after switch: 0
+TSS: LTR loaded
+CPU 0 TSS RSP0 = 18446744071562719424
+SMP: BSP CPU 0 online, APIC ID = 0
+LAPIC LVT TIMER: 0x00020030
+LAPIC DIVIDE: 0x00000003
+LAPIC: timer initialized
+LAPIC initial count: 10000000
+LAPIC current count: 9999302
+LAPIC: timer started
+LAPIC current count now: 9977116
+LAPIC current count now: 3587716
+RFLAGS.IF (1=enabled): 0
+STI: interrupts enabled
+Kernel heap initialized
+Heap remaining: 8388608 bytes
+=========== RAMBLOCK TESTS =========
+=========== RAMBLOCK TESTS =========
+=========== RAMBLOCK TESTS =========
+=========== RAMBLOCK TESTS =========
+=========== RAMBLOCK TESTS =========
+RAMBLOCK READ/WRITE: PASS
+RAMBLOCK ERROR TEST: PASS
+=========== EXT2 TESTS =========
+EXT2 SUPERBLOCK: PASS
+EXT2 GROUP DESCRIPTOR: PASS
+EXT2 inode table block: 8
+EXT2 inode #2 mode: 0x000041ED
+EXT2 inode #2 size: 1024
+EXT2 inode #2 first block: 40
+EXT2 INODE #2: ROOT DIRECTORY
+EXT2 INODE #2: PASS
+EXT2 ROOT DIRECTORY: READ OK
+  inode=2 name=.
+  inode=2 name=..
+  inode=11 name=lost+found
+  inode=12 name=bin
+  inode=13 name=test
+lookup(lost+found): inode=11
+read_inode(11): mode=0x000041C0
+read_inode(11): size=12288
+read_inode(11): first block=41
+read_inode(11): DIRECTORY
+inode #11 entry: . -> inode=11
+inode #11 entry: .. -> inode=2
+inode #11 DIRECTORY PARSE: PASS
+inode #11 data bytes read: 12288
+inode #11 FULL DATA READ: PASS
+inode #11 block[0]: 41
+inode #11 block[1]: 42
+inode #11 block[2]: 43
+inode #11 block[3]: 44
+inode #11 block[4]: 45
+inode #11 block[5]: 46
+inode #11 block[6]: 47
+inode #11 block[7]: 48
+inode #11 block[8]: 49
+inode #11 block[9]: 50
+inode #11 block[10]: 51
+inode #11 block[11]: 52
+inode #11 block[12]: 0
+inode #11 block[13]: 0
+inode #11 block[14]: 0
+lookup(.) -> inode=11
+lookup(..) -> inode=2
+EXT2 DIRECTORY LOOKUP: PASS
+PATH lookup(lost+found): inode=11
+EXT2 PATH COMPONENT: PASS
+PATH /lost+found -> inode=11
+EXT2 PATH RESOLUTION: PASS
+PATH /bin/hello -> inode=16
+PATH /bin/hello size=4728
+EXT2 FILE LOOKUP: PASS
+/bin/hello bytes read: 4728
+EXT2 FILE READ: PASS
+PATH /test/big -> inode=15
+/test/big size=68
+/test/big indirect block=0
+/test/big bytes read: 68
+EXT2 INDIRECT READ: PASS
+/test/big block[0]=57
+/test/big block[1]=0
+/test/big block[2]=0
+/test/big block[3]=0
+/test/big block[4]=0
+/test/big block[5]=0
+/test/big block[6]=0
+/test/big block[7]=0
+/test/big block[8]=0
+/test/big block[9]=0
+/test/big block[10]=0
+/test/big block[11]=0
+/test/big block[12]=0
+/test/big block[13]=0
+/test/big block[14]=0
+VFS OPEN /bin/hello: inode=16
+VFS READ bytes: 4728
+=== WAIT TEST ===
+AddressSpace: user PML4 = 0x36020224
+AddressSpace: kernel mappings copied
+AddressSpace: user PML4 = 0x36024320
+AddressSpace: kernel mappings copied
+WAIT TEST: parent PID=1
+WAIT TEST: child PID=2
+WAIT TEST: child terminated
+WAIT TEST: terminated child found
+REAP: destroying AddressSpace PID=2
+AddressSpace: destroyed PML4=0x36024320
+ADDRESS SPACE destroyed
+PROCESS reaped PID=2
+WAIT TEST: reaped child PID=2
+WAIT TEST: PASS
+=========== ELF FROM VFS TEST =========
+ELF VFS: inode=16
+ELF VFS: file size=4728
+ELF VFS: bytes read=4728
+ELF VFS: FILE READ OK
+ELF VFS: ELF MAGIC OK
+AddressSpace: user PML4 = 0x36024320
+AddressSpace: kernel mappings copied
+MAP: va=0x4194304 pa=0x36028416 W=0 X=0
+MAP: va=0x4198400 pa=0x36044800 W=0 X=1
+ELF VFS: entry=0x4198400
+ELF VFS: ELF LOAD OK
+ELF FROM VFS: PASS
+--------------------------------
+SMP: preparing APIC 1
+SMP: trampoline physical: 0x0000000000008000
+SMP: trampoline virtual: 0xFFFF800000008000
+SMP: AP trampoline installed
+SMP: trampoline CR3: 0x0000000000097000
+SMP: trampoline stack: 0xFFFFFFFFA010FFF8
+SMP: trampoline entry: 0xFFFFFFFF8000BEA0
+LAPIC: starting AP 1
+LAPIC: INIT -> APIC 1
+LAPIC: INIT deassert
+LAPIC: SIPI -> APIC 1 vector=0x00000008
+AP: entered trampoline, LAPIC ID = 1
+TSS: LTR loaded
+CPU 1 TSS RSP0 = 18446744071562784960
+SMP: CPU 1 online, APIC ID = 1
+AP: PerCpu CPU ID = 1
+AP: PerCpu APIC ID = 1
+AP: GS CPU ID = 1
+AP: GS APIC ID = 1
+SMP: GS current CPU = 1
+AP LAPIC: enabled, ID = 1
+AP LAPIC: timer started, count = 10000000
+AP LAPIC: timer initialized, CPU=1
+AP Scheduler initialized: CPU=1
+AP_BETA -> CPU 1
+AP_BETA -> PID 0, TID 10
+Scheduler: starting thread slot 0
+AP BETA started CPU=1
+TIME=0
+SLEEP thread=10 wake_at=5
+CPU=1 TID=10 SLEEP
+LAPIC: SIPI -> APIC 1 vector=0x00000008
+SMP: APIC 1 started successfully
+--------------------------------
+SMP: preparing APIC 2
+SMP: trampoline physical: 0x0000000000008000
+SMP: trampoline virtual: 0xFFFF800000008000
+SMP: AP trampoline installed
+SMP: trampoline CR3: 0x0000000000097000
+SMP: trampoline stack: 0xFFFFFFFFA011FFF8
+SMP: trampoline entry: 0xFFFFFFFF8000BEA0
+LAPIC: starting AP 2
+LAPIC: INIT -> APIC LAPIC TIMER: 1
+2
+LAPIC: INIT deassert
+LAPIC: SIPI -> APIC 2 vector=0x00000008
+AP: entered trampoline, LAPIC ID = 2
+TSS: LTR loaded
+CPU 2 TSS RSP0 = 18446744071562850496
+SMP: CPU 2 online, APIC ID = 2
+AP: PerCpu CPU ID = 2
+AP: PerCpu APIC ID = 2
+AP: GS CPU ID = 2
+AP: GS APIC ID = 2
+SMP: GS current CPU = 2
+AP LAPIC: enabled, ID = 2
+AP LAPIC: timer started, count = 10000000
+AP LAPIC: timer initialized, CPU=2
+AP Scheduler initialized: CPU=2
+AP_SILF -> CPU 2
+AP_SILF -> PID 0, TID 11
+Scheduler: starting thread slot 0
+AP SILF started CPU=2
+TIME=1
+SLEEP thread=11 wake_at=6
+CPU=2 TID=11 SLEEP
+LAPIC: SIPI -> APIC 2 vector=0x00000008
+SMP: APIC 2 started successfully
+--------------------------------
+SMP: preparing APIC 3
+SMP: trampoline physical: 0x0000000000008000
+SMP: trampoline virtual: 0xFFFF800000008000
+SMP: AP trampoline installed
+SMP: trampoline CR3: 0x0000000000097000
+SMP: trampoline stack: 0xFFFFFFFFA012FFF8
+SMP: trampoline entry: 0xFFFFFFFF8000BEA0
+LAPIC: starting AP 3
+LAPIC: INIT -> APIC 3
+LAPIC: INIT deassert
+LAPIC: SIPI -> APIC 3 vector=0x00000008
+AP: entered trampoline, LAPIC ID = 3
+TSS: LTR loaded
+CPU 3 TSS RSP0 = 18446744071562916032
+SMP: CPU 3 online, APIC ID = 3
+AP: PerCpu CPU ID = 3
+AP: PerCpu APIC ID = 3
+AP: GS CPU ID = 3
+AP: GS APIC ID = 3
+SMP: GS current CPU = 3
+AP LAPIC: enabled, ID = 3
+AP LAPIC: timer started, count = 10000000
+AP LAPIC: timer initialized, CPU=3
+AP Scheduler initialized: CPU=3
+AP_GAMMA -> CPU 3
+AP_GAMMA -> PID 0, TID 12
+Scheduler: starting thread slot 0
+AP GAMMA started CPU=3
+TIME=1
+SLEEP thread=12 wake_at=6
+CPU=3 TID=12 SLEEP
+LAPIC: SIPI -> APIC 3 vector=0x00000008
+SMP: APIC 3 started successfully
+SMP: CPUs online = 4
+Process manager: initialized
+Kernel process: PID=0
+AP threads registered to kernel process
+SMP: current CPU = 0
+Heap allocation: OK
+Heap write/read: OK
+Box allocation: OK
+=== PROCESS ADDRESS SPACE TEST ===
+Kernel process (no AddressSpace): OK
+AddressSpace: user PML4 = 0x36048896
+AddressSpace: kernel mappings copied
+User process PML4: 0x36048896
+Kernel-half present entries: 3
+PROCESS ADDRESS SPACE TEST: PASS
+=== USER THREAD TEST ===
+Kind: User OK
+Process ID: OK
+User RIP/RSP stored: OK
+Kernel stack exists: OK
+Frame alignment: OK
+CS=0x2B SS=0x33: OK
+RFLAGS=0x514 IF set: OK
+Frame RIP/RSP: OK
+GPRs zero: OK
+Kernel thread path unchanged: OK
+USER THREAD TEST: PASS
+=== USER PROCESS CR3 TEST ===
+Kernel CR3: 0x618496
+AddressSpace: user PML4 = 0x36052992
+AddressSpace: kernel mappings copied
+Thread -> Process link: OK
+PML4 non-zero: OK
+PML4 page aligned: OK
+User PML4: 0x36052992 (differs from kernel CR3: OK)
+Kernel-half identical, present entries: 3
+CR3 load/readback/restore: OK
+USER PROCESS CR3 TEST: PASS
+=== ELF EXEC TEST ===
+EXEC TEST: heap ready, full pipeline
+AddressSpace: user PML4 = 0x36057088
+AddressSpace: kernel mappings copied
+EXEC TEST: PID=1
+MAP: va=0x4194304 pa=0x36061184 W=0 X=1
+EXEC TEST: entry=0x0000000000400000
+EXEC TEST: user mapping executable OK
+MAP: va=0x140737488338944 pa=0x36077568 W=1 X=0
+MAP: va=0x140737488343040 pa=0x36093952 W=1 X=0
+MAP: va=0x140737488347136 pa=0x36098048 W=1 X=0
+MAP: va=0x140737488351232 pa=0x36102144 W=1 X=0
+User stack: mapped
+EXEC TEST: stack base=0x00007FFFFFFFC000 top=0x0000800000000000
+EXEC TEST: user RSP(argc)=0x00007FFFFFFFFFD0
+EXEC TEST: RSP 16-aligned OK
+EXEC TEST: user stack writable U=1 W=1 X=0 OK
+=== ARGV TEST ===
+ARGV TEST: argc=2
+ARGV TEST: argv[0]=0x00007FFFFFFFFFF5
+ARGV TEST: argv[1]=0x00007FFFFFFFFFFA
+ARGV TEST: argv[2]=0x0000000000000000
+ARGV TEST: argv[2]=NULL OK
+ARGV TEST: strings OK
+ARGV TEST: initial RSP=0x00007FFFFFFFFFD0
+ARGV TEST: PASS
+CREATE USER THREAD: allocated tid=1 cpu=0 pid=1
+CREATE USER THREAD: Thread::new_user OK
+CREATE USER THREAD: scheduler add OK tid=1
+CREATE USER THREAD: process registration OK tid=1
+EXEC TEST: TID=1
+EXEC TEST: process thread registration OK
+EXEC TEST: scheduler thread registration OK
+EXEC TEST: thread RIP=0x0000000000400000 RSP=0x00007FFFFFFFFFD0 OK
+EXEC TEST: thread frame CS/SS/RFLAGS OK
+EXEC TEST: process ready
+ELF EXEC TEST: PASS
+=== ELF EXEC GLOBAL TEST ===
+EXEC: creating user process
+AddressSpace: user PML4 = 0x36106240
+AddressSpace: kernel mappings copied
+EXEC: PID=3
+EXEC: loading ELF
+MAP: va=0x4194304 pa=0x36110336 W=0 X=1
+EXEC: entry=0x4194304
+EXEC: creating user stack
+MAP: va=0x140737488338944 pa=0x36126720 W=1 X=0
+MAP: va=0x140737488343040 pa=0x36143104 W=1 X=0
+MAP: va=0x140737488347136 pa=0x36147200 W=1 X=0
+MAP: va=0x140737488351232 pa=0x36151296 W=1 X=0
+User stack: mapped
+EXEC: argv len=2
+EXEC: user RSP(argc)=0x140737488355280
+EXEC: stack top=0x140737488355328
+EXEC: creating user thread on CPU=0
+CREATE USER THREAD: allocated tid=13 cpu=0 pid=3
+CREATE USER THREAD: Thread::new_user OK
+CREATE USER THREAD: scheduler add OK tid=13
+CREATE USER THREAD: process registration OK tid=13
+EXEC: TID=13
+EXEC: process ready
+GLOBAL EXEC: PID=3 TID=13 entry=0x0000000000400000 RSP=0x00007FFFFFFFFFD0
+GLOBAL EXEC: entry OK
+GLOBAL EXEC: RSP 16-aligned OK
+GLOBAL EXEC: thread owned by both managers OK
+GLOBAL ARGV: argc=2 argv0=0x00007FFFFFFFFFF5 argv1=0x00007FFFFFFFFFFA argv2=0
+GLOBAL EXEC: argv verification OK
+GLOBAL EXEC: PASS
+=== PROCESS REAP TEST ===
+REAP TEST: free_before=121482
+EXEC: creating user process
+AddressSpace: user PML4 = 0x36155392
+AddressSpace: kernel mappings copied
+EXEC: PID=1
+EXEC: loading ELF
+AddressSpace: destroyed PML4=0x36155392
+PROCESS removed (cleanup) PID=1
+EXEC: cleaned up failed process
+REAP TEST: free_after_bad_elf=121482
+REAP TEST: error cleanup OK (no leak)
+AddressSpace: user PML4 = 0x36155392
+AddressSpace: kernel mappings copied
+PROCESS created PID=1
+REAP TEST: process exists OK
+REAP TEST: address space exists OK
+MAP: va=0x4194304 pa=0x36159488 W=0 X=1
+MAP: va=0x140737488338944 pa=0x36175872 W=1 X=0
+MAP: va=0x140737488343040 pa=0x36192256 W=1 X=0
+MAP: va=0x140737488347136 pa=0x36196352 W=1 X=0
+MAP: va=0x140737488351232 pa=0x36200448 W=1 X=0
+User stack: mapped
+CREATE USER THREAD: allocated tid=1 cpu=0 pid=1
+CREATE USER THREAD: Thread::new_user OK
+CREATE USER THREAD: scheduler add OK tid=1
+CREATE USER THREAD: process registration OK tid=1
+THREAD created TID=1
+REAP TEST: thread exists OK
+REAP TEST: free_mid=121470
+REAP TEST: frames allocated OK
+PROCESS terminated PID=1
+THREAD terminated TID=1
+PROCESS terminated PID=1
+SCHEDULER slot reaped TID=1
+REAP: destroying AddressSpace PID=1
+AddressSpace: destroyed PML4=0x36155392
+ADDRESS SPACE destroyed
+PROCESS reaped PID=1
+REAP TEST: process removed OK
+REAP TEST: free_before_reap=121470 free_after=121482
+FRAMES returned
+AddressSpace: user PML4 = 0x36155392
+AddressSpace: kernel mappings copied
+REAP TEST: second PROCESS created PID=2
+MAP: va=0x4194304 pa=0x36159488 W=0 X=1
+MAP: va=0x140737488338944 pa=0x36175872 W=1 X=0
+MAP: va=0x140737488343040 pa=0x36192256 W=1 X=0
+MAP: va=0x140737488347136 pa=0x36196352 W=1 X=0
+MAP: va=0x140737488351232 pa=0x36200448 W=1 X=0
+User stack: mapped
+CREATE USER THREAD: allocated tid=2 cpu=0 pid=2
+CREATE USER THREAD: Thread::new_user OK
+CREATE USER THREAD: scheduler add OK tid=2
+CREATE USER THREAD: process registration OK tid=2
+REAP TEST: second THREAD created TID=2 (slot reuse OK)
+PROCESS terminated PID=2
+REAP: destroying AddressSpace PID=2
+AddressSpace: destroyed PML4=0x36155392
+ADDRESS SPACE destroyed
+PROCESS reaped PID=2
+REAP TEST: free_final=121482
+PROCESS REAP TEST: PASS
+=== ELF EXEC RUNTIME TEST ===
+RUNTIME EXEC: creating user process via ElfExecutor with argv
+EXEC: creating user process
+AddressSpace: user PML4 = 0x36155392
+AddressSpace: kernel mappings copied
+EXEC: PID=4
+EXEC: loading ELF
+MAP: va=0x4194304 pa=0x36159488 W=0 X=1
+EXEC: entry=0x4194304
+EXEC: creating user stack
+MAP: va=0x140737488338944 pa=0x36175872 W=1 X=0
+MAP: va=0x140737488343040 pa=0x36192256 W=1 X=0
+MAP: va=0x140737488347136 pa=0x36196352 W=1 X=0
+MAP: va=0x140737488351232 pa=0x36200448 W=1 X=0
+User stack: mapped
+EXEC: argv len=2
+EXEC: user RSP(argc)=0x140737488355280
+EXEC: stack top=0x140737488355328
+EXEC: creating user thread on CPU=0
+CREATE USER THREAD: allocated tid=14 cpu=0 pid=4
+CREATE USER THREAD: Thread::new_user OK
+CREATE USER THREAD: scheduler add OK tid=14
+CREATE USER THREAD: process registration OK tid=14
+EXEC: TID=14
+EXEC: process ready
+RUNTIME EXEC: PID=4 TID=14 queued for Ring3
+RUNTIME EXEC: entry=0x0000000000400000 RSP(argc)=0x00007FFFFFFFFFD0
+RUNTIME ARGV: argc=2
+RUNTIME EXEC: argv OK, RSP points to argc
+EXEC RUNTIME: ELF thread queued
+=== VFS EXEC HELLO TEST ===
+VFS EXEC: open /bin/hello
+VFS EXEC: ELF bytes=4728 magic OK
+EXEC: creating user process
+AddressSpace: user PML4 = 0x36204544
+AddressSpace: kernel mappings copied
+EXEC: PID=5
+EXEC: loading ELF
+MAP: va=0x4194304 pa=0x36208640 W=0 X=0
+MAP: va=0x4198400 pa=0x36225024 W=0 X=1
+EXEC: entry=0x4198400
+EXEC: creating user stack
+MAP: va=0x140737488338944 pa=0x36229120 W=1 X=0
+MAP: va=0x140737488343040 pa=0x36245504 W=1 X=0
+MAP: va=0x140737488347136 pa=0x36249600 W=1 X=0
+MAP: va=0x140737488351232 pa=0x36253696 W=1 X=0
+User stack: mapped
+EXEC: argv len=1
+EXEC: user RSP(argc)=0x140737488355296
+EXEC: stack top=0x140737488355328
+EXEC: creating user thread on CPU=1
+CREATE USER THREAD: allocated tid=15 cpu=1 pid=5
+CREATE USER THREAD: Thread::new_user OK
+CREATE USER THREAD: scheduler add OK tid=15
+CREATE USER THREAD: process registration OK tid=15
+EXEC: TID=15
+EXEC: process ready
+VFS EXEC: PROCESS CREATED PID=5 TID=15 entry=0x0000000000401000 RSP=0x00007FFFFFFFFFE0
+VFS EXEC: ELF LOAD OK
+VFS EXEC: reaper TID=16 armed
+VFS EXEC: /bin/hello queued for Ring3
+VFS EXEC: /bin/hello queued for Ring3
+=== VFS EXEC INIT TEST ===
+VFS EXEC: open /bin/init
+VFS EXEC: ELF bytes=4728 magic OK
+EXEC: creating user process
+AddressSpace: user PML4 = 0x36257792
+AddressSpace: kernel mappings copied
+EXEC: PID=6
+EXEC: loading ELF
+MAP: va=0x4194304 pa=0x36261888 W=0 X=0
+MAP: va=0x4198400 pa=0x36278272 W=0 X=1
+EXEC: entry=0x4198400
+EXEC: creating user stack
+MAP: va=0x140737488338944 pa=0x36282368 W=1 X=0
+MAP: va=0x140737488343040 pa=0x36298752 W=1 X=0
+MAP: va=0x140737488347136 pa=0x36302848 W=1 X=0
+MAP: va=0x140737488351232 pa=0x36306944 W=1 X=0
+User stack: mapped
+EXEC: argv len=1
+EXEC: user RSP(argc)=0x140737488355296
+EXEC: stack top=0x140737488355328
+EXEC: creating user thread on CPU=2
+CREATE USER THREAD: allocated tid=17 cpu=2 pid=6
+CREATE USER THREAD: Thread::new_user OK
+CREATE USER THREAD: scheduler add OK tid=17
+CREATE USER THREAD: process registration OK tid=17
+EXEC: TID=17
+EXEC: process ready
+VFS EXEC: PROCESS CREATED PID=6 TID=17 entry=0x0000000000401000 RSP=0x00007FFFFFFFFFE0
+VFS EXEC INIT: ELF LOAD OK
+VFS EXEC: reaper TID=18 armed
+VFS EXEC: /bin/init queued for Ring3
+VFS EXEC: /bin/init queued for Ring3 (boot path)
+=== VFS EXEC BADPTR TEST ===
+VFS EXEC: open /bin/badptr
+VFS EXEC: ELF bytes=4888 magic OK
+EXEC: creating user process
+AddressSpace: user PML4 = 0x36311040
+AddressSpace: kernel mappings copied
+EXEC: PID=7
+EXEC: loading ELF
+MAP: va=0x4194304 pa=0x36315136 W=0 X=0
+MAP: va=0x4198400 pa=0x36331520 W=0 X=1
+EXEC: entry=0x4198400
+EXEC: creating user stack
+MAP: va=0x140737488338944 pa=0x36335616 W=1 X=0
+MAP: va=0x140737488343040 pa=0x36352000 W=1 X=0
+MAP: va=0x140737488347136 pa=0x36356096 W=1 X=0
+MAP: va=0x140737488351232 pa=0x36360192 W=1 X=0
+User stack: mapped
+EXEC: argv len=1
+EXEC: user RSP(argc)=0x140737488355296
+EXEC: stack top=0x140737488355328
+EXEC: creating user thread on CPU=3
+CREATE USER THREAD: allocated tid=19 cpu=3 pid=7
+CREATE USER THREAD: Thread::new_user OK
+CREATE USER THREAD: scheduler add OK tid=19
+CREATE USER THREAD: process registration OK tid=19
+EXEC: TID=19
+EXEC: process ready
+VFS EXEC: PROCESS CREATED PID=7 TID=19 entry=0x0000000000401000 RSP=0x00007FFFFFFFFFE0
+VFS EXEC BADPTR: ELF LOAD OK
+VFS EXEC: reaper TID=20 armed
+VFS EXEC: /bin/badptr queued for Ring3
+VFS EXEC: /bin/badptr queued for Ring3
+VFS EXEC WAIT: badptr
+CPU=1 current=0 -> next=1
+CR3 SWITCH: 0x618496 -> 0x36204544
+TSS.RSP0 configured: CPU=1 RSP0=0xFFFFFFFF90032D40
+ENTERING RING3: slot=1 tid=15 RIP=0x0000000000401000 CS=0x000000000000002B RSP=0x00007FFFFFFFFFE0 SS=0x0000000000000033
+RING3 CTX: CR3=0x0000000002287000 TSS.RSP0=0xFFFFFFFF90032D40
+TSS AUDIT: TR=0x0000000000000018 GDTR base=0xFFFFFFFF8007F780 limit=55
+TSS AUDIT: desc base=0xFFFFFFFF8007F7B8 limit=103 P=1 type=0x000000000000000B
+TSS AUDIT: cpu-visible RSP0=0xFFFFFFFF90032D40 percpu RSP0=0xFFFFFFFF90032D40
+TSS AUDIT: percpu=0xFFFFFFFF8007F778 tss=0xFFFFFFFF8007F7B8 desc=0xFFFFFFFF8007F7B8 MATCH
+TSS AUDIT: RSP0 page walk OK
+SYSCALL: CPU=1 TID=15 nr=3
+SYSCALL: WRITE fd=1 len=19
+USER OUTPUT: Hello from ZincOS!
+SYSCALL: CPU=1 TID=15 nr=1
+SYSCALL: EXIT code=0
+EXIT thread=15
+PROCESS terminated PID=5
+CR3 SWITCH: 0x36204544 -> 0x618496
+VFS EXEC: reaper started
+VFS EXEC: PID=5 exited, reaping...
+REAP: destroying AddressSpace PID=5
+AddressSpace: destroyed PML4=0x36204544
+ADDRESS SPACE destroyed
+PROCESS reaped PID=5
+VFS EXEC: PROCESS REAP OK
+EXIT thread=16
+LAPIC TIMER: 2
+CPU=2 current=0 -> next=1
+CR3 SWITCH: 0x618496 -> 0x36257792
+TSS.RSP0 configured: CPU=2 RSP0=0xFFFFFFFF9003AD40
+ENTERING RING3: slot=1 tid=17 RIP=0x0000000000401000 CS=0x000000000000002B RSP=0x00007FFFFFFFFFE0 SS=0x0000000000000033
+RING3 CTX: CR3=0x0000000002294000 TSS.RSP0=0xFFFFFFFF9003AD40
+TSS AUDIT: TR=0x0000000000000018 GDTR base=0xFFFFFFFF8007FDD8 limit=55
+TSS AUDIT: desc base=0xFFFFFFFF8007FE10 limit=103 P=1 type=0x000000000000000B
+TSS AUDIT: cpu-visible RSP0=0xFFFFFFFF9003AD40 percpu RSP0=0xFFFFFFFF9003AD40
+TSS AUDIT: percpu=0xFFFFFFFF8007FDD0 tss=0xFFFFFFFF8007FE10 desc=0xFFFFFFFF8007FE10 MATCH
+TSS AUDIT: RSP0 page walk OK
+SYSCALL: CPU=2 TID=17 nr=3
+SYSCALL: WRITE fd=1 len=20
+USER OUTPUT: ZincOS init started
+SYSCALL: CPU=2 TID=17 nr=1
+SYSCALL: EXIT code=0
+EXIT thread=17
+PROCESS terminated PID=6
+CR3 SWITCH: 0x36257792 -> 0x618496
+VFS EXEC: init reaper started
+VFS EXEC: init PID=6 exited, reaping...
+REAP: destroying AddressSpace PID=6
+AddressSpace: destroyed PML4=0x36257792
+ADDRESS SPACE destroyed
+PROCESS reaped PID=6
+VFS EXEC: init PROCESS REAP OK
+EXIT thread=18
+CPU=3 current=0 -> next=1
+CR3 SWITCH: 0x618496 -> 0x36311040
+TSS.RSP0 configured: CPU=3 RSP0=0xFFFFFFFF90042D40
+ENTERING RING3: slot=1 tid=19 RIP=0x0000000000401000 CS=0x000000000000002B RSP=0x00007FFFFFFFFFE0 SS=0x0000000000000033
+RING3 CTX: CR3=0x00000000022A1000 TSS.RSP0=0xFFFFFFFF90042D40
+TSS AUDIT: TR=0x0000000000000018 GDTR base=0xFFFFFFFF80080430 limit=55
+TSS AUDIT: desc base=0xFFFFFFFF80080468 limit=103 P=1 type=0x000000000000000B
+TSS AUDIT: cpu-visible RSP0=0xFFFFFFFF90042D40 percpu RSP0=0xFFFFFFFF90042D40
+TSS AUDIT: percpu=0xFFFFFFFF80080428 tss=0xFFFFFFFF80080468 desc=0xFFFFFFFF80080468 MATCH
+TSS AUDIT: RSP0 page walk OK
+SYSCALL: CPU=3 TID=19 nr=3
+SYSCALL: WRITE fd=1 len=10
+SYSCALL WRITE: bad user range
+SYSCALL: CPU=3 TID=19 nr=3
+SYSCALL: WRITE fd=1 len=27
+USER OUTPUT: INVALID POINTER TEST: PASS
+SYSCALL: CPU=3 TID=19 nr=1
+SYSCALL: EXIT code=0
+EXIT thread=19
+PROCESS terminated PID=7
+CR3 SWITCH: 0x36311040 -> 0x618496
+VFS EXEC: badptr reaper started
+VFS EXEC: badptr PID=7 exited, reaping...
+REAP: destroying AddressSpace PID=7
+AddressSpace: destroyed PML4=0x36311040
+ADDRESS SPACE destroyed
+PROCESS reaped PID=7
+VFS EXEC: badptr PROCESS REAP OK
+EXIT thread=20
+VFS EXEC WAIT DONE: badptr
+=== VFS EXEC OPEN TEST ===
+VFS EXEC: open /bin/open_test
+VFS EXEC: ELF bytes=9056 magic OK
+EXEC: creating user process
+AddressSpace: user PML4 = 0x36204544
+AddressSpace: kernel mappings copied
+EXEC: PID=8
+EXEC: loading ELF
+MAP: va=0x4194304 pa=0x36208640 W=0 X=0
+MAP: va=0x4198400 pa=0x36225024 W=0 X=1
+MAP: va=0x4202496 pa=0x36229120 W=1 X=0
+EXEC: entry=0x4198400
+EXEC: creating user stack
+MAP: va=0x140737488338944 pa=0x36233216 W=1 X=0
+MAP: va=0x140737488343040 pa=0x36249600 W=1 X=0
+MAP: va=0x140737488347136 pa=0x36253696 W=1 X=0
+MAP: va=0x140737488351232 pa=0x36257792 W=1 X=0
+User stack: mapped
+EXEC: argv len=1
+EXEC: user RSP(argc)=0x140737488355280
+EXEC: stack top=0x140737488355328
+EXEC: creating user thread on CPU=3
+CREATE USER THREAD: allocated tid=21 cpu=3 pid=8
+CREATE USER THREAD: Thread::new_user OK
+CREATE USER THREAD: scheduler add OK tid=21
+CREATE USER THREAD: process registration OK tid=21
+EXEC: TID=21
+EXEC: process ready
+VFS EXEC: PROCESS CREATED PID=8 TID=21 entry=0x0000000000401000 RSP=0x00007FFFFFFFFFD0
+VFS EXEC OPEN TEST: ELF LOAD OK
+VFS EXEC: reaper TID=22 armed
+VFS EXEC: /bin/open_test queued for Ring3
+VFS EXEC WAIT: open_test
+Scheduler: reaped thread=15 slot=1
+CPU=1 current=2 -> next=7
+CPU=1 TID=16 -> IDLE
+LAPIC TIMER: 3
+Scheduler: reaped thread=17 slot=1
+CPU=2 current=2 -> next=7
+CPU=2 TID=18 -> IDLE
+Scheduler: reaped thread=19 slot=1
+CPU=3 current=2 -> next=3
+CR3 SWITCH: 0x618496 -> 0x36204544
+TSS.RSP0 configured: CPU=3 RSP0=0xFFFFFFFF9004AD40
+ENTERING RING3: slot=3 tid=21 RIP=0x0000000000401000 CS=0x000000000000002B RSP=0x00007FFFFFFFFFD0 SS=0x0000000000000033
+RING3 CTX: CR3=0x0000000002287000 TSS.RSP0=0xFFFFFFFF9004AD40
+TSS AUDIT: TR=0x0000000000000018 GDTR base=0xFFFFFFFF80080430 limit=55
+TSS AUDIT: desc base=0xFFFFFFFF80080468 limit=103 P=1 type=0x000000000000000B
+TSS AUDIT: cpu-visible RSP0=0xFFFFFFFF9004AD40 percpu RSP0=0xFFFFFFFF9004AD40
+TSS AUDIT: percpu=0xFFFFFFFF80080428 tss=0xFFFFFFFF80080468 desc=0xFFFFFFFF80080468 MATCH
+TSS AUDIT: RSP0 page walk OK
+SYSCALL: CPU=3 TID=21 nr=4
+SYSCALL: OPEN
+OPEN path: /test/big
+OPEN fd: 3
+SYSCALL: CPU=3 TID=21 nr=3
+SYSCALL: WRITE fd=1 len=16
+USER OUTPUT: OPEN TEST: PASS
+SYSCALL: CPU=3 TID=21 nr=1
+SYSCALL: EXIT code=0
+EXIT thread=21
+PROCESS terminated PID=8
+CR3 SWITCH: 0x36204544 -> 0x618496
+VFS EXEC: open_test reaper started
+VFS EXEC: open_test PID=8 exited, reaping...
+REAP: destroying AddressSpace PID=8
+AddressSpace: destroyed PML4=0x36204544
+ADDRESS SPACE destroyed
+PROCESS reaped PID=8
+VFS EXEC: open_test PROCESS REAP OK
+EXIT thread=22
+VFS EXEC WAIT DONE: open_test
+=== VFS EXEC READ TEST ===
+VFS EXEC: open /bin/read_test
+VFS EXEC: ELF bytes=9112 magic OK
+EXEC: creating user process
+AddressSpace: user PML4 = 0x36204544
+AddressSpace: kernel mappings copied
+EXEC: PID=9
+EXEC: loading ELF
+MAP: va=0x4194304 pa=0x36208640 W=0 X=0
+MAP: va=0x4198400 pa=0x36225024 W=0 X=1
+MAP: va=0x4202496 pa=0x36229120 W=1 X=0
+EXEC: entry=0x4198400
+EXEC: creating user stack
+MAP: va=0x140737488338944 pa=0x36233216 W=1 X=0
+MAP: va=0x140737488343040 pa=0x36249600 W=1 X=0
+MAP: va=0x140737488347136 pa=0x36253696 W=1 X=0
+MAP: va=0x140737488351232 pa=0x36257792 W=1 X=0
+User stack: mapped
+EXEC: argv len=1
+EXEC: user RSP(argc)=0x140737488355280
+EXEC: stack top=0x140737488355328
+EXEC: creating user thread on CPU=3
+CREATE USER THREAD: allocated tid=23 cpu=3 pid=9
+CREATE USER THREAD: Thread::new_user OK
+CREATE USER THREAD: scheduler add OK tid=23
+CREATE USER THREAD: process registration OK tid=23
+EXEC: TID=23
+EXEC: process ready
+VFS EXEC: PROCESS CREATED PID=9 TID=23 entry=0x0000000000401000 RSP=0x00007FFFFFFFFFD0
+VFS EXEC READ TEST: ELF LOAD OK
+VFS EXEC: reaper TID=24 armed
+VFS EXEC: /bin/read_test queued for Ring3
+VFS EXEC WAIT: read_test
+Scheduler: reaped thread=16 slot=2
+LAPIC TIMER: 4
+Scheduler: reaped thread=18 slot=2
+Scheduler: reaped thread=20 slot=2
+Scheduler: reaped thread=21 slot=3
+CPU=3 current=4 -> next=5
+VFS EXEC: read_test reaper started
+TIME=4
+SLEEP thread=24 wake_at=9
+CPU=3 TID=24 SLEEP
+LAPIC TIMER: 5
+Scheduler: reaped thread=22 slot=4
+CPU=3 current=5 -> next=1
+CR3 SWITCH: 0x618496 -> 0x36204544
+TSS.RSP0 configured: CPU=3 RSP0=0xFFFFFFFF90032D40
+ENTERING RING3: slot=1 tid=23 RIP=0x0000000000401000 CS=0x000000000000002B RSP=0x00007FFFFFFFFFD0 SS=0x0000000000000033
+RING3 CTX: CR3=0x0000000002287000 TSS.RSP0=0xFFFFFFFF90032D40
+TSS AUDIT: TR=0x0000000000000018 GDTR base=0xFFFFFFFF80080430 limit=55
+TSS AUDIT: desc base=0xFFFFFFFF80080468 limit=103 P=1 type=0x000000000000000B
+TSS AUDIT: cpu-visible RSP0=0xFFFFFFFF90032D40 percpu RSP0=0xFFFFFFFF90032D40
+TSS AUDIT: percpu=0xFFFFFFFF80080428 tss=0xFFFFFFFF80080468 desc=0xFFFFFFFF80080468 MATCH
+TSS AUDIT: RSP0 page walk OK
+SYSCALL: CPU=3 TID=23 nr=4
+SYSCALL: OPEN
+OPEN path: /test/big
+OPEN fd: 3
+SYSCALL: CPU=3 TID=23 nr=5
+SYSCALL: READ fd=3 len=64
+READ bytes=64
+SYSCALL: CPU=3 TID=23 nr=3
+SYSCALL: WRITE fd=1 len=64
+USER OUTPUT: Hello from ZincOS!
+SYS_READ works!
+EXT2 -> VFS -> SYS_READ -> RiSYSCALL: CPU=3 TID=23 nr=1
+SYSCALL: EXIT code=0
+EXIT thread=23
+PROCESS terminated PID=9
+CR3 SWITCH: 0x36204544 -> 0x618496
+CPU=1 TID=10 WAKE
+CPU=1 current=7 -> next=0
+CPU=1 IDLE -> TID=10
+TIME=5
+SLEEP thread=10 wake_at=10
+CPU=1 TID=10 SLEEP
+LAPIC TIMER: 6
+CPU=2 TID=11 WAKE
+CPU=2 current=7 -> next=0
+CPU=2 IDLE -> TID=11
+TIME=6
+SLEEP thread=11 wake_at=11
+CPU=2 TID=11 SLEEP
+Scheduler: reaped thread=23 slot=1
+CPU=3 TID=12 WAKE
+CPU=3 current=7 -> next=0
+CPU=3 IDLE -> TID=12
+TIME=6
+SLEEP thread=12 wake_at=11
+CPU=3 TID=12 SLEEP
+CPU=1 current=0 -> next=7
+CPU=1 TID=10 -> IDLE
+LAPIC TIMER: 7
+CPU=2 current=0 -> next=7
+CPU=2 TID=11 -> IDLE
+CPU=3 current=0 -> next=7
+CPU=3 TID=12 -> IDLE
+LAPIC TIMER: 8
+LAPIC TIMER: 9
+CPU=3 TID=24 WAKE
+CPU=3 current=7 -> next=5
+CPU=3 IDLE -> TID=24
+VFS EXEC: read_test PID=9 exited, reaping...
+REAP: destroying AddressSpace PID=9
+AddressSpace: destroyed PML4=0x36204544
+ADDRESS SPACE destroyed
+PROCESS reaped PID=9
+VFS EXEC: read_test PROCESS REAP OK
+EXIT thread=24
+VFS EXEC WAIT DONE: read_test
+=== VFS EXEC CLOSE TEST ===
+VFS EXEC: open /bin/close_test
+VFS EXEC: ELF bytes=9288 magic OK
+EXEC: creating user process
+AddressSpace: user PML4 = 0x36204544
+AddressSpace: kernel mappings copied
+EXEC: PID=10
+EXEC: loading ELF
+MAP: va=0x4194304 pa=0x36208640 W=0 X=0
+MAP: va=0x4198400 pa=0x36225024 W=0 X=1
+MAP: va=0x4202496 pa=0x36229120 W=1 X=0
+EXEC: entry=0x4198400
+EXEC: creating user stack
+MAP: va=0x140737488338944 pa=0x36233216 W=1 X=0
+MAP: va=0x140737488343040 pa=0x36249600 W=1 X=0
+MAP: va=0x140737488347136 pa=0x36253696 W=1 X=0
+MAP: va=0x140737488351232 pa=0x36257792 W=1 X=0
+User stack: mapped
+EXEC: argv len=1
+EXEC: user RSP(argc)=0x140737488355280
+EXEC: stack top=0x140737488355328
+EXEC: creating user thread on CPU=3
+CREATE USER THREAD: allocated tid=25 cpu=3 pid=10
+CREATE USER THREAD: Thread::new_user OK
+CREATE USER THREAD: scheduler add OK tid=25
+CREATE USER THREAD: process registration OK tid=25
+EXEC: TID=25
+EXEC: process ready
+VFS EXEC: PROCESS CREATED PID=10 TID=25 entry=0x0000000000401000 RSP=0x00007FFFFFFFFFD0
+VFS EXEC CLOSE TEST: ELF LOAD OK
+VFS EXEC: reaper TID=26 armed
+VFS EXEC: /bin/close_test queued for Ring3
+VFS EXEC WAIT: close_test
+LAPIC TIMER: 10
+CPU=3 current=5 -> next=1
+CR3 SWITCH: 0x618496 -> 0x36204544
+TSS.RSP0 configured: CPU=3 RSP0=0xFFFFFFFF90032D40
+ENTERING RING3: slot=1 tid=25 RIP=0x0000000000401000 CS=0x000000000000002B RSP=0x00007FFFFFFFFFD0 SS=0x0000000000000033
+RING3 CTX: CR3=0x0000000002287000 TSS.RSP0=0xFFFFFFFF90032D40
+TSS AUDIT: TR=0x0000000000000018 GDTR base=0xFFFFFFFF80080430 limit=55
+TSS AUDIT: desc base=0xFFFFFFFF80080468 limit=103 P=1 type=0x000000000000000B
+TSS AUDIT: cpu-visible RSP0=0xFFFFFFFF90032D40 percpu RSP0=0xFFFFFFFF90032D40
+TSS AUDIT: percpu=0xFFFFFFFF80080428 tss=0xFFFFFFFF80080468 desc=0xFFFFFFFF80080468 MATCH
+TSS AUDIT: RSP0 page walk OK
+SYSCALL: CPU=3 TID=25 nr=4
+SYSCALL: OPEN
+OPEN path: /test/big
+OPEN fd: 3
+SYSCALL: CPU=3 TID=25 nr=6
+SYSCALL: CLOSE fd=3
+CLOSE: fd=3 closed
+SYSCALL: CPU=3 TID=25 nr=4
+SYSCALL: OPEN
+OPEN path: /test/big
+OPEN fd: 3
+SYSCALL: CPU=3 TID=25 nr=3
+SYSCALL: WRITE fd=1 len=25
+USER OUTPUT: CLOSE TEST: CLOSE PASS
+CLSYSCALL: CPU=3 TID=25 nr=6
+SYSCALL: CLOSE fd=3
+CLOSE: fd=3 closed
+SYSCALL: CPU=3 TID=25 nr=1
+SYSCALL: EXIT code=0
+EXIT thread=25
+PROCESS terminated PID=10
+CR3 SWITCH: 0x36204544 -> 0x618496
+VFS EXEC: close_test reaper started
+VFS EXEC: close_test PID=10 exited, reaping...
+REAP: destroying AddressSpace PID=10
+AddressSpace: destroyed PML4=0x36204544
+ADDRESS SPACE destroyed
+PROCESS reaped PID=10
+VFS EXEC: close_test PROCESS REAP OK
+EXIT thread=26
+VFS EXEC WAIT DONE: close_test
+=== VFS EXEC EXECVE TEST ===
+VFS EXEC: open /bin/exec_test
+VFS EXEC: ELF bytes=8936 magic OK
+EXEC: creating user process
+AddressSpace: user PML4 = 0x36204544
+AddressSpace: kernel mappings copied
+EXEC: PID=11
+EXEC: loading ELF
+MAP: va=0x4194304 pa=0x36208640 W=0 X=0
+MAP: va=0x4198400 pa=0x36225024 W=0 X=1
+MAP: va=0x4202496 pa=0x36229120 W=1 X=0
+EXEC: entry=0x4198400
+EXEC: creating user stack
+MAP: va=0x140737488338944 pa=0x36233216 W=1 X=0
+MAP: va=0x140737488343040 pa=0x36249600 W=1 X=0
+MAP: va=0x140737488347136 pa=0x36253696 W=1 X=0
+MAP: va=0x140737488351232 pa=0x36257792 W=1 X=0
+User stack: mapped
+EXEC: argv len=1
+EXEC: user RSP(argc)=0x140737488355280
+EXEC: stack top=0x140737488355328
+EXEC: creating user thread on CPU=3
+CREATE USER THREAD: allocated tid=27 cpu=3 pid=11
+CREATE USER THREAD: Thread::new_user OK
+CREATE USER THREAD: scheduler add OK tid=27
+CREATE USER THREAD: process registration OK tid=27
+EXEC: TID=27
+EXEC: process ready
+VFS EXEC: PROCESS CREATED PID=11 TID=27 entry=0x0000000000401000 RSP=0x00007FFFFFFFFFD0
+VFS EXEC: execve_test PROCESS CREATED PID=11 TID=27
+VFS EXEC: reaper TID=28 armed
+VFS EXEC WAIT: execve_test
+CPU=1 TID=10 WAKE
+CPU=1 current=7 -> next=0
+CPU=1 IDLE -> TID=10
+TIME=10
+SLEEP thread=10 wake_at=15
+CPU=1 TID=10 SLEEP
+LAPIC TIMER: 11
+CPU=2 TID=11 WAKE
+CPU=2 current=7 -> next=0
+CPU=2 IDLE -> TID=11
+TIME=11
+SLEEP thread=11 wake_at=16
+CPU=2 TID=11 SLEEP
+Scheduler: reaped thread=25 slot=1
+Scheduler: reaped thread=24 slot=5
+CPU=3 TID=12 WAKE
+CPU=3 current=2 -> next=3
+CR3 SWITCH: 0x618496 -> 0x36204544
+TSS.RSP0 configured: CPU=3 RSP0=0xFFFFFFFF9003ED40
+ENTERING RING3: slot=3 tid=27 RIP=0x0000000000401000 CS=0x000000000000002B RSP=0x00007FFFFFFFFFD0 SS=0x0000000000000033
+RING3 CTX: CR3=0x0000000002287000 TSS.RSP0=0xFFFFFFFF9003ED40
+TSS AUDIT: TR=0x0000000000000018 GDTR base=0xFFFFFFFF80080430 limit=55
+TSS AUDIT: desc base=0xFFFFFFFF80080468 limit=103 P=1 type=0x000000000000000B
+TSS AUDIT: cpu-visible RSP0=0xFFFFFFFF9003ED40 percpu RSP0=0xFFFFFFFF9003ED40
+TSS AUDIT: percpu=0xFFFFFFFF80080428 tss=0xFFFFFFFF80080468 desc=0xFFFFFFFF80080468 MATCH
+TSS AUDIT: RSP0 page walk OK
+SYSCALL: CPU=3 TID=27 nr=2
+SYSCALL: EXECVE
+EXECVE: path_ptr=0x0000000000402000
+EXECVE: argv_ptr=0x0000000000402011
+EXECVE: envp_ptr=0x0000000000000000
+EXECVE: path=/bin/hello
+EXECVE: argc=1
+VFS EXEC: ELF bytes=4728 magic OK
+EXEC: preparing replacement image
+AddressSpace: user PML4 = 0x36261888
+AddressSpace: kernel mappings copied
+MAP: va=0x4194304 pa=0x36265984 W=0 X=0
+MAP: va=0x4198400 pa=0x36282368 W=0 X=1
+EXEC: replacement entry=0x4198400
+MAP: va=0x140737488338944 pa=0x36286464 W=1 X=0
+MAP: va=0x140737488343040 pa=0x36302848 W=1 X=0
+MAP: va=0x140737488347136 pa=0x36306944 W=1 X=0
+MAP: va=0x140737488351232 pa=0x36311040 W=1 X=0
+User stack: mapped
+EXEC: replacement RSP=0x140737488355296
+EXEC: image replaced PID=11
+EXECVE: PID=11 path=/bin/hello
+EXECVE: old CR3=0x0000000002287000
+EXECVE: new CR3=0x0000000002295000
+EXECVE: new CR3 loaded
+AddressSpace: destroyed PML4=0x36204544
+EXECVE: image replaced PID=11 entry=0x0000000000401000 RSP=0x00007FFFFFFFFFE0
+SYSCALL: CPU=3 TID=27 nr=3
+SYSCALL: WRITE fd=1 len=19
+USER OUTPUT: Hello from ZincOS!
+SYSCALL: CPU=3 TID=27 nr=1
+SYSCALL: EXIT code=0
+EXIT thread=27
+PROCESS terminated PID=11
+CR3 SWITCH: 0x36261888 -> 0x618496
+VFS EXEC: execve_test reaper started
+VFS EXEC: execve_test PID=11 exited, reaping...
+REAP: destroying AddressSpace PID=11
+AddressSpace: destroyed PML4=0x36261888
+ADDRESS SPACE destroyed
+PROCESS reaped PID=11
+VFS EXEC: execve_test PROCESS REAP OK
+EXIT thread=28
+VFS EXEC WAIT DONE: execve_test
+=== RING 3 USER THREAD TEST ===
+AddressSpace: user PML4 = 0x36204544
+AddressSpace: kernel mappings copied
+User process created: PID=12
+MAP: va=0x4194304 pa=0x36208640 W=1 X=1
+MAP: va=0x5242880 pa=0x36225024 W=1 X=0
+MAP: va=0x140737488338944 pa=0x36229120 W=1 X=0
+MAP: va=0x140737488343040 pa=0x36245504 W=1 X=0
+MAP: va=0x140737488347136 pa=0x36249600 W=1 X=0
+MAP: va=0x140737488351232 pa=0x36253696 W=1 X=0
+User stack: mapped
+User CR3 loaded: PML4=0x0000000002287000 (at first schedule)
+User thread created: TID=20 RIP=0x0000000000400000 RSP=0x00007FFFFFFFFFF0
+RING3 threads queued on CPU 0 (user + monitor)
+=== INIT TEST ===
+INIT: reusing existing PID=1
+AddressSpace: user PML4 = 0x36257792
+AddressSpace: kernel mappings copied
+INIT: PID=1 started
+INIT: parent=None
+INIT: waiting for child
+INIT: parent PID=1 child PID=2
+MAP: va=0x4194304 pa=0x36261888 W=1 X=1
+MAP: va=0x140737488338944 pa=0x36278272 W=1 X=0
+MAP: va=0x140737488343040 pa=0x36294656 W=1 X=0
+MAP: va=0x140737488347136 pa=0x36298752 W=1 X=0
+MAP: va=0x140737488351232 pa=0x36302848 W=1 X=0
+User stack: mapped
+MAP: va=0x4194304 pa=0x36306944 W=1 X=1
+MAP: va=0x140737488338944 pa=0x36323328 W=1 X=0
+MAP: va=0x140737488343040 pa=0x36339712 W=1 X=0
+MAP: va=0x140737488347136 pa=0x36343808 W=1 X=0
+MAP: va=0x140737488351232 pa=0x36347904 W=1 X=0
+User stack: mapped
+INIT: parent CR3=0x000000000225A000 child CR3=0x0000000002294000
+INIT: parent TID=40 CPU0 child TID=41 CPU1
+INIT: threads queued (SMP cross-CPU)
+=== SCHEDULER TEST ===
+ALPHA -> CPU 0
+BETA  -> CPU 0
+SILF  -> CPU 0
+IDLE  -> CPU 0
+Kernel process threads: 7
+Starting scheduler...
+Scheduler: starting thread slot 0
+CR3 SWITCH: 0x618496 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+ENTERING RING3: slot=0 tid=13 RIP=0x0000000000400000 CS=0x000000000000002B RSP=0x00007FFFFFFFFFD0 SS=0x0000000000000033
+RING3 CTX: CR3=0x000000000226F000 TSS.RSP0=0xFFFFFFFF90027300
+TSS AUDIT: TR=0x0000000000000018 GDTR base=0xFFFFFFFF8008B400 limit=55
+TSS AUDIT: desc base=0xFFFFFFFF8007F160 limit=103 P=1 type=0x000000000000000B
+TSS AUDIT: cpu-visible RSP0=0xFFFFFFFF90027300 percpu RSP0=0xFFFFFFFF90027300
+TSS AUDIT: percpu=0xFFFFFFFF8007F120 tss=0xFFFFFFFF8007F160 desc=0xFFFFFFFF8007F160 MATCH
+TSS AUDIT: RSP0 page walk OK
+SYSCALL: CPU=0 TID=13 nr=0
+SYSCALL: YIELD
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+ENTERING RING3: slot=1 tid=14 RIP=0x0000000000400000 CS=0x000000000000002B RSP=0x00007FFFFFFFFFD0 SS=0x0000000000000033
+RING3 CTX: CR3=0x000000000227B000 TSS.RSP0=0xFFFFFFFF9001F5E0
+TSS AUDIT: TR=0x0000000000000018 GDTR base=0xFFFFFFFF8008B400 limit=55
+TSS AUDIT: desc base=0xFFFFFFFF8007F160 limit=103 P=1 type=0x000000000000000B
+TSS AUDIT: cpu-visible RSP0=0xFFFFFFFF9001F5E0 percpu RSP0=0xFFFFFFFF9001F5E0
+TSS AUDIT: percpu=0xFFFFFFFF8007F120 tss=0xFFFFFFFF8007F160 desc=0xFFFFFFFF8007F160 MATCH
+TSS AUDIT: RSP0 page walk OK
+SYSCALL: CPU=0 TID=14 nr=0
+SYSCALL: YIELD
+CR3 SWITCH: 0x36155392 -> 0x36204544
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90032D40
+ENTERING RING3: slot=2 tid=20 RIP=0x0000000000400000 CS=0x000000000000002B RSP=0x00007FFFFFFFFFF0 SS=0x0000000000000033
+RING3 CTX: CR3=0x0000000002287000 TSS.RSP0=0xFFFFFFFF90032D40
+TSS AUDIT: TR=0x0000000000000018 GDTR base=0xFFFFFFFF8008B400 limit=55
+TSS AUDIT: desc base=0xFFFFFFFF8007F160 limit=103 P=1 type=0x000000000000000B
+TSS AUDIT: cpu-visible RSP0=0xFFFFFFFF90032D40 percpu RSP0=0xFFFFFFFF90032D40
+TSS AUDIT: percpu=0xFFFFFFFF8007F120 tss=0xFFFFFFFF8007F160 desc=0xFFFFFFFF8007F160 MATCH
+TSS AUDIT: RSP0 page walk OK
+SYSCALL: CPU=0 TID=20 nr=0
+SYSCALL: YIELD
+CR3 SWITCH: 0x36204544 -> 0x618496
+RING3 monitor started
+CPU=1 current=0 -> next=1
+CR3 SWITCH: 0x618496 -> 0x36257792
+TSS.RSP0 configured: CPU=1 RSP0=0xFFFFFFFF9004AD40
+ENTERING RING3: slot=1 tid=41 RIP=0x0000000000400000 CS=0x000000000000002B RSP=0x00007FFFFFFFFFF0 SS=0x0000000000000033
+RING3 CTX: CR3=0x0000000002294000 TSS.RSP0=0xFFFFFFFF9004AD40
+TSS AUDIT: TR=0x0000000000000018 GDTR base=0xFFFFFFFF8007F780 limit=55
+TSS AUDIT: desc base=0xFFFFFFFF8007F7B8 limit=103 P=1 type=0x000000000000000B
+TSS AUDIT: cpu-visible RSP0=0xFFFFFFFF9004AD40 percpu RSP0=0xFFFFFFFF9004AD40
+TSS AUDIT: percpu=0xFFFFFFFF8007F778 tss=0xFFFFFFFF8007F7B8 desc=0xFFFFFFFF8007F7B8 MATCH
+TSS AUDIT: RSP0 page walk OK
+LAPIC TIMER: 12
+TIME=12
+SCHED tick CPU=0 current=3 next=4
+CR3 SWITCH: 0x618496 -> 0x36020224
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90046D40
+ENTERING RING3: slot=4 tid=40 RIP=0x0000000000400000 CS=0x000000000000002B RSP=0x00007FFFFFFFFFF0 SS=0x0000000000000033
+RING3 CTX: CR3=0x000000000225A000 TSS.RSP0=0xFFFFFFFF90046D40
+TSS AUDIT: TR=0x0000000000000018 GDTR base=0xFFFFFFFF8008B400 limit=55
+TSS AUDIT: desc base=0xFFFFFFFF8007F160 limit=103 P=1 type=0x000000000000000B
+TSS AUDIT: cpu-visible RSP0=0xFFFFFFFF90046D40 percpu RSP0=0xFFFFFFFF90046D40
+TSS AUDIT: percpu=0xFFFFFFFF8007F120 tss=0xFFFFFFFF8007F160 desc=0xFFFFFFFF8007F160 MATCH
+TSS AUDIT: RSP0 page walk OK
+FRESH USER SWITCH: slot=4 thread=40 via start_user_thread_context
+SYSCALL: CPU=0 TID=40 nr=7
+SYSCALL: WAIT
+SYS_WAIT: parent PID=1
+SYS_WAIT: live child=2
+WAIT: blocking on child PID=2
+WAIT: blocking parent PID=1 child PID=2 TID=40
+WAIT: scheduler switch
+CR3 SWITCH: 0x36020224 -> 0x618496
+Thread ALPHA started!
+ALPHA: 1
+TIME=12
+SLEEP thread=42 wake_at=17
+CPU=0 TID=42 SLEEP
+SYSCALL: CPU=1 TID=41 nr=1
+SYSCALL: EXIT code=0
+EXIT thread=41
+PROCESS terminated PID=2
+WAIT: waking parent thread=40 child PID=2
+WAIT: waking parent PID=1 TID=40 child PID=2
+WAIT: parent resumed RAX=2
+WAIT: child PID=2 terminated
+CR3 SWITCH: 0x36257792 -> 0x618496
+CPU=2 current=0 -> next=7
+CPU=2 TID=11 -> IDLE
+Scheduler: reaped thread=26 slot=2
+Scheduler: reaped thread=27 slot=3
+CPU=3 current=4 -> next=0
+TIME=12
+SLEEP thread=12 wake_at=17
+CPU=3 TID=12 SLEEP
+Scheduler: reaped thread=41 slot=1
+LAPIC TIMER: 13
+TIME=13
+SLEEP CHECK thread=42 wake=17 now=13 -> WAIT
+SCHED tick CPU=0 current=5 next=6
+FRESH SWITCH: slot=6 thread=43 entry=18446744071562127872 stack=18446744071830842680
+Thread BETA started!
+BETA: 1
+TIME=13
+SLEEP thread=43 wake_at=18
+CPU=0 TID=43 SLEEP
+Scheduler: reaped thread=28 slot=4
+CPU=3 current=0 -> next=7
+CPU=3 TID=12 -> IDLE
+LAPIC TIMER: 14
+TIME=14
+SLEEP CHECK thread=42 wake=17 now=14 -> WAIT
+SLEEP CHECK thread=43 wake=18 now=14 -> WAIT
+SCHED tick CPU=0 current=6 next=0
+CR3 SWITCH: 0x618496 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+USER->KERNEL INTERRUPT: CPU=0 RIP=0x0000000000400009 CS=0x000000000000002B CR3=0x000000000226F000 TSS.RSP0=0xFFFFFFFF90027300
+User -> Kernel interrupt succeeded
+LAPIC TIMER: 15
+TIME=15
+SLEEP CHECK thread=42 wake=17 now=15 -> WAIT
+SLEEP CHECK thread=43 wake=18 now=15 -> WAIT
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+CPU=1 TID=10 WAKE
+CPU=1 current=7 -> next=0
+CPU=1 IDLE -> TID=10
+TIME=15
+SLEEP thread=10 wake_at=20
+CPU=1 TID=10 SLEEP
+USER->KERNEL INTERRUPT: CPU=0 RIP=0x0000000000400009 CS=0x000000000000002B CR3=0x000000000227B000 TSS.RSP0=0xFFFFFFFF9001F5E0
+User -> Kernel interrupt succeeded
+LAPIC TIMER: 16
+TIME=16
+SLEEP CHECK thread=42 wake=17 now=16 -> WAIT
+SLEEP CHECK thread=43 wake=18 now=16 -> WAIT
+SCHED tick CPU=0 current=1 next=2
+CR3 SWITCH: 0x36155392 -> 0x36204544
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90032D40
+SYSCALL: CPU=0 TID=20 nr=0
+SYSCALL: YIELD
+CR3 SWITCH: 0x36204544 -> 0x618496
+CPU=2 TID=11 WAKE
+CPU=2 current=7 -> next=0
+CPU=2 IDLE -> TID=11
+TIME=16
+SLEEP thread=11 wake_at=21
+CPU=2 TID=11 SLEEP
+CPU=1 current=0 -> next=7
+CPU=1 TID=10 -> IDLE
+LAPIC TIMER: 17
+TIME=17
+SLEEP CHECK thread=42 wake=17 now=17 -> WAKE
+SLEEP CHECK thread=43 wake=18 now=17 -> WAIT
+SCHED tick CPU=0 current=3 next=4
+CR3 SWITCH: 0x618496 -> 0x36020224
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90046D40
+SYSCALL: CPU=0 TID=40 nr=7
+SYSCALL: WAIT
+SYS_WAIT: parent PID=1
+SYS_WAIT: terminated child=2
+WAIT: terminated child PID=2
+REAP: destroying AddressSpace PID=2
+AddressSpace: destroyed PML4=0x36257792
+ADDRESS SPACE destroyed
+PROCESS reaped PID=2
+WAIT: reaped PID=2
+SYSCALL: CPU=0 TID=40 nr=7
+SYSCALL: WAIT
+SYS_WAIT: parent PID=1
+SYS_WAIT: no child
+WAIT: blocking PID=1
+WAIT: scheduler switch
+CR3 SWITCH: 0x36020224 -> 0x618496
+ALPHA: 2
+TIME=17
+SLEEP thread=42 wake_at=22
+CPU=0 TID=42 SLEEP
+CPU=2 current=0 -> next=7
+CPU=2 TID=11 -> IDLE
+CPU=3 TID=12 WAKE
+CPU=3 current=7 -> next=0
+CPU=3 IDLE -> TID=12
+TIME=17
+SLEEP thread=12 wake_at=22
+CPU=3 TID=12 SLEEP
+LAPIC TIMER: 18
+TIME=18
+SLEEP CHECK thread=42 wake=22 now=18 -> WAIT
+SLEEP CHECK thread=43 wake=18 now=18 -> WAKE
+SCHED tick CPU=0 current=5 next=6
+BETA: 2
+BETA waiting for ALPHA...
+JOIN: current thread waiting
+CPU=3 current=0 -> next=7
+CPU=3 TID=12 -> IDLE
+LAPIC TIMER: 19
+TIME=19
+SLEEP CHECK thread=42 wake=22 now=19 -> WAIT
+SCHED tick CPU=0 current=6 next=0
+CR3 SWITCH: 0x618496 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+LAPIC TIMER: 20
+TIME=20
+SLEEP CHECK thread=42 wake=22 now=20 -> WAIT
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+CPU=1 TID=10 WAKE
+CPU=1 current=7 -> next=0
+CPU=1 IDLE -> TID=10
+TIME=20
+SLEEP thread=10 wake_at=25
+CPU=1 TID=10 SLEEP
+TIME=21
+SLEEP CHECK thread=42 wake=22 now=21 -> WAIT
+SCHED tick CPU=0 current=1 next=2
+CR3 SWITCH: 0x36155392 -> 0x36204544
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90032D40
+SYSCALL: CPU=0 TID=20 nr=0
+SYSCALL: YIELD
+CR3 SWITCH: 0x36204544 -> 0x618496
+CPU=2 TID=11 WAKE
+CPU=2 current=7 -> next=0
+CPU=2 IDLE -> TID=11
+TIME=21
+SLEEP thread=11 wake_at=26
+CPU=2 TID=11 SLEEP
+CPU=1 current=0 -> next=7
+CPU=1 TID=10 -> IDLE
+TIME=22
+SLEEP CHECK thread=42 wake=22 now=22 -> WAKE
+SCHED tick CPU=0 current=3 next=5
+ALPHA: 3
+TIME=22
+SLEEP thread=42 wake_at=27
+CPU=0 TID=42 SLEEP
+CPU=2 current=0 -> next=7
+CPU=2 TID=11 -> IDLE
+CPU=3 TID=12 WAKE
+CPU=3 current=7 -> next=0
+CPU=3 IDLE -> TID=12
+TIME=22
+SLEEP thread=12 wake_at=27
+CPU=3 TID=12 SLEEP
+TIME=23
+SLEEP CHECK thread=42 wake=27 now=23 -> WAIT
+SCHED tick CPU=0 current=5 next=0
+CR3 SWITCH: 0x618496 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+CPU=3 current=0 -> next=7
+CPU=3 TID=12 -> IDLE
+TIME=24
+SLEEP CHECK thread=42 wake=27 now=24 -> WAIT
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+TIME=25
+SLEEP CHECK thread=42 wake=27 now=25 -> WAIT
+SCHED tick CPU=0 current=1 next=2
+CR3 SWITCH: 0x36155392 -> 0x36204544
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90032D40
+SYSCALL: CPU=0 TID=20 nr=1
+SYSCALL: EXIT code=0
+EXIT thread=20
+PROCESS terminated PID=12
+CR3 SWITCH: 0x36204544 -> 0x618496
+User code executed (marker observed)
+Kernel verified user execution marker
+Returning/scheduling safely
+RING 3 USER THREAD TEST: PASS
+TIME=25
+SLEEP thread=21 wake_at=75
+CPU=0 TID=21 SLEEP
+CPU=1 TID=10 WAKE
+CPU=1 current=7 -> next=0
+CPU=1 IDLE -> TID=10
+TIME=25
+SLEEP thread=10 wake_at=30
+CPU=1 TID=10 SLEEP
+Scheduler: reaped thread=20 slot=2
+TIME=26
+SLEEP CHECK thread=21 wake=75 now=26 -> WAIT
+SLEEP CHECK thread=42 wake=27 now=26 -> WAIT
+SCHED tick CPU=0 current=3 next=0
+CR3 SWITCH: 0x618496 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+CPU=2 TID=11 WAKE
+CPU=2 current=7 -> next=0
+CPU=2 IDLE -> TID=11
+TIME=26
+SLEEP thread=11 wake_at=31
+CPU=2 TID=11 SLEEP
+CPU=1 current=0 -> next=7
+CPU=1 TID=10 -> IDLE
+TIME=27
+SLEEP CHECK thread=21 wake=75 now=27 -> WAIT
+SLEEP CHECK thread=42 wake=27 now=27 -> WAKE
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+CPU=2 current=0 -> next=7
+CPU=2 TID=11 -> IDLE
+CPU=3 TID=12 WAKE
+CPU=3 current=7 -> next=0
+CPU=3 IDLE -> TID=12
+TIME=27
+SLEEP thread=12 wake_at=32
+CPU=3 TID=12 SLEEP
+TIME=28
+SLEEP CHECK thread=21 wake=75 now=28 -> WAIT
+SCHED tick CPU=0 current=1 next=5
+CR3 SWITCH: 0x36155392 -> 0x618496
+ALPHA: 4
+TIME=28
+SLEEP thread=42 wake_at=33
+CPU=0 TID=42 SLEEP
+CPU=3 current=0 -> next=7
+CPU=3 TID=12 -> IDLE
+TIME=29
+SLEEP CHECK thread=21 wake=75 now=29 -> WAIT
+SLEEP CHECK thread=42 wake=33 now=29 -> WAIT
+SCHED tick CPU=0 current=5 next=0
+CR3 SWITCH: 0x618496 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+TIME=30
+SLEEP CHECK thread=21 wake=75 now=30 -> WAIT
+SLEEP CHECK thread=42 wake=33 now=30 -> WAIT
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+CPU=1 TID=10 WAKE
+CPU=1 current=7 -> next=0
+CPU=1 IDLE -> TID=10
+TIME=30
+SLEEP thread=10 wake_at=35
+CPU=1 TID=10 SLEEP
+TIME=31
+SLEEP CHECK thread=21 wake=75 now=31 -> WAIT
+SLEEP CHECK thread=42 wake=33 now=31 -> WAIT
+SCHED tick CPU=0 current=1 next=0
+CR3 SWITCH: 0x36155392 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+CPU=2 TID=11 WAKE
+CPU=2 current=7 -> next=0
+CPU=2 IDLE -> TID=11
+TIME=31
+SLEEP thread=11 wake_at=36
+CPU=2 TID=11 SLEEP
+CPU=1 current=0 -> next=7
+CPU=1 TID=10 -> IDLE
+TIME=32
+SLEEP CHECK thread=21 wake=75 now=32 -> WAIT
+SLEEP CHECK thread=42 wake=33 now=32 -> WAIT
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+CPU=2 current=0 -> next=7
+CPU=2 TID=11 -> IDLE
+CPU=3 TID=12 WAKE
+CPU=3 current=7 -> next=0
+CPU=3 IDLE -> TID=12
+TIME=32
+SLEEP thread=12 wake_at=37
+CPU=3 TID=12 SLEEP
+TIME=33
+SLEEP CHECK thread=21 wake=75 now=33 -> WAIT
+SLEEP CHECK thread=42 wake=33 now=33 -> WAKE
+SCHED tick CPU=0 current=1 next=5
+CR3 SWITCH: 0x36155392 -> 0x618496
+ALPHA: 5
+ALPHA exiting!
+EXIT thread=42
+JOIN: waking thread=43
+CPU=3 current=0 -> next=7
+CPU=3 TID=12 -> IDLE
+TIME=34
+SLEEP CHECK thread=21 wake=75 now=34 -> WAIT
+SCHED tick CPU=0 current=5 next=6
+BETA: ALPHA finished!
+EXIT thread=43
+Scheduler: reaped thread=42 slot=5
+TIME=35
+SLEEP CHECK thread=21 wake=75 now=35 -> WAIT
+SCHED tick CPU=0 current=6 next=0
+CR3 SWITCH: 0x618496 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+CPU=1 TID=10 WAKE
+CPU=1 current=7 -> next=0
+CPU=1 IDLE -> TID=10
+TIME=35
+SLEEP thread=10 wake_at=40
+CPU=1 TID=10 SLEEP
+Scheduler: reaped thread=43 slot=6
+TIME=36
+SLEEP CHECK thread=21 wake=75 now=36 -> WAIT
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+CPU=2 TID=11 WAKE
+CPU=2 current=7 -> next=0
+CPU=2 IDLE -> TID=11
+TIME=36
+SLEEP thread=11 wake_at=41
+CPU=2 TID=11 SLEEP
+CPU=1 current=0 -> next=7
+CPU=1 TID=10 -> IDLE
+TIME=37
+SLEEP CHECK thread=21 wake=75 now=37 -> WAIT
+SCHED tick CPU=0 current=1 next=0
+CR3 SWITCH: 0x36155392 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+CPU=2 current=0 -> next=7
+CPU=2 TID=11 -> IDLE
+CPU=3 TID=12 WAKE
+CPU=3 current=7 -> next=0
+CPU=3 IDLE -> TID=12
+TIME=37
+SLEEP thread=12 wake_at=42
+CPU=3 TID=12 SLEEP
+TIME=38
+SLEEP CHECK thread=21 wake=75 now=38 -> WAIT
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+CPU=3 current=0 -> next=7
+CPU=3 TID=12 -> IDLE
+TIME=39
+SLEEP CHECK thread=21 wake=75 now=39 -> WAIT
+SCHED tick CPU=0 current=1 next=0
+CR3 SWITCH: 0x36155392 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+TIME=40
+SLEEP CHECK thread=21 wake=75 now=40 -> WAIT
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+CPU=1 TID=10 WAKE
+CPU=1 current=7 -> next=0
+CPU=1 IDLE -> TID=10
+TIME=40
+SLEEP thread=10 wake_at=45
+CPU=1 TID=10 SLEEP
+TIME=41
+SLEEP CHECK thread=21 wake=75 now=41 -> WAIT
+SCHED tick CPU=0 current=1 next=0
+CR3 SWITCH: 0x36155392 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+CPU=2 TID=11 WAKE
+CPU=2 current=7 -> next=0
+CPU=2 IDLE -> TID=11
+TIME=41
+SLEEP thread=11 wake_at=46
+CPU=2 TID=11 SLEEP
+CPU=1 current=0 -> next=7
+CPU=1 TID=10 -> IDLE
+TIME=42
+SLEEP CHECK thread=21 wake=75 now=42 -> WAIT
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+CPU=2 current=0 -> next=7
+CPU=2 TID=11 -> IDLE
+CPU=3 TID=12 WAKE
+CPU=3 current=7 -> next=0
+CPU=3 IDLE -> TID=12
+TIME=42
+SLEEP thread=12 wake_at=47
+CPU=3 TID=12 SLEEP
+TIME=43
+SLEEP CHECK thread=21 wake=75 now=43 -> WAIT
+SCHED tick CPU=0 current=1 next=0
+CR3 SWITCH: 0x36155392 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+CPU=3 current=0 -> next=7
+CPU=3 TID=12 -> IDLE
+TIME=44
+SLEEP CHECK thread=21 wake=75 now=44 -> WAIT
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+TIME=45
+SLEEP CHECK thread=21 wake=75 now=45 -> WAIT
+SCHED tick CPU=0 current=1 next=0
+CR3 SWITCH: 0x36155392 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+CPU=1 TID=10 WAKE
+CPU=1 current=7 -> next=0
+CPU=1 IDLE -> TID=10
+AP BETA CPU=1 counter=10
+TIME=45
+SLEEP thread=10 wake_at=50
+CPU=1 TID=10 SLEEP
+TIME=46
+SLEEP CHECK thread=21 wake=75 now=46 -> WAIT
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+CPU=2 TID=11 WAKE
+CPU=2 current=7 -> next=0
+CPU=2 IDLE -> TID=11
+AP SILF CPU=2 counter=10
+TIME=46
+SLEEP thread=11 wake_at=51
+CPU=2 TID=11 SLEEP
+CPU=1 current=0 -> next=7
+CPU=1 TID=10 -> IDLE
+TIME=47
+SLEEP CHECK thread=21 wake=75 now=47 -> WAIT
+SCHED tick CPU=0 current=1 next=0
+CR3 SWITCH: 0x36155392 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+CPU=2 current=0 -> next=7
+CPU=2 TID=11 -> IDLE
+CPU=3 TID=12 WAKE
+CPU=3 current=7 -> next=0
+CPU=3 IDLE -> TID=12
+AP GAMMA CPU=3 counter=10
+TIME=47
+SLEEP thread=12 wake_at=52
+CPU=3 TID=12 SLEEP
+TIME=48
+SLEEP CHECK thread=21 wake=75 now=48 -> WAIT
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+CPU=3 current=0 -> next=7
+CPU=3 TID=12 -> IDLE
+TIME=49
+SLEEP CHECK thread=21 wake=75 now=49 -> WAIT
+SCHED tick CPU=0 current=1 next=0
+CR3 SWITCH: 0x36155392 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+TIME=50
+SLEEP CHECK thread=21 wake=75 now=50 -> WAIT
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+CPU=1 TID=10 WAKE
+CPU=1 current=7 -> next=0
+CPU=1 IDLE -> TID=10
+TIME=50
+SLEEP thread=10 wake_at=55
+CPU=1 TID=10 SLEEP
+TIME=51
+SLEEP CHECK thread=21 wake=75 now=51 -> WAIT
+SCHED tick CPU=0 current=1 next=0
+CR3 SWITCH: 0x36155392 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+CPU=2 TID=11 WAKE
+CPU=2 current=7 -> next=0
+CPU=2 IDLE -> TID=11
+TIME=51
+SLEEP thread=11 wake_at=56
+CPU=2 TID=11 SLEEP
+CPU=1 current=0 -> next=7
+CPU=1 TID=10 -> IDLE
+TIME=52
+SLEEP CHECK thread=21 wake=75 now=52 -> WAIT
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+CPU=2 current=0 -> next=7
+CPU=2 TID=11 -> IDLE
+CPU=3 TID=12 WAKE
+CPU=3 current=7 -> next=0
+CPU=3 IDLE -> TID=12
+TIME=52
+SLEEP thread=12 wake_at=57
+CPU=3 TID=12 SLEEP
+TIME=53
+SLEEP CHECK thread=21 wake=75 now=53 -> WAIT
+SCHED tick CPU=0 current=1 next=0
+CR3 SWITCH: 0x36155392 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+CPU=3 current=0 -> next=7
+CPU=3 TID=12 -> IDLE
+TIME=54
+SLEEP CHECK thread=21 wake=75 now=54 -> WAIT
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+TIME=55
+SLEEP CHECK thread=21 wake=75 now=55 -> WAIT
+SCHED tick CPU=0 current=1 next=0
+CR3 SWITCH: 0x36155392 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+CPU=1 TID=10 WAKE
+CPU=1 current=7 -> next=0
+CPU=1 IDLE -> TID=10
+TIME=55
+SLEEP thread=10 wake_at=60
+CPU=1 TID=10 SLEEP
+TIME=56
+SLEEP CHECK thread=21 wake=75 now=56 -> WAIT
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+CPU=2 TID=11 WAKE
+CPU=2 current=7 -> next=0
+CPU=2 IDLE -> TID=11
+TIME=56
+SLEEP thread=11 wake_at=61
+CPU=2 TID=11 SLEEP
+CPU=1 current=0 -> next=7
+CPU=1 TID=10 -> IDLE
+TIME=57
+SLEEP CHECK thread=21 wake=75 now=57 -> WAIT
+SCHED tick CPU=0 current=1 next=0
+CR3 SWITCH: 0x36155392 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+CPU=2 current=0 -> next=7
+CPU=2 TID=11 -> IDLE
+CPU=3 TID=12 WAKE
+CPU=3 current=7 -> next=0
+CPU=3 IDLE -> TID=12
+TIME=57
+SLEEP thread=12 wake_at=62
+CPU=3 TID=12 SLEEP
+TIME=58
+SLEEP CHECK thread=21 wake=75 now=58 -> WAIT
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+CPU=3 current=0 -> next=7
+CPU=3 TID=12 -> IDLE
+TIME=59
+SLEEP CHECK thread=21 wake=75 now=59 -> WAIT
+SCHED tick CPU=0 current=1 next=0
+CR3 SWITCH: 0x36155392 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+TIME=60
+SLEEP CHECK thread=21 wake=75 now=60 -> WAIT
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+CPU=1 TID=10 WAKE
+CPU=1 current=7 -> next=0
+CPU=1 IDLE -> TID=10
+TIME=60
+SLEEP thread=10 wake_at=65
+CPU=1 TID=10 SLEEP
+TIME=61
+SLEEP CHECK thread=21 wake=75 now=61 -> WAIT
+SCHED tick CPU=0 current=1 next=0
+CR3 SWITCH: 0x36155392 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+CPU=2 TID=11 WAKE
+CPU=2 current=7 -> next=0
+CPU=2 IDLE -> TID=11
+TIME=61
+SLEEP thread=11 wake_at=66
+CPU=2 TID=11 SLEEP
+CPU=1 current=0 -> next=7
+CPU=1 TID=10 -> IDLE
+TIME=62
+SLEEP CHECK thread=21 wake=75 now=62 -> WAIT
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+CPU=2 current=0 -> next=7
+CPU=2 TID=11 -> IDLE
+CPU=3 TID=12 WAKE
+CPU=3 current=7 -> next=0
+CPU=3 IDLE -> TID=12
+TIME=62
+SLEEP thread=12 wake_at=67
+CPU=3 TID=12 SLEEP
+TIME=63
+SLEEP CHECK thread=21 wake=75 now=63 -> WAIT
+SCHED tick CPU=0 current=1 next=0
+CR3 SWITCH: 0x36155392 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+CPU=3 current=0 -> next=7
+CPU=3 TID=12 -> IDLE
+TIME=64
+SLEEP CHECK thread=21 wake=75 now=64 -> WAIT
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+TIME=65
+SLEEP CHECK thread=21 wake=75 now=65 -> WAIT
+SCHED tick CPU=0 current=1 next=0
+CR3 SWITCH: 0x36155392 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+CPU=1 TID=10 WAKE
+CPU=1 current=7 -> next=0
+CPU=1 IDLE -> TID=10
+TIME=65
+SLEEP thread=10 wake_at=70
+CPU=1 TID=10 SLEEP
+TIME=66
+SLEEP CHECK thread=21 wake=75 now=66 -> WAIT
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+CPU=2 TID=11 WAKE
+CPU=2 current=7 -> next=0
+CPU=2 IDLE -> TID=11
+TIME=66
+SLEEP thread=11 wake_at=71
+CPU=2 TID=11 SLEEP
+CPU=1 current=0 -> next=7
+CPU=1 TID=10 -> IDLE
+TIME=67
+SLEEP CHECK thread=21 wake=75 now=67 -> WAIT
+SCHED tick CPU=0 current=1 next=0
+CR3 SWITCH: 0x36155392 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+CPU=2 current=0 -> next=7
+CPU=2 TID=11 -> IDLE
+CPU=3 TID=12 WAKE
+CPU=3 current=7 -> next=0
+CPU=3 IDLE -> TID=12
+TIME=67
+SLEEP thread=12 wake_at=72
+CPU=3 TID=12 SLEEP
+TIME=68
+SLEEP CHECK thread=21 wake=75 now=68 -> WAIT
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+CPU=3 current=0 -> next=7
+CPU=3 TID=12 -> IDLE
+TIME=69
+SLEEP CHECK thread=21 wake=75 now=69 -> WAIT
+SCHED tick CPU=0 current=1 next=0
+CR3 SWITCH: 0x36155392 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+TIME=70
+SLEEP CHECK thread=21 wake=75 now=70 -> WAIT
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+CPU=1 TID=10 WAKE
+CPU=1 current=7 -> next=0
+CPU=1 IDLE -> TID=10
+TIME=70
+SLEEP thread=10 wake_at=75
+CPU=1 TID=10 SLEEP
+TIME=71
+SLEEP CHECK thread=21 wake=75 now=71 -> WAIT
+SCHED tick CPU=0 current=1 next=0
+CR3 SWITCH: 0x36155392 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+CPU=2 TID=11 WAKE
+CPU=2 current=7 -> next=0
+CPU=2 IDLE -> TID=11
+TIME=71
+SLEEP thread=11 wake_at=76
+CPU=2 TID=11 SLEEP
+CPU=1 current=0 -> next=7
+CPU=1 TID=10 -> IDLE
+TIME=72
+SLEEP CHECK thread=21 wake=75 now=72 -> WAIT
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+CPU=2 current=0 -> next=7
+CPU=2 TID=11 -> IDLE
+CPU=3 TID=12 WAKE
+CPU=3 current=7 -> next=0
+CPU=3 IDLE -> TID=12
+TIME=72
+SLEEP thread=12 wake_at=77
+CPU=3 TID=12 SLEEP
+TIME=73
+SLEEP CHECK thread=21 wake=75 now=73 -> WAIT
+SCHED tick CPU=0 current=1 next=0
+CR3 SWITCH: 0x36155392 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+CPU=3 current=0 -> next=7
+CPU=3 TID=12 -> IDLE
+TIME=74
+SLEEP CHECK thread=21 wake=75 now=74 -> WAIT
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+TIME=75
+SLEEP CHECK thread=21 wake=75 now=75 -> WAKE
+SCHED tick CPU=0 current=1 next=3
+CR3 SWITCH: 0x36155392 -> 0x618496
+TIME=75
+SLEEP thread=21 wake_at=125
+CPU=0 TID=21 SLEEP
+CPU=1 TID=10 WAKE
+CPU=1 current=7 -> next=0
+CPU=1 IDLE -> TID=10
+TIME=75
+SLEEP thread=10 wake_at=80
+CPU=1 TID=10 SLEEP
+TIME=76
+SLEEP CHECK thread=21 wake=125 now=76 -> WAIT
+SCHED tick CPU=0 current=3 next=0
+CR3 SWITCH: 0x618496 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+CPU=2 TID=11 WAKE
+CPU=2 current=7 -> next=0
+CPU=2 IDLE -> TID=11
+TIME=76
+SLEEP thread=11 wake_at=81
+CPU=2 TID=11 SLEEP
+CPU=1 current=0 -> next=7
+CPU=1 TID=10 -> IDLE
+TIME=77
+SLEEP CHECK thread=21 wake=125 now=77 -> WAIT
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+CPU=2 current=0 -> next=7
+CPU=2 TID=11 -> IDLE
+CPU=3 TID=12 WAKE
+CPU=3 current=7 -> next=0
+CPU=3 IDLE -> TID=12
+TIME=77
+SLEEP thread=12 wake_at=82
+CPU=3 TID=12 SLEEP
+TIME=78
+SLEEP CHECK thread=21 wake=125 now=78 -> WAIT
+SCHED tick CPU=0 current=1 next=0
+CR3 SWITCH: 0x36155392 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+CPU=3 current=0 -> next=7
+CPU=3 TID=12 -> IDLE
+TIME=79
+SLEEP CHECK thread=21 wake=125 now=79 -> WAIT
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+TIME=80
+SLEEP CHECK thread=21 wake=125 now=80 -> WAIT
+SCHED tick CPU=0 current=1 next=0
+CR3 SWITCH: 0x36155392 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+CPU=1 TID=10 WAKE
+CPU=1 current=7 -> next=0
+CPU=1 IDLE -> TID=10
+TIME=80
+SLEEP thread=10 wake_at=85
+CPU=1 TID=10 SLEEP
+TIME=81
+SLEEP CHECK thread=21 wake=125 now=81 -> WAIT
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+CPU=2 TID=11 WAKE
+CPU=2 current=7 -> next=0
+CPU=2 IDLE -> TID=11
+TIME=81
+SLEEP thread=11 wake_at=86
+CPU=2 TID=11 SLEEP
+CPU=1 current=0 -> next=7
+CPU=1 TID=10 -> IDLE
+TIME=82
+SLEEP CHECK thread=21 wake=125 now=82 -> WAIT
+SCHED tick CPU=0 current=1 next=0
+CR3 SWITCH: 0x36155392 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+CPU=2 current=0 -> next=7
+CPU=2 TID=11 -> IDLE
+CPU=3 TID=12 WAKE
+CPU=3 current=7 -> next=0
+CPU=3 IDLE -> TID=12
+TIME=82
+SLEEP thread=12 wake_at=87
+CPU=3 TID=12 SLEEP
+TIME=83
+SLEEP CHECK thread=21 wake=125 now=83 -> WAIT
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+CPU=3 current=0 -> next=7
+CPU=3 TID=12 -> IDLE
+TIME=84
+SLEEP CHECK thread=21 wake=125 now=84 -> WAIT
+SCHED tick CPU=0 current=1 next=0
+CR3 SWITCH: 0x36155392 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+TIME=85
+SLEEP CHECK thread=21 wake=125 now=85 -> WAIT
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+CPU=1 TID=10 WAKE
+CPU=1 current=7 -> next=0
+CPU=1 IDLE -> TID=10
+TIME=85
+SLEEP thread=10 wake_at=90
+CPU=1 TID=10 SLEEP
+TIME=86
+SLEEP CHECK thread=21 wake=125 now=86 -> WAIT
+SCHED tick CPU=0 current=1 next=0
+CR3 SWITCH: 0x36155392 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+CPU=2 TID=11 WAKE
+CPU=2 current=7 -> next=0
+CPU=2 IDLE -> TID=11
+TIME=86
+SLEEP thread=11 wake_at=91
+CPU=2 TID=11 SLEEP
+CPU=1 current=0 -> next=7
+CPU=1 TID=10 -> IDLE
+TIME=87
+SLEEP CHECK thread=21 wake=125 now=87 -> WAIT
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+CPU=2 current=0 -> next=7
+CPU=2 TID=11 -> IDLE
+CPU=3 TID=12 WAKE
+CPU=3 current=7 -> next=0
+CPU=3 IDLE -> TID=12
+TIME=87
+SLEEP thread=12 wake_at=92
+CPU=3 TID=12 SLEEP
+TIME=88
+SLEEP CHECK thread=21 wake=125 now=88 -> WAIT
+SCHED tick CPU=0 current=1 next=0
+CR3 SWITCH: 0x36155392 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+CPU=3 current=0 -> next=7
+CPU=3 TID=12 -> IDLE
+TIME=89
+SLEEP CHECK thread=21 wake=125 now=89 -> WAIT
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+TIME=90
+SLEEP CHECK thread=21 wake=125 now=90 -> WAIT
+SCHED tick CPU=0 current=1 next=0
+CR3 SWITCH: 0x36155392 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+CPU=1 TID=10 WAKE
+CPU=1 current=7 -> next=0
+CPU=1 IDLE -> TID=10
+TIME=90
+SLEEP thread=10 wake_at=95
+CPU=1 TID=10 SLEEP
+TIME=91
+SLEEP CHECK thread=21 wake=125 now=91 -> WAIT
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+CPU=2 TID=11 WAKE
+CPU=2 current=7 -> next=0
+CPU=2 IDLE -> TID=11
+TIME=91
+SLEEP thread=11 wake_at=96
+CPU=2 TID=11 SLEEP
+CPU=1 current=0 -> next=7
+CPU=1 TID=10 -> IDLE
+TIME=92
+SLEEP CHECK thread=21 wake=125 now=92 -> WAIT
+SCHED tick CPU=0 current=1 next=0
+CR3 SWITCH: 0x36155392 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+CPU=2 current=0 -> next=7
+CPU=2 TID=11 -> IDLE
+CPU=3 TID=12 WAKE
+CPU=3 current=7 -> next=0
+CPU=3 IDLE -> TID=12
+TIME=92
+SLEEP thread=12 wake_at=97
+CPU=3 TID=12 SLEEP
+TIME=93
+SLEEP CHECK thread=21 wake=125 now=93 -> WAIT
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+CPU=3 current=0 -> next=7
+CPU=3 TID=12 -> IDLE
+TIME=94
+SLEEP CHECK thread=21 wake=125 now=94 -> WAIT
+SCHED tick CPU=0 current=1 next=0
+CR3 SWITCH: 0x36155392 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+TIME=95
+SLEEP CHECK thread=21 wake=125 now=95 -> WAIT
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+CPU=1 TID=10 WAKE
+CPU=1 current=7 -> next=0
+CPU=1 IDLE -> TID=10
+AP BETA CPU=1 counter=20
+TIME=95
+SLEEP thread=10 wake_at=100
+CPU=1 TID=10 SLEEP
+TIME=96
+SLEEP CHECK thread=21 wake=125 now=96 -> WAIT
+SCHED tick CPU=0 current=1 next=0
+CR3 SWITCH: 0x36155392 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+CPU=2 TID=11 WAKE
+CPU=2 current=7 -> next=0
+CPU=2 IDLE -> TID=11
+AP SILF CPU=2 counter=20
+TIME=96
+SLEEP thread=11 wake_at=101
+CPU=2 TID=11 SLEEP
+CPU=1 current=0 -> next=7
+CPU=1 TID=10 -> IDLE
+TIME=97
+SLEEP CHECK thread=21 wake=125 now=97 -> WAIT
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+CPU=2 current=0 -> next=7
+CPU=2 TID=11 -> IDLE
+CPU=3 TID=12 WAKE
+CPU=3 current=7 -> next=0
+CPU=3 IDLE -> TID=12
+AP GAMMA CPU=3 counter=20
+TIME=97
+SLEEP thread=12 wake_at=102
+CPU=3 TID=12 SLEEP
+TIME=98
+SLEEP CHECK thread=21 wake=125 now=98 -> WAIT
+SCHED tick CPU=0 current=1 next=0
+CR3 SWITCH: 0x36155392 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+CPU=3 current=0 -> next=7
+CPU=3 TID=12 -> IDLE
+TIME=99
+SLEEP CHECK thread=21 wake=125 now=99 -> WAIT
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+TIME=100
+SLEEP CHECK thread=21 wake=125 now=100 -> WAIT
+SCHED tick CPU=0 current=1 next=0
+CR3 SWITCH: 0x36155392 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+AP Scheduler tick: CPU=1 ticks=100
+CPU=1 TID=10 WAKE
+CPU=1 current=7 -> next=0
+CPU=1 IDLE -> TID=10
+TIME=100
+SLEEP thread=10 wake_at=105
+CPU=1 TID=10 SLEEP
+TIME=101
+SLEEP CHECK thread=21 wake=125 now=101 -> WAIT
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+AP Scheduler tick: CPU=2 ticks=100
+CPU=2 TID=11 WAKE
+CPU=2 current=7 -> next=0
+CPU=2 IDLE -> TID=11
+TIME=101
+SLEEP thread=11 wake_at=106
+CPU=2 TID=11 SLEEP
+AP Scheduler tick: CPU=3 ticks=100
+CPU=1 current=0 -> next=7
+CPU=1 TID=10 -> IDLE
+TIME=102
+SLEEP CHECK thread=21 wake=125 now=102 -> WAIT
+SCHED tick CPU=0 current=1 next=0
+CR3 SWITCH: 0x36155392 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+CPU=2 current=0 -> next=7
+CPU=2 TID=11 -> IDLE
+CPU=3 TID=12 WAKE
+CPU=3 current=7 -> next=0
+CPU=3 IDLE -> TID=12
+TIME=102
+SLEEP thread=12 wake_at=107
+CPU=3 TID=12 SLEEP
+TIME=103
+SLEEP CHECK thread=21 wake=125 now=103 -> WAIT
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+CPU=3 current=0 -> next=7
+CPU=3 TID=12 -> IDLE
+TIME=104
+SLEEP CHECK thread=21 wake=125 now=104 -> WAIT
+SCHED tick CPU=0 current=1 next=0
+CR3 SWITCH: 0x36155392 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+TIME=105
+SLEEP CHECK thread=21 wake=125 now=105 -> WAIT
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+CPU=1 TID=10 WAKE
+CPU=1 current=7 -> next=0
+CPU=1 IDLE -> TID=10
+TIME=105
+SLEEP thread=10 wake_at=110
+CPU=1 TID=10 SLEEP
+TIME=106
+SLEEP CHECK thread=21 wake=125 now=106 -> WAIT
+SCHED tick CPU=0 current=1 next=0
+CR3 SWITCH: 0x36155392 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+CPU=2 TID=11 WAKE
+CPU=2 current=7 -> next=0
+CPU=2 IDLE -> TID=11
+TIME=106
+SLEEP thread=11 wake_at=111
+CPU=2 TID=11 SLEEP
+CPU=1 current=0 -> next=7
+CPU=1 TID=10 -> IDLE
+TIME=107
+SLEEP CHECK thread=21 wake=125 now=107 -> WAIT
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+CPU=2 current=0 -> next=7
+CPU=2 TID=11 -> IDLE
+CPU=3 TID=12 WAKE
+CPU=3 current=7 -> next=0
+CPU=3 IDLE -> TID=12
+TIME=107
+SLEEP thread=12 wake_at=112
+CPU=3 TID=12 SLEEP
+TIME=108
+SLEEP CHECK thread=21 wake=125 now=108 -> WAIT
+SCHED tick CPU=0 current=1 next=0
+CR3 SWITCH: 0x36155392 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+CPU=3 current=0 -> next=7
+CPU=3 TID=12 -> IDLE
+TIME=109
+SLEEP CHECK thread=21 wake=125 now=109 -> WAIT
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+TIME=110
+SLEEP CHECK thread=21 wake=125 now=110 -> WAIT
+SCHED tick CPU=0 current=1 next=0
+CR3 SWITCH: 0x36155392 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+CPU=1 TID=10 WAKE
+CPU=1 current=7 -> next=0
+CPU=1 IDLE -> TID=10
+TIME=110
+SLEEP thread=10 wake_at=115
+CPU=1 TID=10 SLEEP
+TIME=111
+SLEEP CHECK thread=21 wake=125 now=111 -> WAIT
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+CPU=2 TID=11 WAKE
+CPU=2 current=7 -> next=0
+CPU=2 IDLE -> TID=11
+TIME=111
+SLEEP thread=11 wake_at=116
+CPU=2 TID=11 SLEEP
+CPU=1 current=0 -> next=7
+CPU=1 TID=10 -> IDLE
+TIME=112
+SLEEP CHECK thread=21 wake=125 now=112 -> WAIT
+SCHED tick CPU=0 current=1 next=0
+CR3 SWITCH: 0x36155392 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+CPU=2 current=0 -> next=7
+CPU=2 TID=11 -> IDLE
+CPU=3 TID=12 WAKE
+CPU=3 current=7 -> next=0
+CPU=3 IDLE -> TID=12
+TIME=112
+SLEEP thread=12 wake_at=117
+CPU=3 TID=12 SLEEP
+TIME=113
+SLEEP CHECK thread=21 wake=125 now=113 -> WAIT
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+CPU=3 current=0 -> next=7
+CPU=3 TID=12 -> IDLE
+TIME=114
+SLEEP CHECK thread=21 wake=125 now=114 -> WAIT
+SCHED tick CPU=0 current=1 next=0
+CR3 SWITCH: 0x36155392 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+TIME=115
+SLEEP CHECK thread=21 wake=125 now=115 -> WAIT
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+CPU=1 TID=10 WAKE
+CPU=1 current=7 -> next=0
+CPU=1 IDLE -> TID=10
+TIME=115
+SLEEP thread=10 wake_at=120
+CPU=1 TID=10 SLEEP
+TIME=116
+SLEEP CHECK thread=21 wake=125 now=116 -> WAIT
+SCHED tick CPU=0 current=1 next=0
+CR3 SWITCH: 0x36155392 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+CPU=2 TID=11 WAKE
+CPU=2 current=7 -> next=0
+CPU=2 IDLE -> TID=11
+TIME=116
+SLEEP thread=11 wake_at=121
+CPU=2 TID=11 SLEEP
+CPU=1 current=0 -> next=7
+CPU=1 TID=10 -> IDLE
+TIME=117
+SLEEP CHECK thread=21 wake=125 now=117 -> WAIT
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+CPU=2 current=0 -> next=7
+CPU=2 TID=11 -> IDLE
+CPU=3 TID=12 WAKE
+CPU=3 current=7 -> next=0
+CPU=3 IDLE -> TID=12
+TIME=117
+SLEEP thread=12 wake_at=122
+CPU=3 TID=12 SLEEP
+TIME=118
+SLEEP CHECK thread=21 wake=125 now=118 -> WAIT
+SCHED tick CPU=0 current=1 next=0
+CR3 SWITCH: 0x36155392 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+CPU=3 current=0 -> next=7
+CPU=3 TID=12 -> IDLE
+TIME=119
+SLEEP CHECK thread=21 wake=125 now=119 -> WAIT
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+TIME=120
+SLEEP CHECK thread=21 wake=125 now=120 -> WAIT
+SCHED tick CPU=0 current=1 next=0
+CR3 SWITCH: 0x36155392 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+CPU=1 TID=10 WAKE
+CPU=1 current=7 -> next=0
+CPU=1 IDLE -> TID=10
+TIME=120
+SLEEP thread=10 wake_at=125
+CPU=1 TID=10 SLEEP
+TIME=121
+SLEEP CHECK thread=21 wake=125 now=121 -> WAIT
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+CPU=2 TID=11 WAKE
+CPU=2 current=7 -> next=0
+CPU=2 IDLE -> TID=11
+TIME=121
+SLEEP thread=11 wake_at=126
+CPU=2 TID=11 SLEEP
+CPU=1 current=0 -> next=7
+CPU=1 TID=10 -> IDLE
+TIME=122
+SLEEP CHECK thread=21 wake=125 now=122 -> WAIT
+SCHED tick CPU=0 current=1 next=0
+CR3 SWITCH: 0x36155392 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+CPU=2 current=0 -> next=7
+CPU=2 TID=11 -> IDLE
+CPU=3 TID=12 WAKE
+CPU=3 current=7 -> next=0
+CPU=3 IDLE -> TID=12
+TIME=122
+SLEEP thread=12 wake_at=127
+CPU=3 TID=12 SLEEP
+TIME=123
+SLEEP CHECK thread=21 wake=125 now=123 -> WAIT
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+CPU=3 current=0 -> next=7
+CPU=3 TID=12 -> IDLE
+TIME=124
+SLEEP CHECK thread=21 wake=125 now=124 -> WAIT
+SCHED tick CPU=0 current=1 next=0
+CR3 SWITCH: 0x36155392 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+TIME=125
+SLEEP CHECK thread=21 wake=125 now=125 -> WAKE
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+CPU=1 TID=10 WAKE
+CPU=1 current=7 -> next=0
+CPU=1 IDLE -> TID=10
+TIME=125
+SLEEP thread=10 wake_at=130
+CPU=1 TID=10 SLEEP
+TIME=126
+SCHED tick CPU=0 current=1 next=3
+CR3 SWITCH: 0x36155392 -> 0x618496
+TIME=126
+SLEEP thread=21 wake_at=176
+CPU=0 TID=21 SLEEP
+CPU=2 TID=11 WAKE
+CPU=2 current=7 -> next=0
+CPU=2 IDLE -> TID=11
+TIME=126
+SLEEP thread=11 wake_at=131
+CPU=2 TID=11 SLEEP
+CPU=1 current=0 -> next=7
+CPU=1 TID=10 -> IDLE
+TIME=127
+SLEEP CHECK thread=21 wake=176 now=127 -> WAIT
+SCHED tick CPU=0 current=3 next=0
+CR3 SWITCH: 0x618496 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+CPU=2 current=0 -> next=7
+CPU=2 TID=11 -> IDLE
+CPU=3 TID=12 WAKE
+CPU=3 current=7 -> next=0
+CPU=3 IDLE -> TID=12
+TIME=127
+SLEEP thread=12 wake_at=132
+CPU=3 TID=12 SLEEP
+TIME=128
+SLEEP CHECK thread=21 wake=176 now=128 -> WAIT
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+CPU=3 current=0 -> next=7
+CPU=3 TID=12 -> IDLE
+TIME=129
+SLEEP CHECK thread=21 wake=176 now=129 -> WAIT
+SCHED tick CPU=0 current=1 next=0
+CR3 SWITCH: 0x36155392 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+TIME=130
+SLEEP CHECK thread=21 wake=176 now=130 -> WAIT
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+CPU=1 TID=10 WAKE
+CPU=1 current=7 -> next=0
+CPU=1 IDLE -> TID=10
+TIME=130
+SLEEP thread=10 wake_at=135
+CPU=1 TID=10 SLEEP
+TIME=131
+SLEEP CHECK thread=21 wake=176 now=131 -> WAIT
+SCHED tick CPU=0 current=1 next=0
+CR3 SWITCH: 0x36155392 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+CPU=2 TID=11 WAKE
+CPU=2 current=7 -> next=0
+CPU=2 IDLE -> TID=11
+TIME=131
+SLEEP thread=11 wake_at=136
+CPU=2 TID=11 SLEEP
+CPU=1 current=0 -> next=7
+CPU=1 TID=10 -> IDLE
+TIME=132
+SLEEP CHECK thread=21 wake=176 now=132 -> WAIT
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+CPU=2 current=0 -> next=7
+CPU=2 TID=11 -> IDLE
+CPU=3 TID=12 WAKE
+CPU=3 current=7 -> next=0
+CPU=3 IDLE -> TID=12
+TIME=132
+SLEEP thread=12 wake_at=137
+CPU=3 TID=12 SLEEP
+TIME=133
+SLEEP CHECK thread=21 wake=176 now=133 -> WAIT
+SCHED tick CPU=0 current=1 next=0
+CR3 SWITCH: 0x36155392 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+CPU=3 current=0 -> next=7
+CPU=3 TID=12 -> IDLE
+TIME=134
+SLEEP CHECK thread=21 wake=176 now=134 -> WAIT
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+TIME=135
+SLEEP CHECK thread=21 wake=176 now=135 -> WAIT
+SCHED tick CPU=0 current=1 next=0
+CR3 SWITCH: 0x36155392 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+CPU=1 TID=10 WAKE
+CPU=1 current=7 -> next=0
+CPU=1 IDLE -> TID=10
+TIME=135
+SLEEP thread=10 wake_at=140
+CPU=1 TID=10 SLEEP
+TIME=136
+SLEEP CHECK thread=21 wake=176 now=136 -> WAIT
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+CPU=2 TID=11 WAKE
+CPU=2 current=7 -> next=0
+CPU=2 IDLE -> TID=11
+TIME=136
+SLEEP thread=11 wake_at=141
+CPU=2 TID=11 SLEEP
+CPU=1 current=0 -> next=7
+CPU=1 TID=10 -> IDLE
+TIME=137
+SLEEP CHECK thread=21 wake=176 now=137 -> WAIT
+SCHED tick CPU=0 current=1 next=0
+CR3 SWITCH: 0x36155392 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+CPU=2 current=0 -> next=7
+CPU=2 TID=11 -> IDLE
+CPU=3 TID=12 WAKE
+CPU=3 current=7 -> next=0
+CPU=3 IDLE -> TID=12
+TIME=137
+SLEEP thread=12 wake_at=142
+CPU=3 TID=12 SLEEP
+TIME=138
+SLEEP CHECK thread=21 wake=176 now=138 -> WAIT
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+CPU=3 current=0 -> next=7
+CPU=3 TID=12 -> IDLE
+TIME=139
+SLEEP CHECK thread=21 wake=176 now=139 -> WAIT
+SCHED tick CPU=0 current=1 next=0
+CR3 SWITCH: 0x36155392 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+TIME=140
+SLEEP CHECK thread=21 wake=176 now=140 -> WAIT
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+CPU=1 TID=10 WAKE
+CPU=1 current=7 -> next=0
+CPU=1 IDLE -> TID=10
+TIME=140
+SLEEP thread=10 wake_at=145
+CPU=1 TID=10 SLEEP
+TIME=141
+SLEEP CHECK thread=21 wake=176 now=141 -> WAIT
+SCHED tick CPU=0 current=1 next=0
+CR3 SWITCH: 0x36155392 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+CPU=2 TID=11 WAKE
+CPU=2 current=7 -> next=0
+CPU=2 IDLE -> TID=11
+TIME=141
+SLEEP thread=11 wake_at=146
+CPU=2 TID=11 SLEEP
+CPU=1 current=0 -> next=7
+CPU=1 TID=10 -> IDLE
+TIME=142
+SLEEP CHECK thread=21 wake=176 now=142 -> WAIT
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+CPU=2 current=0 -> next=7
+CPU=2 TID=11 -> IDLE
+CPU=3 TID=12 WAKE
+CPU=3 current=7 -> next=0
+CPU=3 IDLE -> TID=12
+TIME=142
+SLEEP thread=12 wake_at=147
+CPU=3 TID=12 SLEEP
+TIME=143
+SLEEP CHECK thread=21 wake=176 now=143 -> WAIT
+SCHED tick CPU=0 current=1 next=0
+CR3 SWITCH: 0x36155392 -> 0x36106240
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF90027300
+CPU=3 current=0 -> next=7
+CPU=3 TID=12 -> IDLE
+TIME=144
+SLEEP CHECK thread=21 wake=176 now=144 -> WAIT
+SCHED tick CPU=0 current=0 next=1
+CR3 SWITCH: 0x36106240 -> 0x36155392
+TSS.RSP0 configured: CPU=0 RSP0=0xFFFFFFFF9001F5E0
+qemu: terminating on signal 15 from pid 0 (timeout)

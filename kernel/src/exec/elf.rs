@@ -1,7 +1,5 @@
 use crate::{
-    elf::loader::{ElfError, ElfLoader},
-    memory::{physical::FrameAllocator, user_stack::UserStack},
-    task::{
+    elf::loader::{ElfError, ElfLoader}, memory::{address_space::AddressSpace, physical::FrameAllocator, user_stack::UserStack}, task::{
         process::{ProcessID, ProcessManager},
         thread::ThreadID,
     },
@@ -11,9 +9,7 @@ pub struct ExecResult {
     pub process_id: ProcessID,
     pub thread_id: ThreadID,
     pub entry: u64,
-    /// Initially stack.top -16, now points to argc (initial RSP)
     pub user_stack_top: u64,
-    /// Alias for clarity: initial RSP pointing to argc
     pub user_stack_pointer: u64,
 }
 
@@ -31,7 +27,6 @@ pub enum ExecError {
 pub struct ElfExecutor;
 
 impl ElfExecutor {
-    /// Legacy exec without arguments (argc=0)
     pub fn exec(
         data: &[u8],
         process_manager: &mut ProcessManager,
@@ -40,7 +35,6 @@ impl ElfExecutor {
         Self::exec_with_argv(data, &[], process_manager, frame_allocator)
     }
 
-    /// Exec with argv. Builds user stack argc/argv and creates thread with RSP = argc.
     pub fn exec_with_argv(
         data: &[u8],
         argv: &[&str],
@@ -61,7 +55,7 @@ impl ElfExecutor {
         crate::drivers::serial::println("EXEC: creating user process");
 
         let pid = process_manager
-            .create_user(frame_allocator)
+            .create_user(frame_allocator, None)
             .ok_or(ExecError::ProcessCreationFailed)?;
 
         crate::drivers::serial::print("EXEC: PID=");
@@ -149,5 +143,79 @@ impl ElfExecutor {
             user_stack_top: user_rsp,
             user_stack_pointer: user_rsp,
         })
+    }
+
+    pub fn replace_current_process(
+        data: &[u8],
+        argv: &[&str],
+        process_manager: &mut ProcessManager,
+        frame_allocator: &mut FrameAllocator,
+        pid: ProcessID,
+        _cpu_id: usize,
+    ) -> Result<(u64, u64, Option<AddressSpace>), ExecError> {
+        crate::drivers::serial::println("EXEC: preparing replacement image");
+    
+        let mut new_address_space =
+            AddressSpace::new_user(frame_allocator)
+                .ok_or(ExecError::ProcessCreationFailed)?;
+    
+        let loaded = match ElfLoader::load(
+            data,
+            &mut new_address_space,
+            frame_allocator,
+        ) {
+            Ok(v) => v,
+            Err(e) => {
+                new_address_space.destroy(frame_allocator);
+                return Err(ExecError::Elf(e));
+            }
+        };
+    
+        crate::drivers::serial::print("EXEC: replacement entry=0x");
+        crate::drivers::serial::print_u64(loaded.entry);
+        crate::drivers::serial::println("");
+    
+        let stack = match UserStack::map(
+            &mut new_address_space,
+            frame_allocator,
+        ) {
+            Some(stack) => stack,
+            None => {
+                new_address_space.destroy(frame_allocator);
+                return Err(ExecError::UserStackCreationFailed);
+            }
+        };
+    
+        let user_rsp = match stack.setup_argv(
+            &mut new_address_space,
+            argv,
+        ) {
+            Some(rsp) => rsp,
+            None => {
+                new_address_space.destroy(frame_allocator);
+                return Err(ExecError::StackSetupFailed);
+            }
+        };
+    
+        crate::drivers::serial::print("EXEC: replacement RSP=0x");
+        crate::drivers::serial::print_u64(user_rsp);
+        crate::drivers::serial::println("");
+    
+        let process = match process_manager.get_mut(pid) {
+            Some(process) => process,
+            None => {
+                new_address_space.destroy(frame_allocator);
+                return Err(ExecError::ProcessNotFound);
+            }
+        };
+    
+        let old_address_space = process.replace_address_space(new_address_space);
+      
+    
+        crate::drivers::serial::print("EXEC: image replaced PID=");
+        crate::drivers::serial::print_u64(pid);
+        crate::drivers::serial::println("");
+    
+        Ok((loaded.entry, user_rsp, old_address_space))
     }
 }

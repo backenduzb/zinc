@@ -317,7 +317,7 @@ pub fn process_address_space_test() {
     let mut allocator = FrameAllocator::new();
     let mut manager = ProcessManager::new();
 
-    let pid = match manager.create_user(&mut allocator) {
+    let pid = match manager.create_user(&mut allocator, None) {
         Some(pid) => pid,
         None => {
             crate::drivers::serial::println("PROCESS TEST: create_user FAILED");
@@ -505,7 +505,7 @@ pub fn user_process_cr3_test() {
     let mut allocator = crate::memory::physical::FrameAllocator::new();
     let mut manager = ProcessManager::new();
 
-    let pid = match manager.create_user(&mut allocator) {
+    let pid = match manager.create_user(&mut allocator, None) {
         Some(pid) => pid,
         None => {
             crate::drivers::serial::println("CR3 TEST: create_user FAILED");

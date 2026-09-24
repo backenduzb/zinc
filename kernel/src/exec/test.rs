@@ -146,7 +146,7 @@ pub fn test_loader() {
     let mut local_sched = crate::task::scheduler::Scheduler::new();
     let argv: &[&str] = &["zinc", "hello"];
 
-    let pid = match local_pm.create_user(&mut allocator) {
+    let pid = match local_pm.create_user(&mut allocator, None) {
         Some(p) => p,
         None => {
             crate::drivers::serial::println("EXEC TEST: create_user FAILED");
@@ -639,7 +639,7 @@ pub fn test_process_reap() {
     let elf = build_test_elf(&payload);
     let argv: &[&str] = &["zinc", "hello"];
 
-    let pid = match local_pm.create_user(&mut allocator) {
+    let pid = match local_pm.create_user(&mut allocator, None) {
         Some(p) => p,
         None => {
             crate::drivers::serial::println("REAP TEST: create_user FAILED");
@@ -797,7 +797,7 @@ pub fn test_process_reap() {
     }
     crate::drivers::serial::println("FRAMES returned");
 
-    let pid2 = match local_pm.create_user(&mut allocator) {
+    let pid2 = match local_pm.create_user(&mut allocator, None) {
         Some(p) => p,
         None => {
             crate::drivers::serial::println("REAP TEST: second create_user FAILED (slot leak?)");

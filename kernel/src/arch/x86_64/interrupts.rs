@@ -156,11 +156,6 @@ pub extern "C" fn timer_handler(
     (frame as u64, 0)
 }
 
-/// LAPIC timer entry. Detects Ring 3 -> Ring 0 transitions (interrupted
-/// CS.RPL == 3, which happens on the first timer tick after a fresh
-/// `iretq` into user mode) and logs the privilege-crossing context:
-/// interrupted RIP/CS, current CR3 (must be the user PML4) and the
-/// TSS.RSP0 the CPU used for the stack switch.
 fn log_user_kernel_transition(frame: *mut crate::arch::x86_64::context::InterruptFrame) {
     if frame.is_null() {
         return;
@@ -172,8 +167,6 @@ fn log_user_kernel_transition(frame: *mut crate::arch::x86_64::context::Interrup
         return;
     }
 
-    // Rate-limit: the periodic LAPIC timer preempts Ring 3 constantly;
-    // full context is logged for the first two transitions only.
     static TRANSITIONS: AtomicU64 = AtomicU64::new(0);
     let n = TRANSITIONS.fetch_add(1, Ordering::Relaxed);
 

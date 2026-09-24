@@ -50,6 +50,7 @@ pub struct Thread {
     process_id: ProcessID,
     user_rip: u64,
     user_rsp: u64,
+    waiting_for_process: Option<ProcessID>,
 }
 
 impl Thread {
@@ -79,6 +80,7 @@ impl Thread {
             process_id,
             user_rip: 0,
             user_rsp: 0,
+            waiting_for_process: None,
         };
 
         thread.setup_stack(entry);
@@ -113,6 +115,7 @@ impl Thread {
             process_id,
             user_rip,
             user_rsp,
+            waiting_for_process: None,
         };
 
         thread.setup_user_stack(user_rip, user_rsp);
@@ -192,6 +195,14 @@ impl Thread {
         self.interrupt_rsp = rsp as u64;
     }
 
+    pub fn set_waiting_for_process(&mut self, pid: Option<ProcessID>) {
+        self.waiting_for_process = pid;
+    }
+
+    pub fn waiting_for_process(&self) -> Option<ProcessID> {
+        self.waiting_for_process
+    }
+
     fn setup_user_stack(&mut self, user_rip: u64, user_rsp: u64) {
         let stack_top = (self.stack.data.as_ptr() as usize + KERNEL_STACK_SIZE) & !0xF;
 
@@ -227,6 +238,14 @@ impl Thread {
         }
 
         self.interrupt_rsp = frame_addr as u64;
+    }
+
+    pub fn replace_user_image(&mut self, user_rip: u64, user_rsp: u64) {
+        self.kind = ThreadKind::User;
+        self.entry = user_rip;
+        self.user_rip = user_rip;
+        self.user_rsp = user_rsp;
+        self.setup_user_stack(user_rip, user_rsp);
     }
 
     pub fn kind(&self) -> ThreadKind {

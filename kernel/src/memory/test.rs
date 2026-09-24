@@ -229,9 +229,9 @@ fn wait_for_vfs_complete(flag: &AtomicBool, name: &str) {
     crate::drivers::serial::print("VFS EXEC WAIT: ");
     crate::drivers::serial::println(name);
 
-    const INNER_SPINS: u64 = 4096;
-    const HEARTBEAT_OUTER: u64 = 65536;
-    const TIMEOUT_OUTER: u64 = 600_000;
+    const INNER_SPINS: u64 = 2048;
+    const HEARTBEAT_OUTER: u64 = 20000;
+    const TIMEOUT_OUTER: u64 = 120_000;
 
     let mut outer = 0u64;
     let done = loop {
@@ -525,30 +525,31 @@ extern "C" fn after_address_space_switch() -> ! {
     }
 
     if !crate::exec::vfs::test_open_test_exec() {
-        crate::drivers::serial::println(
-            "VFS EXEC OPEN TEST: FAILED"
-        );
+        crate::drivers::serial::println("VFS EXEC OPEN TEST: FAILED");
     } else {
         wait_for_vfs_complete(&crate::exec::vfs::OPEN_TEST_COMPLETE, "open_test");
     }
 
     if !crate::exec::vfs::test_read_test_exec() {
-        crate::drivers::serial::println(
-            "VFS EXEC READ TEST: FAILED"
-        );
+        crate::drivers::serial::println("VFS EXEC READ TEST: FAILED");
     } else {
         wait_for_vfs_complete(&crate::exec::vfs::READ_TEST_COMPLETE, "read_test");
     }
 
     if !crate::exec::vfs::test_close_test_exec() {
-        crate::drivers::serial::println(
-            "VFS EXEC CLOSE TEST: FAILED"
-        );
+        crate::drivers::serial::println("VFS EXEC CLOSE TEST: FAILED");
     } else {
         wait_for_vfs_complete(&crate::exec::vfs::CLOSE_TEST_COMPLETE, "close_test");
     }
-    
+
+    if !crate::exec::vfs::test_execve_exec() {
+        crate::drivers::serial::println("VFS EXEC EXECVE TEST: FAILED");
+    } else {
+        wait_for_vfs_complete(&crate::exec::vfs::EXECVE_TEST_COMPLETE, "execve_test");
+    }
+
     crate::task::ring3::prepare_ring3_user_thread();
+    crate::task::ring3::prepare_wait_blocking_test();
 
     crate::task::test::scheduler_test();
 }
