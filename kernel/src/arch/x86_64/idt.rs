@@ -67,6 +67,8 @@ pub fn init() {
             fn timer_interrupt_stub();
             fn lapic_timer_interrupt_stub();
 
+            fn keyboard_interrupt_stub();
+            
             fn ud_fault_stub();
             fn gp_fault_stub();
             fn page_fault_stub();
@@ -86,6 +88,8 @@ pub fn init() {
 
         IDT[32] = IdtEntry::new(timer_interrupt_stub as *const () as usize);
 
+        IDT[33] = IdtEntry::new(keyboard_interrupt_stub as *const () as usize);
+        
         IDT[48] = IdtEntry::new(lapic_timer_interrupt_stub as *const () as usize);
 
         IDT[0x80] = IdtEntry::new_user_callable(syscall_stub as *const () as usize);

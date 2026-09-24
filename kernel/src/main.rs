@@ -13,6 +13,7 @@ mod exec;
 mod elf;
 mod syscall;
 mod filesystem;
+mod tty;
 
 extern crate alloc;
 
@@ -42,6 +43,8 @@ pub extern "C" fn kmain() -> ! {
     time::init();
     memory::init();
     drivers::pci::init();
+    drivers::input::init();
+    
     if crate::filesystem::context::init() {
         crate::drivers::serial::println("FILESYSTEM: INIT OK");
     } else {
@@ -67,7 +70,7 @@ pub extern "C" fn kmain() -> ! {
 
     crate::drivers::serial::println("AFTER PMM TEST");
 
-    time::clock::test();
+    // time::clock::test();
 
     crate::drivers::serial::println("AFTER CLOCK TEST");
 

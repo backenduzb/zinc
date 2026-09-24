@@ -6,9 +6,7 @@ pub fn ticks() -> u64 {
     TICKS.load(Ordering::Relaxed)
 }
 
-/// Best-effort fault context: never panics (fault handlers run with
-/// panic=abort; a second panic would triple-fault). Returns
-/// (cpu_or_-1, tid_or_9999, cr3).
+
 fn diagnostic_ids() -> (i64, u64, u64) {
     let cr3 = crate::arch::x86_64::paging::read_cr3() & !0xFFF;
 
@@ -24,10 +22,7 @@ fn diagnostic_ids() -> (i64, u64, u64) {
         return (-1, 9999, cr3);
     }
 
-    // Resolve TID through the scheduler without panicking.
     let tid = unsafe {
-        // SAFETY: cpu_id bounds-checked above. Reading the current
-        // thread id only; never mutates scheduler state.
         let base = core::ptr::addr_of_mut!(crate::task::SCHEDULERS);
         (&*base)[cpu_id].current_id().unwrap_or(9999)
     };

@@ -33,6 +33,8 @@ pub const TIMER_INITIAL_COUNT: u32 = 10_000_000;
 static mut BASE: u64 = LAPIC_DEFAULT_BASE;
 
 const REG_LVT_TIMER: u64 = 0x320;
+const REG_LVT_LINT0: u64 = 0x350;
+const REG_LVT_LINT1: u64 = 0x360;
 const REG_INITIAL_COUNT: u64 = 0x380;
 const REG_CURRENT_COUNT: u64 = 0x390;
 const REG_DIVIDE_CONFIG: u64 = 0x3E0;
@@ -86,7 +88,11 @@ pub fn init(base: u64) {
         let svr = read(REG_SVR);
 
         write(REG_SVR, (svr & 0xFF) | SVR_ENABLE | SPURIOUS_VECTOR);
+
+        write(REG_LVT_LINT0, 0x700);
+        write(REG_LVT_LINT1, 0x400); 
     }
+
 
     crate::drivers::serial::println("LAPIC: enabled");
 
@@ -269,6 +275,8 @@ pub fn init_ap() {
     unsafe {
         let svr = read(REG_SVR);
         write(REG_SVR, (svr & 0xFF) | SVR_ENABLE | SPURIOUS_VECTOR);
+        write(REG_LVT_LINT0, 0x700);
+        write(REG_LVT_LINT1, 0x400);
     }
     crate::drivers::serial::print("AP LAPIC: enabled, ID = ");
     crate::drivers::serial::print_u64(apic_id as u64);

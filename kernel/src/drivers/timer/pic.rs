@@ -8,11 +8,11 @@ const PIC2_DATA: u16 = 0xA1;
 
 const PIC_EOI: u8 = 0x20;
 
+const MASTER_MASK: u8 = 0xFC;
+const SLAVE_MASK: u8 = 0xFF;
+
 pub fn init() {
     unsafe {
-        let master_mask = inb(PIC1_DATA);
-        let slave_mask = inb(PIC2_DATA);
-
         io_wait();
         outb(PIC1_COMMAND, 0x11);
         io_wait();
@@ -34,16 +34,26 @@ pub fn init() {
         outb(PIC2_DATA, 0x01);
         io_wait();
 
-        let _ = master_mask;
-        let _ = slave_mask;
-
-        outb(PIC1_DATA, 0xFE);
+        outb(PIC1_DATA, MASTER_MASK);
         io_wait();
-        outb(PIC2_DATA, 0xFF);
+
+        outb(PIC2_DATA, SLAVE_MASK);
         io_wait();
     }
+} 
 
-    crate::drivers::serial::println("PIC initialized");
+pub fn unmask_irq(irq: u8) {
+    unsafe {
+        if irq < 8 {
+            let mask = inb(PIC1_DATA) & !(1 << irq);
+            outb(PIC1_DATA, mask);
+            io_wait();
+        } else if irq < 16 {
+            let mask = inb(PIC2_DATA) & !(1 << (irq - 8));
+            outb(PIC2_DATA, mask);
+            io_wait();
+        }
+    }
 }
 
 pub fn end_of_interrupt() {
