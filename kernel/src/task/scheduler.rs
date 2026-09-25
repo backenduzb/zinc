@@ -234,24 +234,24 @@ impl Scheduler {
             unsafe { (*cpu.tss.get()).kernel_stack() }
         };
 
-        crate::drivers::serial::print("ENTERING RING3: slot=");
-        crate::drivers::serial::print_u64(index as u64);
-        crate::drivers::serial::print(" tid=");
-        crate::drivers::serial::print_u64(thread.id());
-        crate::drivers::serial::print(" RIP=0x");
-        crate::drivers::serial::print_hex_u64(frame.rip);
-        crate::drivers::serial::print(" CS=0x");
-        crate::drivers::serial::print_hex_u64(frame.cs);
-        crate::drivers::serial::print(" RSP=0x");
-        crate::drivers::serial::print_hex_u64(frame.rsp);
-        crate::drivers::serial::print(" SS=0x");
-        crate::drivers::serial::print_hex_u64(frame.ss);
-        crate::drivers::serial::println("");
-        crate::drivers::serial::print("RING3 CTX: CR3=0x");
-        crate::drivers::serial::print_hex_u64(cr3);
-        crate::drivers::serial::print(" TSS.RSP0=0x");
-        crate::drivers::serial::print_hex_u64(rsp0);
-        crate::drivers::serial::println("");
+        crate::log_ring3_raw!("ENTERING RING3: slot=");
+        crate::log_sched_raw!("{}", index as u64);
+        crate::log_sched_raw!(" tid=");
+        crate::log_sched_raw!("{}", thread.id());
+        crate::log_sched_raw!(" RIP=0x");
+        crate::log_sched_raw!("{:016X}", frame.rip);
+        crate::log_sched_raw!(" CS=0x");
+        crate::log_sched_raw!("{:016X}", frame.cs);
+        crate::log_sched_raw!(" RSP=0x");
+        crate::log_sched_raw!("{:016X}", frame.rsp);
+        crate::log_sched_raw!(" SS=0x");
+        crate::log_sched_raw!("{:016X}", frame.ss);
+        crate::log_sched!("");
+        crate::log_cr3_raw!("RING3 CTX: CR3=0x");
+        crate::log_sched_raw!("{:016X}", cr3);
+        crate::log_tss_raw!(" TSS.RSP0=0x");
+        crate::log_sched_raw!("{:016X}", rsp0);
+        crate::log_sched!("");
 
         Self::debug_tss_delivery(rsp0);
     }
@@ -271,13 +271,13 @@ impl Scheduler {
             ]);
         }
 
-        crate::drivers::serial::print("TSS AUDIT: TR=0x");
-        crate::drivers::serial::print_hex_u64(tr_selector as u64);
-        crate::drivers::serial::print(" GDTR base=0x");
-        crate::drivers::serial::print_hex_u64(gdtr_base);
-        crate::drivers::serial::print(" limit=");
-        crate::drivers::serial::print_u64(gdtr_limit as u64);
-        crate::drivers::serial::println("");
+        crate::log_tss_raw!("TSS AUDIT: TR=0x");
+        crate::log_sched_raw!("{:016X}", tr_selector as u64);
+        crate::log_sched_raw!(" GDTR base=0x");
+        crate::log_sched_raw!("{:016X}", gdtr_base);
+        crate::log_sched_raw!(" limit=");
+        crate::log_sched_raw!("{}", gdtr_limit as u64);
+        crate::log_sched!("");
 
         let index = (tr_selector >> 3) as u64;
         let desc_addr = gdtr_base + index * 8;
@@ -297,40 +297,40 @@ impl Scheduler {
         let present = (low >> 47) & 1;
         let desc_type = (low >> 40) & 0xF;
 
-        crate::drivers::serial::print("TSS AUDIT: desc base=0x");
-        crate::drivers::serial::print_hex_u64(base);
-        crate::drivers::serial::print(" limit=");
-        crate::drivers::serial::print_u64(limit);
-        crate::drivers::serial::print(" P=");
-        crate::drivers::serial::print_u64(present);
-        crate::drivers::serial::print(" type=0x");
-        crate::drivers::serial::print_hex_u64(desc_type);
-        crate::drivers::serial::println("");
+        crate::log_tss_raw!("TSS AUDIT: desc base=0x");
+        crate::log_sched_raw!("{:016X}", base);
+        crate::log_sched_raw!(" limit=");
+        crate::log_sched_raw!("{}", limit);
+        crate::log_sched_raw!(" P=");
+        crate::log_sched_raw!("{}", present);
+        crate::log_sched_raw!(" type=0x");
+        crate::log_sched_raw!("{:016X}", desc_type);
+        crate::log_sched!("");
 
         let cpu_rsp0 = unsafe { core::ptr::read_volatile((base + 4) as *const u64) };
 
-        crate::drivers::serial::print("TSS AUDIT: cpu-visible RSP0=0x");
-        crate::drivers::serial::print_hex_u64(cpu_rsp0);
-        crate::drivers::serial::print(" percpu RSP0=0x");
-        crate::drivers::serial::print_hex_u64(rsp0);
-        crate::drivers::serial::println("");
+        crate::log_tss_raw!("TSS AUDIT: cpu-visible RSP0=0x");
+        crate::log_sched_raw!("{:016X}", cpu_rsp0);
+        crate::log_tss_raw!(" percpu RSP0=0x");
+        crate::log_sched_raw!("{:016X}", rsp0);
+        crate::log_sched!("");
 
         {
             let cpu = crate::arch::x86_64::smp::percpu::current();
             let true_tss = unsafe { cpu.tss.get() as u64 };
             let percpu_base = cpu as *const _ as u64;
 
-            crate::drivers::serial::print("TSS AUDIT: percpu=0x");
-            crate::drivers::serial::print_hex_u64(percpu_base);
-            crate::drivers::serial::print(" tss=0x");
-            crate::drivers::serial::print_hex_u64(true_tss);
-            crate::drivers::serial::print(" desc=0x");
-            crate::drivers::serial::print_hex_u64(base);
+            crate::log_tss_raw!("TSS AUDIT: percpu=0x");
+            crate::log_sched_raw!("{:016X}", percpu_base);
+            crate::log_tss_raw!(" tss=0x");
+            crate::log_sched_raw!("{:016X}", true_tss);
+            crate::log_sched_raw!(" desc=0x");
+            crate::log_sched_raw!("{:016X}", base);
 
             if base == true_tss && cpu_rsp0 == rsp0 {
-                crate::drivers::serial::println(" MATCH");
+                crate::log_sched!(" MATCH");
             } else {
-                crate::drivers::serial::println(" MISMATCH");
+                crate::log_sched!(" MISMATCH");
             }
         }
 
@@ -364,9 +364,9 @@ impl Scheduler {
         }
 
         if ok {
-            crate::drivers::serial::println("TSS AUDIT: RSP0 page walk OK");
+            crate::log_tss!("TSS AUDIT: RSP0 page walk OK");
         } else {
-            crate::drivers::serial::println("TSS AUDIT: RSP0 page walk FAILED");
+            crate::log_tss!("TSS AUDIT: RSP0 page walk FAILED");
         }
     }
 
@@ -395,11 +395,11 @@ impl Scheduler {
         let current = crate::arch::x86_64::paging::read_cr3() & !0xFFF;
 
         if target != current {
-            crate::drivers::serial::print("CR3 SWITCH: 0x");
-            crate::drivers::serial::print_u64(current);
-            crate::drivers::serial::print(" -> 0x");
-            crate::drivers::serial::print_u64(target);
-            crate::drivers::serial::println("");
+            crate::log_cr3_raw!("CR3 SWITCH: 0x");
+            crate::log_sched_raw!("{}", current);
+            crate::log_sched_raw!(" -> 0x");
+            crate::log_sched_raw!("{}", target);
+            crate::log_sched!("");
 
             unsafe {
                 crate::arch::x86_64::paging::load_cr3(target);
@@ -424,13 +424,11 @@ impl Scheduler {
                     (*cpu.tss.get()).set_kernel_stack(stack_top);
                 }
 
-                crate::drivers::serial::print("TSS.RSP0 configured: CPU=");
-                crate::drivers::serial::print_u64(
-                    crate::arch::x86_64::smp::percpu::current_cpu_id() as u64,
-                );
-                crate::drivers::serial::print(" RSP0=0x");
-                crate::drivers::serial::print_hex_u64(stack_top);
-                crate::drivers::serial::println("");
+                crate::log_tss_raw!("TSS.RSP0 configured: CPU=");
+                crate::log_sched_raw!("{}", crate::arch::x86_64::smp::percpu::current_cpu_id() as u64,);
+                crate::log_tss_raw!(" RSP0=0x");
+                crate::log_sched_raw!("{:016X}", stack_top);
+                crate::log_sched!("");
             }
         }
     }
@@ -464,9 +462,9 @@ impl Scheduler {
             }
         }
 
-        crate::drivers::serial::print("Scheduler: starting thread slot ");
-        crate::drivers::serial::print_u64(first as u64);
-        crate::drivers::serial::println("");
+        crate::log_vfs_raw!("Scheduler: starting thread slot ");
+        crate::log_sched_raw!("{}", first as u64);
+        crate::log_sched!("");
 
         self.switch_address_space_for(first);
 
@@ -474,8 +472,8 @@ impl Scheduler {
 
         if is_user {
             if let Some(reason) = self.validate_fresh_user(first) {
-                crate::drivers::serial::print("RING3 REFUSED (start_first): ");
-                crate::drivers::serial::println(reason);
+                crate::log_ring3_raw!("RING3 REFUSED (start_first): ");
+                crate::log_sched!("{}", reason);
 
                 if let Some(thread) = self.threads[first].as_mut() {
                     thread.set_state(ThreadState::Terminated);
@@ -533,11 +531,11 @@ impl Scheduler {
             self.ticks = self.ticks.wrapping_add(1);
 
             if self.ticks % 100 == 0 {
-                crate::drivers::serial::print("AP Scheduler tick: CPU=");
-                crate::drivers::serial::print_u64(cpu as u64);
-                crate::drivers::serial::print(" ticks=");
-                crate::drivers::serial::print_u64(self.ticks);
-                crate::drivers::serial::println("");
+                crate::log_sched_raw!("AP Scheduler tick: CPU=");
+                crate::log_sched_raw!("{}", cpu as u64);
+                crate::log_sched_raw!(" ticks=");
+                crate::log_sched_raw!("{}", self.ticks);
+                crate::log_sched!("");
             }
 
             if let Some(thread) = self.threads[self.current].as_mut() {
@@ -550,11 +548,11 @@ impl Scheduler {
                 if let Some(thread) = thread.as_mut() {
                     if thread.state() == ThreadState::Sleeping && thread.wake_at() <= now {
                         thread.set_state(ThreadState::Ready);
-                        crate::drivers::serial::print("CPU=");
-                        crate::drivers::serial::print_u64(cpu as u64);
-                        crate::drivers::serial::print(" TID=");
-                        crate::drivers::serial::print_u64(thread.id());
-                        crate::drivers::serial::println(" WAKE");
+                        crate::log_smp_raw!("CPU=");
+                        crate::log_sched_raw!("{}", cpu as u64);
+                        crate::log_sched_raw!(" TID=");
+                        crate::log_sched_raw!("{}", thread.id());
+                        crate::log_sched!(" WAKE");
                     }
                 }
             }
@@ -587,25 +585,25 @@ impl Scheduler {
             self.current = next;
             self.switches = self.switches.wrapping_add(1);
 
-            crate::drivers::serial::print("CPU=");
-            crate::drivers::serial::print_u64(cpu as u64);
-            crate::drivers::serial::print(" current=");
-            crate::drivers::serial::print_u64(prev as u64);
-            crate::drivers::serial::print(" -> next=");
-            crate::drivers::serial::print_u64(next as u64);
-            crate::drivers::serial::println("");
+            crate::log_smp_raw!("CPU=");
+            crate::log_sched_raw!("{}", cpu as u64);
+            crate::log_sched_raw!(" current=");
+            crate::log_sched_raw!("{}", prev as u64);
+            crate::log_sched_raw!(" -> next=");
+            crate::log_sched_raw!("{}", next as u64);
+            crate::log_sched!("");
             if prev == IDLE_SLOT && next != IDLE_SLOT {
-                crate::drivers::serial::print("CPU=");
-                crate::drivers::serial::print_u64(cpu as u64);
-                crate::drivers::serial::print(" IDLE -> TID=");
-                crate::drivers::serial::print_u64(next_tid);
-                crate::drivers::serial::println("");
+                crate::log_smp_raw!("CPU=");
+                crate::log_sched_raw!("{}", cpu as u64);
+                crate::log_sched_raw!(" IDLE -> TID=");
+                crate::log_sched_raw!("{}", next_tid);
+                crate::log_sched!("");
             } else if prev != IDLE_SLOT && next == IDLE_SLOT {
-                crate::drivers::serial::print("CPU=");
-                crate::drivers::serial::print_u64(cpu as u64);
-                crate::drivers::serial::print(" TID=");
-                crate::drivers::serial::print_u64(prev_tid);
-                crate::drivers::serial::println(" -> IDLE");
+                crate::log_smp_raw!("CPU=");
+                crate::log_sched_raw!("{}", cpu as u64);
+                crate::log_sched_raw!(" TID=");
+                crate::log_sched_raw!("{}", prev_tid);
+                crate::log_sched!(" -> IDLE");
             }
 
             let fresh = match self.threads[next].as_mut() {
@@ -626,8 +624,8 @@ impl Scheduler {
 
                 if is_user {
                     if let Some(reason) = self.validate_fresh_user(next) {
-                        crate::drivers::serial::print("RING3 REFUSED: ");
-                        crate::drivers::serial::println(reason);
+                        crate::log_ring3_raw!("RING3 REFUSED: ");
+                        crate::log_sched!("{}", reason);
 
                         if let Some(thread) = self.threads[next].as_mut() {
                             thread.set_state(ThreadState::Terminated);
@@ -657,44 +655,44 @@ impl Scheduler {
         }
 
         let now = crate::arch::x86_64::lapic::ticks();
-        crate::drivers::serial::print("TIME=");
-        crate::drivers::serial::print_u64(now);
-        crate::drivers::serial::println("");
+        crate::log_sched_raw!("TIME=");
+        crate::log_sched_raw!("{}", now);
+        crate::log_sched!("");
 
         for thread in self.threads.iter_mut() {
             if let Some(thread) = thread.as_mut() {
                 if thread.state() == ThreadState::Sleeping {
-                    crate::drivers::serial::print("SLEEP CHECK thread=");
-                    crate::drivers::serial::print_u64(thread.id());
+                    crate::log_sleep_raw!("SLEEP CHECK thread=");
+                    crate::log_sched_raw!("{}", thread.id());
 
-                    crate::drivers::serial::print(" wake=");
-                    crate::drivers::serial::print_u64(thread.wake_at());
+                    crate::log_sched_raw!(" wake=");
+                    crate::log_sched_raw!("{}", thread.wake_at());
 
-                    crate::drivers::serial::print(" now=");
-                    crate::drivers::serial::print_u64(now);
+                    crate::log_sched_raw!(" now=");
+                    crate::log_sched_raw!("{}", now);
 
                     if thread.wake_at() <= now {
                         thread.set_state(ThreadState::Ready);
-                        crate::drivers::serial::println(" -> WAKE");
+                        crate::log_sched!(" -> WAKE");
                     } else {
-                        crate::drivers::serial::println(" -> WAIT");
+                        crate::log_sched!(" -> WAIT");
                     }
                 }
             }
         }
 
-        crate::drivers::serial::print("SCHED tick CPU=");
-        crate::drivers::serial::print_u64(crate::arch::x86_64::smp::percpu::current_cpu_id() as u64);
-        crate::drivers::serial::print(" current=");
-        crate::drivers::serial::print_u64(self.current as u64);
-        crate::drivers::serial::print(" next=");
+        crate::log_sched_raw!("SCHED tick CPU=");
+        crate::log_sched_raw!("{}", crate::arch::x86_64::smp::percpu::current_cpu_id() as u64);
+        crate::log_sched_raw!(" current=");
+        crate::log_sched_raw!("{}", self.current as u64);
+        crate::log_sched_raw!(" next=");
 
         match self.next() {
-            Some(index) => crate::drivers::serial::print_u64(index as u64),
-            None => crate::drivers::serial::print_u64(99),
+            Some(index) => crate::log_sched_raw!("{}", index as u64),
+            None => crate::log_sched_raw!("{}", 99),
         }
 
-        crate::drivers::serial::println("");
+        crate::log_sched!("");
 
         if let Some(thread) = self.threads[self.current].as_mut() {
             thread.set_interrupt_rsp(frame as u64);
@@ -725,11 +723,11 @@ impl Scheduler {
         self.switches = self.switches.wrapping_add(1);
 
         if self.switches % 200 == 0 {
-            crate::drivers::serial::print("Scheduler: ");
-            crate::drivers::serial::print_u64(self.switches);
-            crate::drivers::serial::print(" switches, now on slot ");
-            crate::drivers::serial::print_u64(next as u64);
-            crate::drivers::serial::println("");
+            crate::log_sched_raw!("Scheduler: ");
+            crate::log_sched_raw!("{}", self.switches);
+            crate::log_sched_raw!(" switches, now on slot ");
+            crate::log_sched_raw!("{}", next as u64);
+            crate::log_sched!("");
         }
 
         let fresh = match self.threads[next].as_mut() {
@@ -750,8 +748,8 @@ impl Scheduler {
 
             if is_user {
                 if let Some(reason) = self.validate_fresh_user(next) {
-                    crate::drivers::serial::print("RING3 REFUSED: ");
-                    crate::drivers::serial::println(reason);
+                    crate::log_ring3_raw!("RING3 REFUSED: ");
+                    crate::log_sched!("{}", reason);
 
                     if let Some(thread) = self.threads[next].as_mut() {
                         thread.set_state(ThreadState::Terminated);
@@ -764,13 +762,11 @@ impl Scheduler {
 
                 let rsp = self.threads[next].as_ref().unwrap().interrupt_rsp();
 
-                crate::drivers::serial::print("FRESH USER SWITCH: slot=");
-                crate::drivers::serial::print_u64(next as u64);
-                crate::drivers::serial::print(" thread=");
-                crate::drivers::serial::print_u64(
-                    self.threads[next].as_ref().map(|t| t.id()).unwrap_or(0),
-                );
-                crate::drivers::serial::println(" via start_user_thread_context");
+                crate::log_ring3_raw!("FRESH USER SWITCH: slot=");
+                crate::log_sched_raw!("{}", next as u64);
+                crate::log_vfs_raw!(" thread=");
+                crate::log_sched_raw!("{}", self.threads[next].as_ref().map(|t| t.id()).unwrap_or(0),);
+                crate::log_vfs!(" via start_user_thread_context");
 
                 return (rsp, Self::user_entry_trampoline());
             }
@@ -780,19 +776,19 @@ impl Scheduler {
             let stack = thread.stack_top();
             let entry = thread.entry();
 
-            crate::drivers::serial::print("FRESH SWITCH: slot=");
-            crate::drivers::serial::print_u64(next as u64);
+            crate::log_sched_raw!("FRESH SWITCH: slot=");
+            crate::log_sched_raw!("{}", next as u64);
 
-            crate::drivers::serial::print(" thread=");
-            crate::drivers::serial::print_u64(thread.id());
+            crate::log_vfs_raw!(" thread=");
+            crate::log_sched_raw!("{}", thread.id());
 
-            crate::drivers::serial::print(" entry=");
-            crate::drivers::serial::print_u64(entry);
+            crate::log_sched_raw!(" entry=");
+            crate::log_sched_raw!("{}", entry);
 
-            crate::drivers::serial::print(" stack=");
-            crate::drivers::serial::print_u64(stack);
+            crate::log_sched_raw!(" stack=");
+            crate::log_sched_raw!("{}", stack);
 
-            crate::drivers::serial::println("");
+            crate::log_sched!("");
 
             (stack, entry)
         } else {
@@ -851,8 +847,8 @@ impl Scheduler {
 
             if is_user {
                 if let Some(reason) = self.validate_fresh_user(next) {
-                    crate::drivers::serial::print("RING3 REFUSED (syscall yield): ");
-                    crate::drivers::serial::println(reason);
+                    crate::log_syscall_raw!("RING3 REFUSED (syscall yield): ");
+                    crate::log_sched!("{}", reason);
 
                     if let Some(thread) = self.threads[next].as_mut() {
                         thread.set_state(ThreadState::Terminated);
@@ -932,8 +928,8 @@ impl Scheduler {
 
             if is_user {
                 if let Some(reason) = self.validate_fresh_user(next) {
-                    crate::drivers::serial::print("RING3 REFUSED (syscall exit): ");
-                    crate::drivers::serial::println(reason);
+                    crate::log_syscall_raw!("RING3 REFUSED (syscall exit): ");
+                    crate::log_sched!("{}", reason);
 
                     if let Some(thread) = self.threads[next].as_mut() {
                         thread.set_state(ThreadState::Terminated);
@@ -984,25 +980,25 @@ impl Scheduler {
         let now = crate::arch::x86_64::lapic::ticks();
         let cpu = crate::arch::x86_64::smp::percpu::current_cpu_id();
 
-        crate::drivers::serial::print("TIME=");
-        crate::drivers::serial::print_u64(now);
-        crate::drivers::serial::println("");
+        crate::log_sched_raw!("TIME=");
+        crate::log_sched_raw!("{}", now);
+        crate::log_sched!("");
 
         if let Some(thread) = self.threads[self.current].as_mut() {
             thread.set_wake_at(now + ticks);
             thread.set_state(ThreadState::Sleeping);
 
-            crate::drivers::serial::print("SLEEP thread=");
-            crate::drivers::serial::print_u64(thread.id());
-            crate::drivers::serial::print(" wake_at=");
-            crate::drivers::serial::print_u64(now + ticks);
-            crate::drivers::serial::println("");
+            crate::log_sleep_raw!("SLEEP thread=");
+            crate::log_sched_raw!("{}", thread.id());
+            crate::log_sched_raw!(" wake_at=");
+            crate::log_sched_raw!("{}", now + ticks);
+            crate::log_sched!("");
 
-            crate::drivers::serial::print("CPU=");
-            crate::drivers::serial::print_u64(cpu as u64);
-            crate::drivers::serial::print(" TID=");
-            crate::drivers::serial::print_u64(thread.id());
-            crate::drivers::serial::println(" SLEEP");
+            crate::log_smp_raw!("CPU=");
+            crate::log_sched_raw!("{}", cpu as u64);
+            crate::log_sched_raw!(" TID=");
+            crate::log_sched_raw!("{}", thread.id());
+            crate::log_sleep!(" SLEEP");
         }
     }
 
@@ -1015,9 +1011,9 @@ impl Scheduler {
         if let Some(thread) = self.threads[self.current].as_mut() {
             thread.set_state(ThreadState::Terminated);
 
-            serial::print("EXIT thread=");
-            serial::print_u64(exiting_id);
-            serial::println("");
+            crate::log_vfs_raw!("EXIT thread=");
+            crate::log_sched_raw!("{}", exiting_id);
+            crate::log_sched!("");
         }
 
         let mut process_terminated = false;
@@ -1057,25 +1053,25 @@ impl Scheduler {
                             }
                             thread.set_waiting_for_process(None);
                             thread.set_state(ThreadState::Ready);
-                            serial::print("WAIT: waking parent thread=");
-                            serial::print_u64(thread.id());
-                            serial::print(" child PID=");
-                            serial::print_u64(pid);
-                            serial::println("");
-                            serial::print("WAIT: waking parent PID=");
-                            serial::print_u64(thread.process_id());
-                            serial::print(" TID=");
-                            serial::print_u64(thread.id());
-                            serial::print(" child PID=");
-                            serial::print_u64(pid);
-                            serial::println("");
-                            serial::print("WAIT: parent resumed RAX=");
-                            serial::print_u64(pid);
-                            serial::println("");
-                            serial::print("WAIT: child PID=");
-                            serial::print_u64(pid);
-                            serial::print(" terminated");
-                            serial::println("");
+                            crate::log_vfs_raw!("WAIT: waking parent thread=");
+                            crate::log_sched_raw!("{}", thread.id());
+                            crate::log_sched_raw!(" child PID=");
+                            crate::log_sched_raw!("{}", pid);
+                            crate::log_sched!("");
+                            crate::log_sched_raw!("WAIT: waking parent PID=");
+                            crate::log_sched_raw!("{}", thread.process_id());
+                            crate::log_sched_raw!(" TID=");
+                            crate::log_sched_raw!("{}", thread.id());
+                            crate::log_sched_raw!(" child PID=");
+                            crate::log_sched_raw!("{}", pid);
+                            crate::log_sched!("");
+                            crate::log_sched_raw!("WAIT: parent resumed RAX=");
+                            crate::log_sched_raw!("{}", pid);
+                            crate::log_sched!("");
+                            crate::log_sched_raw!("WAIT: child PID=");
+                            crate::log_sched_raw!("{}", pid);
+                            crate::log_sched_raw!(" terminated");
+                            crate::log_sched!("");
                         }
                     }
                 }
@@ -1097,9 +1093,9 @@ impl Scheduler {
                         {
                             thread.set_waiting_for(None);
                             thread.set_state(ThreadState::Ready);
-                            serial::print("JOIN: waking thread=");
-                            serial::print_u64(thread.id());
-                            serial::println("");
+                            crate::log_vfs_raw!("JOIN: waking thread=");
+                            crate::log_sched_raw!("{}", thread.id());
+                            crate::log_sched!("");
                         }
                     }
                 }
@@ -1115,9 +1111,9 @@ impl Scheduler {
                     thread.set_state(ThreadState::Terminated);
                     pid_opt = Some(thread.process_id());
 
-                    crate::drivers::serial::print("KILL thread=");
-                    crate::drivers::serial::print_u64(id);
-                    crate::drivers::serial::println("");
+                    crate::log_vfs_raw!("KILL thread=");
+                    crate::log_sched_raw!("{}", id);
+                    crate::log_sched!("");
 
                     break;
                 }
@@ -1164,11 +1160,11 @@ impl Scheduler {
                 self.threads[index] = None;
                 self.count = self.count.saturating_sub(1);
 
-                crate::drivers::serial::print("Scheduler: reaped thread=");
-                crate::drivers::serial::print_u64(id);
-                crate::drivers::serial::print(" slot=");
-                crate::drivers::serial::print_u64(index as u64);
-                crate::drivers::serial::println("");
+                crate::log_vfs_raw!("Scheduler: reaped thread=");
+                crate::log_sched_raw!("{}", id);
+                crate::log_sched_raw!(" slot=");
+                crate::log_sched_raw!("{}", index as u64);
+                crate::log_sched!("");
             }
         }
     }
@@ -1197,7 +1193,7 @@ impl Scheduler {
             thread.set_waiting_for(Some(id));
             thread.set_state(ThreadState::Waiting);
 
-            serial::println("JOIN: current thread waiting");
+            crate::log_vfs!("JOIN: current thread waiting");
         }
 
         loop {
@@ -1237,72 +1233,72 @@ impl Scheduler {
         user_rsp: u64,
     ) -> Option<ThreadID> {
         if self.count >= MAX_THREADS {
-            serial::print("CREATE USER THREAD: scheduler full, reaping cpu=");
-            serial::print_u64(cpu_id as u64);
-            serial::println("");
+            crate::log_vfs_raw!("CREATE USER THREAD: scheduler full, reaping cpu=");
+            crate::log_sched_raw!("{}", cpu_id as u64);
+            crate::log_sched!("");
 
             self.reap_terminated();
 
             if self.count >= MAX_THREADS {
-                serial::print("CREATE USER THREAD FAIL: scheduler still full cpu=");
-                serial::print_u64(cpu_id as u64);
-                serial::print(" count=");
-                serial::print_u64(self.count as u64);
-                serial::print(" max=");
-                serial::print_u64(MAX_THREADS as u64);
-                serial::println("");
+                crate::log_vfs_raw!("CREATE USER THREAD FAIL: scheduler still full cpu=");
+                crate::log_sched_raw!("{}", cpu_id as u64);
+                crate::log_sched_raw!(" count=");
+                crate::log_sched_raw!("{}", self.count as u64);
+                crate::log_sched_raw!(" max=");
+                crate::log_sched_raw!("{}", MAX_THREADS as u64);
+                crate::log_sched!("");
                 return None;
             }
         }
 
         if process_manager.get(process_id).is_none() {
-            serial::print("CREATE USER THREAD FAIL: process missing pid=");
-            serial::print_u64(process_id);
-            serial::println("");
+            crate::log_vfs_raw!("CREATE USER THREAD FAIL: process missing pid=");
+            crate::log_sched_raw!("{}", process_id);
+            crate::log_sched!("");
             return None;
         }
 
         let thread_id = process_manager.allocate_thread_id();
 
-        serial::print("CREATE USER THREAD: allocated tid=");
-        serial::print_u64(thread_id);
-        serial::print(" cpu=");
-        serial::print_u64(cpu_id as u64);
-        serial::print(" pid=");
-        serial::print_u64(process_id);
-        serial::println("");
+        crate::log_vfs_raw!("CREATE USER THREAD: allocated tid=");
+        crate::log_sched_raw!("{}", thread_id);
+        crate::log_smp_raw!(" cpu=");
+        crate::log_sched_raw!("{}", cpu_id as u64);
+        crate::log_sched_raw!(" pid=");
+        crate::log_sched_raw!("{}", process_id);
+        crate::log_sched!("");
 
         let thread = Thread::new_user(thread_id, cpu_id, process_id, user_rip, user_rsp);
 
-        serial::println("CREATE USER THREAD: Thread::new_user OK");
+        crate::log_vfs!("CREATE USER THREAD: Thread::new_user OK");
 
         if !self.add_thread(thread, cpu_id) {
-            serial::print("CREATE USER THREAD FAIL: add_thread cpu=");
-            serial::print_u64(cpu_id as u64);
-            serial::print(" count=");
-            serial::print_u64(self.count as u64);
-            serial::println("");
+            crate::log_vfs_raw!("CREATE USER THREAD FAIL: add_thread cpu=");
+            crate::log_sched_raw!("{}", cpu_id as u64);
+            crate::log_sched_raw!(" count=");
+            crate::log_sched_raw!("{}", self.count as u64);
+            crate::log_sched!("");
             return None;
         }
 
-        serial::print("CREATE USER THREAD: scheduler add OK tid=");
-        serial::print_u64(thread_id);
-        serial::println("");
+        crate::log_vfs_raw!("CREATE USER THREAD: scheduler add OK tid=");
+        crate::log_sched_raw!("{}", thread_id);
+        crate::log_sched!("");
 
         if !process_manager.add_thread(process_id, thread_id) {
-            serial::print("CREATE USER THREAD FAIL: process add_thread pid=");
-            serial::print_u64(process_id);
-            serial::print(" tid=");
-            serial::print_u64(thread_id);
-            serial::println("");
+            crate::log_vfs_raw!("CREATE USER THREAD FAIL: process add_thread pid=");
+            crate::log_sched_raw!("{}", process_id);
+            crate::log_sched_raw!(" tid=");
+            crate::log_sched_raw!("{}", thread_id);
+            crate::log_sched!("");
 
             self.remove_thread_by_id(thread_id);
             return None;
         }
 
-        serial::print("CREATE USER THREAD: process registration OK tid=");
-        serial::print_u64(thread_id);
-        serial::println("");
+        crate::log_vfs_raw!("CREATE USER THREAD: process registration OK tid=");
+        crate::log_sched_raw!("{}", thread_id);
+        crate::log_sched!("");
 
         Some(thread_id)
     }

@@ -62,7 +62,7 @@ fn wait_icr_idle() {
         core::hint::spin_loop();
     }
 
-    crate::drivers::serial::println("LAPIC: ICR delivery timeout");
+    crate::log_smp!("LAPIC: ICR delivery timeout");
 }
 
 pub fn phys_to_virt(phys: u64) -> u64 {
@@ -70,17 +70,17 @@ pub fn phys_to_virt(phys: u64) -> u64 {
 }
 
 pub fn init(base: u64) {
-    crate::drivers::serial::println("LAPIC: initializing");
+    crate::log_smp!("LAPIC: initializing");
 
     let virt = phys_to_virt(base);
 
-    crate::drivers::serial::print("LAPIC physical base: 0x");
-    crate::drivers::serial::print_hex_u64(base);
-    crate::drivers::serial::println("");
+    crate::log_smp_raw!("LAPIC physical base: 0x");
+    crate::log_smp_raw!("{:016X}", base);
+    crate::log_smp!("");
 
-    crate::drivers::serial::print("LAPIC virtual base: 0x");
-    crate::drivers::serial::print_hex_u64(virt);
-    crate::drivers::serial::println("");
+    crate::log_smp_raw!("LAPIC virtual base: 0x");
+    crate::log_smp_raw!("{:016X}", virt);
+    crate::log_smp!("");
 
     unsafe {
         BASE = virt;
@@ -94,15 +94,15 @@ pub fn init(base: u64) {
     }
 
 
-    crate::drivers::serial::println("LAPIC: enabled");
+    crate::log_smp!("LAPIC: enabled");
 
-    crate::drivers::serial::print("LAPIC ID: ");
-    crate::drivers::serial::print_u64(id() as u64);
-    crate::drivers::serial::println("");
+    crate::log_smp_raw!("LAPIC ID: ");
+    crate::log_smp_raw!("{}", id() as u64);
+    crate::log_smp!("");
 
-    crate::drivers::serial::print("LAPIC version: 0x");
-    crate::drivers::serial::print_hex_u32(version());
-    crate::drivers::serial::println("");
+    crate::log_smp_raw!("LAPIC version: 0x");
+    crate::log_smp_raw!("{:08X}", version());
+    crate::log_smp!("");
 }
 
 pub fn id() -> u32 {
@@ -133,9 +133,9 @@ pub fn send_init_ipi(apic_id: u32) {
 
     wait_icr_idle();
 
-    crate::drivers::serial::print("LAPIC: INIT -> APIC ");
-    crate::drivers::serial::print_u64(apic_id as u64);
-    crate::drivers::serial::println("");
+    crate::log_smp_raw!("LAPIC: INIT -> APIC ");
+    crate::log_smp_raw!("{}", apic_id as u64);
+    crate::log_smp!("");
 }
 
 pub fn deassert_init() {
@@ -149,7 +149,7 @@ pub fn deassert_init() {
 
     wait_icr_idle();
 
-    crate::drivers::serial::println("LAPIC: INIT deassert");
+    crate::log_smp!("LAPIC: INIT deassert");
 }
 
 pub fn send_startup_ipi(apic_id: u32, vector: u8) {
@@ -163,13 +163,13 @@ pub fn send_startup_ipi(apic_id: u32, vector: u8) {
 
     wait_icr_idle();
 
-    crate::drivers::serial::print("LAPIC: SIPI -> APIC ");
-    crate::drivers::serial::print_u64(apic_id as u64);
+    crate::log_smp_raw!("LAPIC: SIPI -> APIC ");
+    crate::log_smp_raw!("{}", apic_id as u64);
 
-    crate::drivers::serial::print(" vector=0x");
-    crate::drivers::serial::print_hex_u32(vector as u32);
+    crate::log_smp_raw!(" vector=0x");
+    crate::log_smp_raw!("{:08X}", vector as u32);
 
-    crate::drivers::serial::println("");
+    crate::log_smp!("");
 }
 
 fn delay() {
@@ -179,9 +179,9 @@ fn delay() {
 }
 
 pub fn start_ap(apic_id: u32, vector: u8) {
-    crate::drivers::serial::print("LAPIC: starting AP ");
-    crate::drivers::serial::print_u64(apic_id as u64);
-    crate::drivers::serial::println("");
+    crate::log_smp_raw!("LAPIC: starting AP ");
+    crate::log_smp_raw!("{}", apic_id as u64);
+    crate::log_smp!("");
 
     send_init_ipi(apic_id);
     delay();
@@ -205,16 +205,16 @@ pub fn timer_init() {
         let lvt = read(REG_LVT_TIMER);
         let divide = read(REG_DIVIDE_CONFIG);
 
-        crate::drivers::serial::print("LAPIC LVT TIMER: 0x");
-        crate::drivers::serial::print_hex_u32(lvt);
-        crate::drivers::serial::println("");
+        crate::log_smp_raw!("LAPIC LVT TIMER: 0x");
+        crate::log_smp_raw!("{:08X}", lvt);
+        crate::log_smp!("");
 
-        crate::drivers::serial::print("LAPIC DIVIDE: 0x");
-        crate::drivers::serial::print_hex_u32(divide);
-        crate::drivers::serial::println("");
+        crate::log_smp_raw!("LAPIC DIVIDE: 0x");
+        crate::log_smp_raw!("{:08X}", divide);
+        crate::log_smp!("");
     }
 
-    crate::drivers::serial::println("LAPIC: timer initialized");
+    crate::log_smp!("LAPIC: timer initialized");
 }
 
 pub fn timer_start(count: u32) {
@@ -223,25 +223,25 @@ pub fn timer_start(count: u32) {
 
         let current = read(REG_CURRENT_COUNT);
 
-        crate::drivers::serial::print("LAPIC initial count: ");
-        crate::drivers::serial::print_u64(count as u64);
-        crate::drivers::serial::println("");
+        crate::log_smp_raw!("LAPIC initial count: ");
+        crate::log_smp_raw!("{}", count as u64);
+        crate::log_smp!("");
 
-        crate::drivers::serial::print("LAPIC current count: ");
-        crate::drivers::serial::print_u64(current as u64);
-        crate::drivers::serial::println("");
+        crate::log_smp_raw!("LAPIC current count: ");
+        crate::log_smp_raw!("{}", current as u64);
+        crate::log_smp!("");
     }
 
-    crate::drivers::serial::println("LAPIC: timer started");
+    crate::log_smp!("LAPIC: timer started");
 }
 
 pub fn timer_debug_count() {
     unsafe {
         let current = read(REG_CURRENT_COUNT);
 
-        crate::drivers::serial::print("LAPIC current count now: ");
-        crate::drivers::serial::print_u64(current as u64);
-        crate::drivers::serial::println("");
+        crate::log_smp_raw!("LAPIC current count now: ");
+        crate::log_smp_raw!("{}", current as u64);
+        crate::log_smp!("");
     }
 }
 
@@ -278,9 +278,9 @@ pub fn init_ap() {
         write(REG_LVT_LINT0, 0x700);
         write(REG_LVT_LINT1, 0x400);
     }
-    crate::drivers::serial::print("AP LAPIC: enabled, ID = ");
-    crate::drivers::serial::print_u64(apic_id as u64);
-    crate::drivers::serial::println("");
+    crate::log_smp_raw!("AP LAPIC: enabled, ID = ");
+    crate::log_smp_raw!("{}", apic_id as u64);
+    crate::log_smp!("");
 }
 
 pub fn timer_init_ap() {
@@ -295,7 +295,7 @@ pub fn timer_start_ap(count: u32) {
     unsafe {
         write(REG_INITIAL_COUNT, count);
     }
-    crate::drivers::serial::print("AP LAPIC: timer started, count = ");
-    crate::drivers::serial::print_u64(count as u64);
-    crate::drivers::serial::println("");
+    crate::log_smp_raw!("AP LAPIC: timer started, count = ");
+    crate::log_smp_raw!("{}", count as u64);
+    crate::log_smp!("");
 }

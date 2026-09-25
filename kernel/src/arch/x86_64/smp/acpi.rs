@@ -91,71 +91,71 @@ pub fn init() {
     let rsdp_phys = match crate::boot::limine::rsdp_address() {
         Some(addr) => addr,
         None => {
-            crate::drivers::serial::println("SMP: RSDP not found");
+            crate::log_smp!("SMP: RSDP not found");
             return;
         }
     };
 
-    crate::drivers::serial::println("SMP: RSDP found");
+    crate::log_smp!("SMP: RSDP found");
 
-    crate::drivers::serial::print("SMP: RSDP address: 0x");
-    crate::drivers::serial::print_hex_u64(rsdp_phys);
-    crate::drivers::serial::println("");
+    crate::log_smp_raw!("SMP: RSDP address: 0x");
+    crate::log_smp_raw!("{:016X}", rsdp_phys);
+    crate::log_smp!("");
 
     let rsdp_virt = phys_to_virt(rsdp_phys);
     let rsdp = unsafe { read_unaligned(rsdp_virt as *const Rsdp) };
 
     if unsafe { core::ptr::addr_of!(rsdp.signature).read_unaligned() } != *b"RSD PTR " {
-        crate::drivers::serial::println("SMP: Invalid RSDP signature");
+        crate::log_smp!("SMP: Invalid RSDP signature");
         return;
     }
 
-    crate::drivers::serial::println("SMP: RSDP signature OK");
+    crate::log_smp!("SMP: RSDP signature OK");
 
     let revision = unsafe { core::ptr::addr_of!(rsdp.revision).read_unaligned() };
     let length = unsafe { core::ptr::addr_of!(rsdp.length).read_unaligned() };
     let xsdt_address = unsafe { core::ptr::addr_of!(rsdp.xsdt_address).read_unaligned() };
     let rsdt_address = unsafe { core::ptr::addr_of!(rsdp.rsdt_address).read_unaligned() };
 
-    crate::drivers::serial::print("SMP: RSDP revision: ");
-    crate::drivers::serial::print_u64(revision as u64);
-    crate::drivers::serial::println("");
+    crate::log_smp_raw!("SMP: RSDP revision: ");
+    crate::log_smp_raw!("{}", revision as u64);
+    crate::log_smp!("");
 
     if revision >= 2 {
-        crate::drivers::serial::print("SMP: RSDP length: ");
-        crate::drivers::serial::print_u64(length as u64);
-        crate::drivers::serial::println("");
+        crate::log_smp_raw!("SMP: RSDP length: ");
+        crate::log_smp_raw!("{}", length as u64);
+        crate::log_smp!("");
 
-        crate::drivers::serial::print("SMP: XSDT address: 0x");
-        crate::drivers::serial::print_hex_u64(xsdt_address);
-        crate::drivers::serial::println("");
+        crate::log_smp_raw!("SMP: XSDT address: 0x");
+        crate::log_smp_raw!("{:016X}", xsdt_address);
+        crate::log_smp!("");
 
         if xsdt_address == 0 {
-            crate::drivers::serial::println("SMP: XSDT address is null");
+            crate::log_smp!("SMP: XSDT address is null");
             return;
         }
 
         let xsdt_virt = phys_to_virt(xsdt_address);
         let ok = sdt_checksum_ok(xsdt_virt);
-        crate::drivers::serial::print("SMP: XSDT checksum: ");
+        crate::log_smp_raw!("SMP: XSDT checksum: ");
         if ok {
-            crate::drivers::serial::println("OK");
+            crate::log_smp!("OK");
         } else {
-            crate::drivers::serial::println("BAD");
+            crate::log_smp!("BAD");
         }
 
         let xsdt_header = unsafe { read_unaligned(xsdt_virt as *const SdtHeader) };
         let xsdt_len = unsafe { core::ptr::addr_of!(xsdt_header.length).read_unaligned() } as usize;
 
         if xsdt_len < core::mem::size_of::<SdtHeader>() {
-            crate::drivers::serial::println("SMP: XSDT length invalid");
+            crate::log_smp!("SMP: XSDT length invalid");
             return;
         }
 
         let entries = (xsdt_len - core::mem::size_of::<SdtHeader>()) / 8;
-        crate::drivers::serial::print("SMP: XSDT entries: ");
-        crate::drivers::serial::print_u64(entries as u64);
-        crate::drivers::serial::println("");
+        crate::log_smp_raw!("SMP: XSDT entries: ");
+        crate::log_smp_raw!("{}", entries as u64);
+        crate::log_smp!("");
 
         let mut madt_phys: u64 = 0;
         for i in 0..entries {
@@ -174,18 +174,18 @@ pub fn init() {
         }
 
         if madt_phys == 0 {
-            crate::drivers::serial::println("SMP: MADT not found");
+            crate::log_smp!("SMP: MADT not found");
             return;
         }
 
-        crate::drivers::serial::println("SMP: MADT found");
+        crate::log_smp!("SMP: MADT found");
 
         let madt_virt = phys_to_virt(madt_phys);
         let madt = unsafe { read_unaligned(madt_virt as *const MadtHeader) };
         let lapic_addr = unsafe { core::ptr::addr_of!(madt.local_apic_address).read_unaligned() };
-        crate::drivers::serial::print("SMP: Local APIC address: 0x");
-        crate::drivers::serial::print_hex_u64(lapic_addr as u64);
-        crate::drivers::serial::println("");
+        crate::log_smp_raw!("SMP: Local APIC address: 0x");
+        crate::log_smp_raw!("{:016X}", lapic_addr as u64);
+        crate::log_smp!("");
 
         set_lapic_phys(lapic_addr as u64);
 
@@ -205,30 +205,30 @@ pub fn init() {
                 let flags = unsafe { read_unaligned((entry_ptr + 4) as *const u32) };
                 let enabled = (flags & 1) != 0 || (flags & 2) != 0;
                 if enabled {
-                    crate::drivers::serial::print("CPU ");
-                    crate::drivers::serial::print_u64(cpu_index);
-                    crate::drivers::serial::print(": APIC ID = ");
-                    crate::drivers::serial::print_u64(apic_id as u64);
-                    crate::drivers::serial::println("");
+                    crate::log_smp_raw!("CPU ");
+                    crate::log_smp_raw!("{}", cpu_index);
+                    crate::log_smp_raw!(": APIC ID = ");
+                    crate::log_smp_raw!("{}", apic_id as u64);
+                    crate::log_smp!("");
                     cpu_index += 1;
                 } else {
-                    crate::drivers::serial::print("CPU ");
-                    crate::drivers::serial::print_u64(cpu_index);
-                    crate::drivers::serial::print(": APIC ID = ");
-                    crate::drivers::serial::print_u64(apic_id as u64);
-                    crate::drivers::serial::print(" (disabled)");
-                    crate::drivers::serial::println("");
+                    crate::log_smp_raw!("CPU ");
+                    crate::log_smp_raw!("{}", cpu_index);
+                    crate::log_smp_raw!(": APIC ID = ");
+                    crate::log_smp_raw!("{}", apic_id as u64);
+                    crate::log_smp_raw!(" (disabled)");
+                    crate::log_smp!("");
                 }
             } else if entry_type == 9 && entry_len == 16 {
                 let apic_id = unsafe { read_unaligned((entry_ptr + 4) as *const u32) };
                 let flags = unsafe { read_unaligned((entry_ptr + 8) as *const u32) };
                 let enabled = (flags & 1) != 0;
                 if enabled {
-                    crate::drivers::serial::print("CPU ");
-                    crate::drivers::serial::print_u64(cpu_index);
-                    crate::drivers::serial::print(": APIC ID = ");
-                    crate::drivers::serial::print_u64(apic_id as u64);
-                    crate::drivers::serial::println("");
+                    crate::log_smp_raw!("CPU ");
+                    crate::log_smp_raw!("{}", cpu_index);
+                    crate::log_smp_raw!(": APIC ID = ");
+                    crate::log_smp_raw!("{}", apic_id as u64);
+                    crate::log_smp!("");
                     cpu_index += 1;
                 }
             }
@@ -239,17 +239,17 @@ pub fn init() {
         }
 
         if cpu_index == 0 {
-            crate::drivers::serial::println("SMP: No enabled CPUs in MADT");
+            crate::log_smp!("SMP: No enabled CPUs in MADT");
         }
     } else {
-        crate::drivers::serial::println("SMP: ACPI 1.0 RSDT detected");
+        crate::log_smp!("SMP: ACPI 1.0 RSDT detected");
     
-        crate::drivers::serial::print("SMP: RSDT address: 0x");
-        crate::drivers::serial::print_hex_u64(rsdt_address as u64);
-        crate::drivers::serial::println("");
+        crate::log_smp_raw!("SMP: RSDT address: 0x");
+        crate::log_smp_raw!("{:016X}", rsdt_address as u64);
+        crate::log_smp!("");
     
         if rsdt_address == 0 {
-            crate::drivers::serial::println("SMP: RSDT address is null");
+            crate::log_smp!("SMP: RSDT address is null");
             return;
         }
     
@@ -258,11 +258,11 @@ pub fn init() {
         // RSDT checksum
         let ok = sdt_checksum_ok(rsdt_virt);
     
-        crate::drivers::serial::print("SMP: RSDT checksum: ");
+        crate::log_smp_raw!("SMP: RSDT checksum: ");
         if ok {
-            crate::drivers::serial::println("OK");
+            crate::log_smp!("OK");
         } else {
-            crate::drivers::serial::println("BAD");
+            crate::log_smp!("BAD");
             return;
         }
     
@@ -276,16 +276,16 @@ pub fn init() {
             } as usize;
     
         if rsdt_len < core::mem::size_of::<SdtHeader>() {
-            crate::drivers::serial::println("SMP: RSDT length invalid");
+            crate::log_smp!("SMP: RSDT length invalid");
             return;
         }
     
         let entries =
             (rsdt_len - core::mem::size_of::<SdtHeader>()) / 4;
     
-        crate::drivers::serial::print("SMP: RSDT entries: ");
-        crate::drivers::serial::print_u64(entries as u64);
-        crate::drivers::serial::println("");
+        crate::log_smp_raw!("SMP: RSDT entries: ");
+        crate::log_smp_raw!("{}", entries as u64);
+        crate::log_smp!("");
     
         // Search MADT (APIC)
         let mut madt_phys: u64 = 0;
@@ -318,15 +318,15 @@ pub fn init() {
                         .read_unaligned()
                 };
     
-            crate::drivers::serial::print("SMP: RSDT entry ");
-            crate::drivers::serial::print_u64(i as u64);
-            crate::drivers::serial::print(": ");
+            crate::log_smp_raw!("SMP: RSDT entry ");
+            crate::log_smp_raw!("{}", i as u64);
+            crate::log_smp_raw!(": ");
     
             for byte in signature {
-                crate::drivers::serial::putc(byte as u8);
+                crate::log_smp_raw!("{}", (byte as u8) as char);
             }
     
-            crate::drivers::serial::println("");
+            crate::log_smp!("");
     
             if &signature == b"APIC" {
                 madt_phys = table_phys;
@@ -335,11 +335,11 @@ pub fn init() {
         }
     
         if madt_phys == 0 {
-            crate::drivers::serial::println("SMP: MADT not found");
+            crate::log_smp!("SMP: MADT not found");
             return;
         }
     
-        crate::drivers::serial::println("SMP: MADT found");
+        crate::log_smp!("SMP: MADT found");
     
         let madt_virt = phys_to_virt(madt_phys);
     
@@ -356,11 +356,9 @@ pub fn init() {
 
         set_lapic_phys(lapic_addr as u64);
     
-        crate::drivers::serial::print(
-            "SMP: Local APIC address: 0x"
-        );
-        crate::drivers::serial::print_hex_u64(lapic_addr as u64);
-        crate::drivers::serial::println("");
+        crate::log_smp_raw!("SMP: Local APIC address: 0x");
+        crate::log_smp_raw!("{:016X}", lapic_addr as u64);
+        crate::log_smp!("");
     
         let madt_len =
             unsafe {
@@ -369,7 +367,7 @@ pub fn init() {
             } as usize;
     
         if madt_len < core::mem::size_of::<MadtHeader>() {
-            crate::drivers::serial::println("SMP: MADT length invalid");
+            crate::log_smp!("SMP: MADT length invalid");
             return;
         }
     
@@ -419,22 +417,22 @@ pub fn init() {
                 let enabled =
                     (flags & 1) != 0 || (flags & 2) != 0;
     
-                crate::drivers::serial::print("CPU ");
-                crate::drivers::serial::print_u64(cpu_index);
-                crate::drivers::serial::print(": Processor ID = ");
-                crate::drivers::serial::print_u64(processor_id as u64);
+                crate::log_smp_raw!("CPU ");
+                crate::log_smp_raw!("{}", cpu_index);
+                crate::log_smp_raw!(": Processor ID = ");
+                crate::log_smp_raw!("{}", processor_id as u64);
     
-                crate::drivers::serial::print(", APIC ID = ");
-                crate::drivers::serial::print_u64(apic_id as u64);
+                crate::log_smp_raw!(", APIC ID = ");
+                crate::log_smp_raw!("{}", apic_id as u64);
     
                 if enabled {
-                    crate::drivers::serial::print("CPU ");
-                    crate::drivers::serial::print_u64(cpu_index);
-                    crate::drivers::serial::print(": Processor ID = ");
-                    crate::drivers::serial::print_u64(processor_id as u64);
-                    crate::drivers::serial::print(", APIC ID = ");
-                    crate::drivers::serial::print_u64(apic_id as u64);
-                    crate::drivers::serial::println(" [enabled]");
+                    crate::log_smp_raw!("CPU ");
+                    crate::log_smp_raw!("{}", cpu_index);
+                    crate::log_smp_raw!(": Processor ID = ");
+                    crate::log_smp_raw!("{}", processor_id as u64);
+                    crate::log_smp_raw!(", APIC ID = ");
+                    crate::log_smp_raw!("{}", apic_id as u64);
+                    crate::log_smp!(" [enabled]");
                 
                     super::register_cpu(
                         processor_id,
@@ -444,7 +442,7 @@ pub fn init() {
                 
                     cpu_index += 1;
                 } else {
-                    crate::drivers::serial::println(" [disabled]");
+                    crate::log_smp!(" [disabled]");
                 }
             }
     
@@ -472,23 +470,13 @@ pub fn init() {
                     };
     
                 if (flags & 1) != 0 {
-                    crate::drivers::serial::print(
-                        "CPU x2APIC: UID = "
-                    );
-                    crate::drivers::serial::print_u64(
-                        processor_uid as u64
-                    );
+                    crate::log_smp_raw!("CPU x2APIC: UID = ");
+                    crate::log_smp_raw!("{}", processor_uid as u64);
     
-                    crate::drivers::serial::print(
-                        ", APIC ID = "
-                    );
-                    crate::drivers::serial::print_u64(
-                        apic_id as u64
-                    );
+                    crate::log_smp_raw!(", APIC ID = ");
+                    crate::log_smp_raw!("{}", apic_id as u64);
     
-                    crate::drivers::serial::println(
-                        " [enabled]"
-                    );
+                    crate::log_smp!(" [enabled]");
     
                     cpu_index += 1;
                 }
@@ -498,28 +486,20 @@ pub fn init() {
         }
     
         if cpu_index == 0 {
-            crate::drivers::serial::println(
-                "SMP: No enabled CPUs in MADT"
-            );
+            crate::log_smp!("SMP: No enabled CPUs in MADT");
         } else {
-            crate::drivers::serial::print(
-                "SMP: Enabled CPUs: "
-            );
-            crate::drivers::serial::print_u64(cpu_index);
-            crate::drivers::serial::println("");
+            crate::log_smp_raw!("SMP: Enabled CPUs: ");
+            crate::log_smp_raw!("{}", cpu_index);
+            crate::log_smp!("");
         }
     }
 
     let _ = rsdp_checksum_ok(rsdp_virt, revision, length);
 
     if !rsdp_checksum_ok(rsdp_virt, revision, length) {
-        crate::drivers::serial::println(
-            "SMP: RSDP checksum: BAD"
-        );
+        crate::log_smp!("SMP: RSDP checksum: BAD");
         return;
     }
     
-    crate::drivers::serial::println(
-        "SMP: RSDP checksum: OK"
-    );
+    crate::log_smp!("SMP: RSDP checksum: OK");
 }

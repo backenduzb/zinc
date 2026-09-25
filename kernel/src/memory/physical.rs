@@ -38,7 +38,7 @@ impl FrameAllocator {
         }
 
         let Some(response) = MEMORY_MAP_REQUEST.response() else {
-            crate::drivers::serial::println("ERROR: memory map unavailable");
+            crate::log_boot!("ERROR: memory map unavailable");
 
             ALLOCATOR_INITIALIZED.store(false, Ordering::SeqCst);
             return Self::empty();
@@ -82,10 +82,10 @@ impl FrameAllocator {
             }
         }
 
-        crate::drivers::serial::print("PMM usable frames: ");
-        crate::drivers::serial::print_u64(usable_memory / PAGE_SIZE);
-        crate::drivers::serial::println("");
-        crate::drivers::serial::println("Frame allocator initialized");
+        crate::log_boot_raw!("PMM usable frames: ");
+        crate::log_boot_raw!("{}", usable_memory / PAGE_SIZE);
+        crate::log_boot!("");
+        crate::log_boot!("Frame allocator initialized");
 
         Self { initialized: true }
     }
@@ -179,15 +179,15 @@ impl FrameAllocator {
 
 pub fn init() {
     let Some(response) = MEMORY_MAP_REQUEST.response() else {
-        crate::drivers::serial::println("ERROR: memory map unvaible");
+        crate::log_boot!("ERROR: memory map unvaible");
         return;
     };
 
     let entries = response.entries();
 
-    crate::drivers::serial::print("Memory map entries: ");
-    crate::drivers::serial::print_u64(entries.len() as u64);
-    crate::drivers::serial::println("");
+    crate::log_boot_raw!("Memory map entries: ");
+    crate::log_boot_raw!("{}", entries.len() as u64);
+    crate::log_boot!("");
 
     let mut usable_memory = 0u64;
 
@@ -197,11 +197,11 @@ pub fn init() {
         }
     }
 
-    crate::drivers::serial::print("Usable memory: ");
-    crate::drivers::serial::print_u64(usable_memory / (1024 * 1024));
-    crate::drivers::serial::println("Mib");
+    crate::log_boot_raw!("Usable memory: ");
+    crate::log_boot_raw!("{}", usable_memory / (1024 * 1024));
+    crate::log_boot!("Mib");
 
-    crate::drivers::serial::println("Physical memory manager initialized");
+    crate::log_boot!("Physical memory manager initialized");
 }
 
 pub fn align_up(address: u64) -> u64 {
@@ -223,55 +223,55 @@ pub fn free_bitmap_frame(frame_index: usize) {
 pub fn test() {
     let mut frame_allocator = memory::physical::FrameAllocator::new();
 
-    crate::drivers::serial::println("Frame allocator test");
+    crate::log_test!("Frame allocator test");
 
     let frame1 = frame_allocator.alloc_frame();
     let frame2 = frame_allocator.alloc_frame();
     let frame3 = frame_allocator.alloc_frame();
 
     if let Some(frame) = frame1 {
-        crate::drivers::serial::print("Allocated frame 1: 0x");
+        crate::log_boot_raw!("Allocated frame 1: 0x");
 
-        crate::drivers::serial::print_u64(frame.address);
+        crate::log_boot_raw!("{}", frame.address);
 
-        crate::drivers::serial::println("");
+        crate::log_boot!("");
     }
 
     if let Some(frame) = frame2 {
-        crate::drivers::serial::print("Allocated frame 2: 0x");
+        crate::log_boot_raw!("Allocated frame 2: 0x");
 
-        crate::drivers::serial::print_u64(frame.address);
+        crate::log_boot_raw!("{}", frame.address);
 
-        crate::drivers::serial::println("");
+        crate::log_boot!("");
     }
 
     if let Some(frame) = frame3 {
-        crate::drivers::serial::print("Allocated frame 3: 0x");
+        crate::log_boot_raw!("Allocated frame 3: 0x");
 
-        crate::drivers::serial::print_u64(frame.address);
+        crate::log_boot_raw!("{}", frame.address);
 
-        crate::drivers::serial::println("");
+        crate::log_boot!("");
     }
 
     if let Some(frame) = frame2 {
         if frame_allocator.free_frame(frame) {
-            crate::drivers::serial::println("Frame 2 freed");
+            crate::log_boot!("Frame 2 freed");
         } else {
-            crate::drivers::serial::println("ERROR: failed to free frame 2");
+            crate::log_test!("ERROR: failed to free frame 2");
         }
     }
 
     match frame_allocator.alloc_frame() {
         Some(frame) => {
-            crate::drivers::serial::print("Reallocated frame: 0x");
+            crate::log_boot_raw!("Reallocated frame: 0x");
 
-            crate::drivers::serial::print_u64(frame.address);
+            crate::log_boot_raw!("{}", frame.address);
 
-            crate::drivers::serial::println("");
+            crate::log_boot!("");
         }
 
         None => {
-            crate::drivers::serial::println("ERROR: reallocation failed");
+            crate::log_test!("ERROR: reallocation failed");
         }
     }
 }

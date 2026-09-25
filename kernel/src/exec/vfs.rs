@@ -116,31 +116,31 @@ pub fn read_exec_path(path: &[u8]) -> Result<Vec<u8>, VfsExecError> {
         return Err(VfsExecError::BadMagic);
     }
 
-    crate::drivers::serial::print("VFS EXEC: ELF bytes=");
-    crate::drivers::serial::print_u64(elf.len() as u64);
-    crate::drivers::serial::println(" magic OK");
+    crate::log_vfs_raw!("VFS EXEC: ELF bytes=");
+    crate::log_vfs_raw!("{}", elf.len() as u64);
+    crate::log_vfs!(" magic OK");
 
     Ok(elf)
 }
 
 pub fn exec_path(path: &[u8], argv: &[&str], cpu_id: usize) -> Result<ExecResult, VfsExecError> {
-    crate::drivers::serial::print("VFS EXEC: open ");
+    crate::log_vfs_raw!("VFS EXEC: open ");
     for &b in path {
-        crate::drivers::serial::putc(b);
+        crate::log_vfs_raw!("{}", (b) as char);
     }
-    crate::drivers::serial::println("");
+    crate::log_vfs!("");
 
     if !crate::arch::x86_64::smp::percpu::is_online(cpu_id) {
-        crate::drivers::serial::println("VFS EXEC: target CPU offline");
+        crate::log_vfs!("VFS EXEC: target CPU offline");
         return Err(VfsExecError::CpuOffline);
     }
 
     let (mut ide, vfs) = open_root_vfs()?;
     let elf = read_path(&vfs, &mut ide, path)?;
 
-    crate::drivers::serial::print("VFS EXEC: ELF bytes=");
-    crate::drivers::serial::print_u64(elf.len() as u64);
-    crate::drivers::serial::println(" magic OK");
+    crate::log_vfs_raw!("VFS EXEC: ELF bytes=");
+    crate::log_vfs_raw!("{}", elf.len() as u64);
+    crate::log_vfs!(" magic OK");
 
     let mut allocator = FrameAllocator::new();
     let pm_ptr = crate::task::process_manager();
@@ -150,15 +150,15 @@ pub fn exec_path(path: &[u8], argv: &[&str], cpu_id: usize) -> Result<ExecResult
     }
     .map_err(VfsExecError::Exec)?;
 
-    crate::drivers::serial::print("VFS EXEC: PROCESS CREATED PID=");
-    crate::drivers::serial::print_u64(res.process_id);
-    crate::drivers::serial::print(" TID=");
-    crate::drivers::serial::print_u64(res.thread_id);
-    crate::drivers::serial::print(" entry=0x");
-    crate::drivers::serial::print_hex_u64(res.entry);
-    crate::drivers::serial::print(" RSP=0x");
-    crate::drivers::serial::print_hex_u64(res.user_stack_pointer);
-    crate::drivers::serial::println("");
+    crate::log_vfs_raw!("VFS EXEC: PROCESS CREATED PID=");
+    crate::log_vfs_raw!("{}", res.process_id);
+    crate::log_vfs_raw!(" TID=");
+    crate::log_vfs_raw!("{}", res.thread_id);
+    crate::log_vfs_raw!(" entry=0x");
+    crate::log_vfs_raw!("{:016X}", res.entry);
+    crate::log_vfs_raw!(" RSP=0x");
+    crate::log_vfs_raw!("{:016X}", res.user_stack_pointer);
+    crate::log_vfs!("");
 
     Ok(res)
 }
@@ -168,7 +168,7 @@ extern "C" fn hello_reaper() -> ! {
         core::arch::asm!("sti", options(nomem, nostack, preserves_flags));
     }
 
-    crate::drivers::serial::println("VFS EXEC: reaper started");
+    crate::log_vfs!("VFS EXEC: reaper started");
 
     loop {
         let pid = REAP_PID.load(Ordering::Relaxed);
@@ -184,18 +184,18 @@ extern "C" fn hello_reaper() -> ! {
                 }
             };
             if ready {
-                crate::drivers::serial::print("VFS EXEC: PID=");
-                crate::drivers::serial::print_u64(pid);
-                crate::drivers::serial::println(" exited, reaping...");
+                crate::log_vfs_raw!("VFS EXEC: PID=");
+                crate::log_vfs_raw!("{}", pid);
+                crate::log_exec!(" exited, reaping...");
 
                 let mut allocator = FrameAllocator::new();
                 let ok = unsafe { (*crate::task::process_manager()).reap(pid, &mut allocator) };
                 let gone = unsafe { (*crate::task::process_manager()).get(pid).is_none() };
                 if ok && gone {
-                    crate::drivers::serial::println("VFS EXEC: PROCESS REAP OK");
+                    crate::log_vfs!("VFS EXEC: PROCESS REAP OK");
                     crate::task::exit();
                 } else {
-                    crate::drivers::serial::println("VFS EXEC: reap FAILED");
+                    crate::log_vfs!("VFS EXEC: reap FAILED");
                 }
             }
         }
@@ -208,7 +208,7 @@ extern "C" fn open_test_reaper() -> ! {
         core::arch::asm!("sti", options(nomem, nostack, preserves_flags));
     }
 
-    crate::drivers::serial::println("VFS EXEC: open_test reaper started");
+    crate::log_vfs!("VFS EXEC: open_test reaper started");
 
     loop {
         let pid = REAP_OPEN_TEST_PID.load(Ordering::Relaxed);
@@ -228,9 +228,9 @@ extern "C" fn open_test_reaper() -> ! {
             };
 
             if ready {
-                crate::drivers::serial::print("VFS EXEC: open_test PID=");
-                crate::drivers::serial::print_u64(pid);
-                crate::drivers::serial::println(" exited, reaping...");
+                crate::log_vfs_raw!("VFS EXEC: open_test PID=");
+                crate::log_vfs_raw!("{}", pid);
+                crate::log_exec!(" exited, reaping...");
 
                 let mut allocator = FrameAllocator::new();
 
@@ -239,7 +239,7 @@ extern "C" fn open_test_reaper() -> ! {
                 let gone = unsafe { (*crate::task::process_manager()).get(pid).is_none() };
 
                 if ok && gone {
-                    crate::drivers::serial::println("VFS EXEC: open_test PROCESS REAP OK");
+                    crate::log_vfs!("VFS EXEC: open_test PROCESS REAP OK");
 
                     OPEN_TEST_COMPLETE.store(true, Ordering::Release);
 
@@ -247,7 +247,7 @@ extern "C" fn open_test_reaper() -> ! {
 
                     crate::task::exit();
                 } else {
-                    crate::drivers::serial::println("VFS EXEC: open_test reap FAILED");
+                    crate::log_vfs!("VFS EXEC: open_test reap FAILED");
                 }
             }
         }
@@ -269,7 +269,7 @@ pub fn spawn_reaper(
     let added = unsafe { crate::task::SCHEDULERS[cpu_id].add_thread(thread, cpu_id) };
 
     if !added {
-        crate::drivers::serial::println("VFS EXEC: reaper add_thread FAILED");
+        crate::log_vfs!("VFS EXEC: reaper add_thread FAILED");
         return false;
     }
 
@@ -279,43 +279,43 @@ pub fn spawn_reaper(
 
     reap_slot.store(pid, Ordering::Relaxed);
 
-    crate::drivers::serial::print("VFS EXEC: reaper TID=");
-    crate::drivers::serial::print_u64(tid);
-    crate::drivers::serial::println(" armed");
+    crate::log_vfs_raw!("VFS EXEC: reaper TID=");
+    crate::log_vfs_raw!("{}", tid);
+    crate::log_vfs!(" armed");
 
     true
 }
 
 pub fn test_hello_exec() -> bool {
-    crate::drivers::serial::println("=== VFS EXEC HELLO TEST ===");
+    crate::log_vfs!("=== VFS EXEC HELLO TEST ===");
 
     let argv: &[&str] = &["hello"];
     let res = match exec_path(HELLO_PATH, argv, HELLO_CPU) {
         Ok(r) => r,
         Err(e) => {
-            crate::drivers::serial::print("VFS EXEC FAILED: ");
-            crate::drivers::serial::println(alloc::format!("{:?}", e).as_str());
+            crate::log_vfs_raw!("VFS EXEC FAILED: ");
+            crate::log_vfs!("{}", alloc::format!("{:?}", e).as_str());
             return false;
         }
     };
 
     if res.entry != 0x401000 {
-        crate::drivers::serial::println("VFS EXEC: unexpected entry FAILED");
+        crate::log_vfs!("VFS EXEC: unexpected entry FAILED");
         return false;
     }
-    crate::drivers::serial::println("VFS EXEC: ELF LOAD OK");
+    crate::log_vfs!("VFS EXEC: ELF LOAD OK");
 
     if !spawn_reaper(res.process_id, HELLO_CPU, hello_reaper, &REAP_PID) {
-        crate::drivers::serial::println("VFS EXEC: reaper spawn FAILED");
+        crate::log_vfs!("VFS EXEC: reaper spawn FAILED");
         return false;
     }
 
-    crate::drivers::serial::println("VFS EXEC: /bin/hello queued for Ring3");
+    crate::log_vfs!("VFS EXEC: /bin/hello queued for Ring3");
     true
 }
 
 pub fn test_open_test_exec() -> bool {
-    crate::drivers::serial::println("=== VFS EXEC OPEN TEST ===");
+    crate::log_vfs!("=== VFS EXEC OPEN TEST ===");
 
     OPEN_TEST_COMPLETE.store(false, Ordering::Release);
     REAP_OPEN_TEST_PID.store(0, Ordering::Relaxed);
@@ -332,25 +332,25 @@ pub fn test_open_test_exec() -> bool {
         Ok(r) => r,
 
         Err(e) => {
-            crate::drivers::serial::print("VFS EXEC OPEN TEST FAILED: ");
-            crate::drivers::serial::println(alloc::format!("{:?}", e).as_str());
+            crate::log_vfs_raw!("VFS EXEC OPEN TEST FAILED: ");
+            crate::log_vfs!("{}", alloc::format!("{:?}", e).as_str());
             return false;
         }
     };
 
     if res.entry != 0x401000 {
-        crate::drivers::serial::println("VFS EXEC OPEN TEST: unexpected entry FAILED");
+        crate::log_vfs!("VFS EXEC OPEN TEST: unexpected entry FAILED");
         return false;
     }
 
-    crate::drivers::serial::println("VFS EXEC OPEN TEST: ELF LOAD OK");
+    crate::log_vfs!("VFS EXEC OPEN TEST: ELF LOAD OK");
 
     if !spawn_reaper(res.process_id, cpu, open_test_reaper, &REAP_OPEN_TEST_PID) {
-        crate::drivers::serial::println("VFS EXEC OPEN TEST: reaper spawn FAILED");
+        crate::log_vfs!("VFS EXEC OPEN TEST: reaper spawn FAILED");
         return false;
     }
 
-    crate::drivers::serial::println("VFS EXEC: /bin/open_test queued for Ring3");
+    crate::log_vfs!("VFS EXEC: /bin/open_test queued for Ring3");
 
     true
 }
@@ -360,7 +360,7 @@ pub extern "C" fn init_reaper() -> ! {
         core::arch::asm!("sti", options(nomem, nostack, preserves_flags));
     }
 
-    crate::drivers::serial::println("VFS EXEC: init reaper started");
+    crate::log_vfs!("VFS EXEC: init reaper started");
 
     loop {
         let pid = REAP_INIT_PID.load(Ordering::Relaxed);
@@ -379,9 +379,9 @@ pub extern "C" fn init_reaper() -> ! {
             };
 
             if ready {
-                crate::drivers::serial::print("VFS EXEC: init PID=");
-                crate::drivers::serial::print_u64(pid);
-                crate::drivers::serial::println(" exited, reaping...");
+                crate::log_vfs_raw!("VFS EXEC: init PID=");
+                crate::log_vfs_raw!("{}", pid);
+                crate::log_exec!(" exited, reaping...");
 
                 let mut allocator = FrameAllocator::new();
 
@@ -390,10 +390,10 @@ pub extern "C" fn init_reaper() -> ! {
                 let gone = unsafe { (*crate::task::process_manager()).get(pid).is_none() };
 
                 if ok && gone {
-                    crate::drivers::serial::println("VFS EXEC: init PROCESS REAP OK");
+                    crate::log_vfs!("VFS EXEC: init PROCESS REAP OK");
                     crate::task::exit();
                 } else {
-                    crate::drivers::serial::println("VFS EXEC: init reap FAILED");
+                    crate::log_vfs!("VFS EXEC: init reap FAILED");
                 }
             }
         }
@@ -407,7 +407,7 @@ pub extern "C" fn badptr_reaper() -> ! {
         core::arch::asm!("sti", options(nomem, nostack, preserves_flags));
     }
 
-    crate::drivers::serial::println("VFS EXEC: badptr reaper started");
+    crate::log_vfs!("VFS EXEC: badptr reaper started");
 
     loop {
         let pid = REAP_BADPTR_PID.load(Ordering::Relaxed);
@@ -426,9 +426,9 @@ pub extern "C" fn badptr_reaper() -> ! {
             };
 
             if ready {
-                crate::drivers::serial::print("VFS EXEC: badptr PID=");
-                crate::drivers::serial::print_u64(pid);
-                crate::drivers::serial::println(" exited, reaping...");
+                crate::log_vfs_raw!("VFS EXEC: badptr PID=");
+                crate::log_vfs_raw!("{}", pid);
+                crate::log_exec!(" exited, reaping...");
 
                 let mut allocator = FrameAllocator::new();
 
@@ -437,13 +437,13 @@ pub extern "C" fn badptr_reaper() -> ! {
                 let gone = unsafe { (*crate::task::process_manager()).get(pid).is_none() };
 
                 if ok && gone {
-                    crate::drivers::serial::println("VFS EXEC: badptr PROCESS REAP OK");
+                    crate::log_vfs!("VFS EXEC: badptr PROCESS REAP OK");
 
                     BADPTR_COMPLETE.store(true, Ordering::Release);
 
                     crate::task::exit();
                 } else {
-                    crate::drivers::serial::println("VFS EXEC: badptr reap FAILED");
+                    crate::log_vfs!("VFS EXEC: badptr reap FAILED");
                 }
             }
         }
@@ -457,7 +457,7 @@ extern "C" fn read_test_reaper() -> ! {
         core::arch::asm!("sti", options(nomem, nostack, preserves_flags));
     }
 
-    crate::drivers::serial::println("VFS EXEC: read_test reaper started");
+    crate::log_vfs!("VFS EXEC: read_test reaper started");
 
     loop {
         let pid = REAP_READ_TEST_PID.load(Ordering::Relaxed);
@@ -476,9 +476,9 @@ extern "C" fn read_test_reaper() -> ! {
             };
 
             if ready {
-                crate::drivers::serial::print("VFS EXEC: read_test PID=");
-                crate::drivers::serial::print_u64(pid);
-                crate::drivers::serial::println(" exited, reaping...");
+                crate::log_vfs_raw!("VFS EXEC: read_test PID=");
+                crate::log_vfs_raw!("{}", pid);
+                crate::log_exec!(" exited, reaping...");
 
                 let mut allocator = FrameAllocator::new();
 
@@ -487,7 +487,7 @@ extern "C" fn read_test_reaper() -> ! {
                 let gone = unsafe { (*crate::task::process_manager()).get(pid).is_none() };
 
                 if ok && gone {
-                    crate::drivers::serial::println("VFS EXEC: read_test PROCESS REAP OK");
+                    crate::log_vfs!("VFS EXEC: read_test PROCESS REAP OK");
 
                     READ_TEST_COMPLETE.store(true, Ordering::Release);
 
@@ -495,7 +495,7 @@ extern "C" fn read_test_reaper() -> ! {
 
                     crate::task::exit();
                 } else {
-                    crate::drivers::serial::println("VFS EXEC: read_test reap FAILED");
+                    crate::log_vfs!("VFS EXEC: read_test reap FAILED");
                 }
             }
         }
@@ -505,7 +505,7 @@ extern "C" fn read_test_reaper() -> ! {
 }
 
 pub fn test_read_test_exec() -> bool {
-    crate::drivers::serial::println("=== VFS EXEC READ TEST ===");
+    crate::log_vfs!("=== VFS EXEC READ TEST ===");
 
     READ_TEST_COMPLETE.store(false, Ordering::Release);
     REAP_READ_TEST_PID.store(0, Ordering::Relaxed);
@@ -521,25 +521,25 @@ pub fn test_read_test_exec() -> bool {
     let res = match exec_path(READ_TEST_PATH, argv, cpu) {
         Ok(r) => r,
         Err(e) => {
-            crate::drivers::serial::print("VFS EXEC READ TEST FAILED: ");
-            crate::drivers::serial::println(alloc::format!("{:?}", e).as_str());
+            crate::log_vfs_raw!("VFS EXEC READ TEST FAILED: ");
+            crate::log_vfs!("{}", alloc::format!("{:?}", e).as_str());
             return false;
         }
     };
 
     if res.entry != 0x401000 {
-        crate::drivers::serial::println("VFS EXEC READ TEST: unexpected entry FAILED");
+        crate::log_vfs!("VFS EXEC READ TEST: unexpected entry FAILED");
         return false;
     }
 
-    crate::drivers::serial::println("VFS EXEC READ TEST: ELF LOAD OK");
+    crate::log_vfs!("VFS EXEC READ TEST: ELF LOAD OK");
 
     if !spawn_reaper(res.process_id, cpu, read_test_reaper, &REAP_READ_TEST_PID) {
-        crate::drivers::serial::println("VFS EXEC READ TEST: reaper spawn FAILED");
+        crate::log_vfs!("VFS EXEC READ TEST: reaper spawn FAILED");
         return false;
     }
 
-    crate::drivers::serial::println("VFS EXEC: /bin/read_test queued for Ring3");
+    crate::log_vfs!("VFS EXEC: /bin/read_test queued for Ring3");
 
     true
 }
@@ -549,7 +549,7 @@ extern "C" fn close_test_reaper() -> ! {
         core::arch::asm!("sti", options(nomem, nostack, preserves_flags));
     }
 
-    crate::drivers::serial::println("VFS EXEC: close_test reaper started");
+    crate::log_vfs!("VFS EXEC: close_test reaper started");
 
     loop {
         let pid = REAP_CLOSE_TEST_PID.load(Ordering::Relaxed);
@@ -568,9 +568,9 @@ extern "C" fn close_test_reaper() -> ! {
             };
 
             if ready {
-                crate::drivers::serial::print("VFS EXEC: close_test PID=");
-                crate::drivers::serial::print_u64(pid);
-                crate::drivers::serial::println(" exited, reaping...");
+                crate::log_vfs_raw!("VFS EXEC: close_test PID=");
+                crate::log_vfs_raw!("{}", pid);
+                crate::log_exec!(" exited, reaping...");
 
                 let mut allocator = FrameAllocator::new();
 
@@ -579,7 +579,7 @@ extern "C" fn close_test_reaper() -> ! {
                 let gone = unsafe { (*crate::task::process_manager()).get(pid).is_none() };
 
                 if ok && gone {
-                    crate::drivers::serial::println("VFS EXEC: close_test PROCESS REAP OK");
+                    crate::log_vfs!("VFS EXEC: close_test PROCESS REAP OK");
 
                     CLOSE_TEST_COMPLETE.store(true, Ordering::Release);
 
@@ -587,7 +587,7 @@ extern "C" fn close_test_reaper() -> ! {
 
                     crate::task::exit();
                 } else {
-                    crate::drivers::serial::println("VFS EXEC: close_test reap FAILED");
+                    crate::log_vfs!("VFS EXEC: close_test reap FAILED");
                 }
             }
         }
@@ -597,7 +597,7 @@ extern "C" fn close_test_reaper() -> ! {
 }
 
 pub fn test_close_test_exec() -> bool {
-    crate::drivers::serial::println("=== VFS EXEC CLOSE TEST ===");
+    crate::log_vfs!("=== VFS EXEC CLOSE TEST ===");
 
     CLOSE_TEST_COMPLETE.store(false, Ordering::Release);
     REAP_CLOSE_TEST_PID.store(0, Ordering::Relaxed);
@@ -614,25 +614,25 @@ pub fn test_close_test_exec() -> bool {
         Ok(r) => r,
 
         Err(e) => {
-            crate::drivers::serial::print("VFS EXEC CLOSE TEST FAILED: ");
-            crate::drivers::serial::println(alloc::format!("{:?}", e).as_str());
+            crate::log_vfs_raw!("VFS EXEC CLOSE TEST FAILED: ");
+            crate::log_vfs!("{}", alloc::format!("{:?}", e).as_str());
             return false;
         }
     };
 
     if res.entry != 0x401000 {
-        crate::drivers::serial::println("VFS EXEC CLOSE TEST: unexpected entry FAILED");
+        crate::log_vfs!("VFS EXEC CLOSE TEST: unexpected entry FAILED");
         return false;
     }
 
-    crate::drivers::serial::println("VFS EXEC CLOSE TEST: ELF LOAD OK");
+    crate::log_vfs!("VFS EXEC CLOSE TEST: ELF LOAD OK");
 
     if !spawn_reaper(res.process_id, cpu, close_test_reaper, &REAP_CLOSE_TEST_PID) {
-        crate::drivers::serial::println("VFS EXEC CLOSE TEST: reaper spawn FAILED");
+        crate::log_vfs!("VFS EXEC CLOSE TEST: reaper spawn FAILED");
         return false;
     }
 
-    crate::drivers::serial::println("VFS EXEC: /bin/close_test queued for Ring3");
+    crate::log_vfs!("VFS EXEC: /bin/close_test queued for Ring3");
 
     true
 }
@@ -642,7 +642,7 @@ extern "C" fn execve_test_reaper() -> ! {
         core::arch::asm!("sti", options(nomem, nostack, preserves_flags));
     }
 
-    crate::drivers::serial::println("VFS EXEC: execve_test reaper started");
+    crate::log_vfs!("VFS EXEC: execve_test reaper started");
 
     loop {
         let pid = REAP_EXECVE_TEST_PID.load(Ordering::Relaxed);
@@ -665,9 +665,9 @@ extern "C" fn execve_test_reaper() -> ! {
             };
 
             if ready {
-                crate::drivers::serial::print("VFS EXEC: execve_test PID=");
-                crate::drivers::serial::print_u64(pid);
-                crate::drivers::serial::println(" exited, reaping...");
+                crate::log_vfs_raw!("VFS EXEC: execve_test PID=");
+                crate::log_vfs_raw!("{}", pid);
+                crate::log_exec!(" exited, reaping...");
 
                 let mut allocator = FrameAllocator::new();
 
@@ -680,17 +680,13 @@ extern "C" fn execve_test_reaper() -> ! {
                 };
 
                 if ok && gone {
-                    crate::drivers::serial::println(
-                        "VFS EXEC: execve_test PROCESS REAP OK"
-                    );
+                    crate::log_vfs!("VFS EXEC: execve_test PROCESS REAP OK");
 
                     EXECVE_TEST_COMPLETE.store(true, Ordering::Release);
 
                     crate::task::exit();
                 } else {
-                    crate::drivers::serial::println(
-                        "VFS EXEC: execve_test reap FAILED"
-                    );
+                    crate::log_vfs!("VFS EXEC: execve_test reap FAILED");
                 }
             }
         }
@@ -700,7 +696,7 @@ extern "C" fn execve_test_reaper() -> ! {
 }
 
 pub fn test_execve_exec() -> bool {
-    crate::drivers::serial::println("=== VFS EXEC EXECVE TEST ===");
+    crate::log_vfs!("=== VFS EXEC EXECVE TEST ===");
 
     EXECVE_TEST_COMPLETE.store(false, Ordering::Release);
     REAP_EXECVE_TEST_PID.store(0, Ordering::Relaxed);
@@ -714,23 +710,19 @@ pub fn test_execve_exec() -> bool {
     ) {
         Ok(r) => r,
         Err(e) => {
-            crate::drivers::serial::print("VFS EXEC EXECVE FAILED: ");
-            crate::drivers::serial::println(
-                alloc::format!("{:?}", e).as_str(),
-            );
+            crate::log_vfs_raw!("VFS EXEC EXECVE FAILED: ");
+            crate::log_vfs!("{}", alloc::format!("{:?}", e).as_str(),);
             return false;
         }
     };
 
-    crate::drivers::serial::print(
-        "VFS EXEC: execve_test PROCESS CREATED PID=",
-    );
-    crate::drivers::serial::print_u64(res.process_id);
+    crate::log_vfs_raw!("{}", "VFS EXEC: execve_test PROCESS CREATED PID=",);
+    crate::log_vfs_raw!("{}", res.process_id);
 
-    crate::drivers::serial::print(" TID=");
-    crate::drivers::serial::print_u64(res.thread_id);
+    crate::log_vfs_raw!(" TID=");
+    crate::log_vfs_raw!("{}", res.thread_id);
 
-    crate::drivers::serial::println("");
+    crate::log_vfs!("");
 
     if !spawn_reaper(
         res.process_id,
@@ -738,9 +730,7 @@ pub fn test_execve_exec() -> bool {
         execve_test_reaper,
         &REAP_EXECVE_TEST_PID,
     ) {
-        crate::drivers::serial::println(
-            "VFS EXEC: execve_test reaper spawn FAILED",
-        );
+        crate::log_vfs!("{}", "VFS EXEC: execve_test reaper spawn FAILED",);
         return false;
     }
 

@@ -264,9 +264,9 @@ impl ProcessManager {
             process.remove_thread(tid);
             if process.threads.is_empty() && !process.is_terminated() {
                 process.set_state(ProcessState::Terminated);
-                crate::drivers::serial::print("PROCESS terminated PID=");
-                crate::drivers::serial::print_u64(pid);
-                crate::drivers::serial::println("");
+                crate::log_boot_raw!("PROCESS terminated PID=");
+                crate::log_boot_raw!("{}", pid);
+                crate::log_boot!("");
                 return true;
             }
             return false;
@@ -288,29 +288,29 @@ impl ProcessManager {
             None => return false,
         };
         if !self.processes[idx].is_terminated() {
-            crate::drivers::serial::print("REAP FAILED: PID=");
-            crate::drivers::serial::print_u64(pid);
-            crate::drivers::serial::println(" not terminated");
+            crate::log_exec_raw!("REAP FAILED: PID=");
+            crate::log_boot_raw!("{}", pid);
+            crate::log_boot!(" not terminated");
             return false;
         }
         if !self.processes[idx].threads.is_empty() {
-            crate::drivers::serial::print("REAP FAILED: PID=");
-            crate::drivers::serial::print_u64(pid);
-            crate::drivers::serial::println(" has live threads");
+            crate::log_exec_raw!("REAP FAILED: PID=");
+            crate::log_boot_raw!("{}", pid);
+            crate::log_vfs!(" has live threads");
             return false;
         }
         let space = self.processes[idx].take_address_space();
         if let Some(s) = space {
-            crate::drivers::serial::print("REAP: destroying AddressSpace PID=");
-            crate::drivers::serial::print_u64(pid);
-            crate::drivers::serial::println("");
+            crate::log_exec_raw!("REAP: destroying AddressSpace PID=");
+            crate::log_boot_raw!("{}", pid);
+            crate::log_boot!("");
             s.destroy(frame_allocator);
-            crate::drivers::serial::println("ADDRESS SPACE destroyed");
+            crate::log_boot!("ADDRESS SPACE destroyed");
         }
         self.processes.remove(idx);
-        crate::drivers::serial::print("PROCESS reaped PID=");
-        crate::drivers::serial::print_u64(pid);
-        crate::drivers::serial::println("");
+        crate::log_exec_raw!("PROCESS reaped PID=");
+        crate::log_boot_raw!("{}", pid);
+        crate::log_boot!("");
         true
     }
 
@@ -324,9 +324,9 @@ impl ProcessManager {
             s.destroy(frame_allocator);
         }
         self.processes.remove(idx);
-        crate::drivers::serial::print("PROCESS removed (cleanup) PID=");
-        crate::drivers::serial::print_u64(pid);
-        crate::drivers::serial::println("");
+        crate::log_boot_raw!("PROCESS removed (cleanup) PID=");
+        crate::log_boot_raw!("{}", pid);
+        crate::log_boot!("");
         true
     }
 

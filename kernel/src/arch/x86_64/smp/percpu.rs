@@ -131,7 +131,7 @@ pub fn init_bsp(apic_id: u32) {
 
         crate::arch::x86_64::gdt::load_for_cpu(gdt, tss);
     }
-    crate::drivers::serial::println("TSS: LTR loaded");
+    crate::log_tss!("TSS: LTR loaded");
 
     let rsp0 = unsafe { (*cpu.tss.get()).kernel_stack() };
 
@@ -139,13 +139,13 @@ pub fn init_bsp(apic_id: u32) {
 
     crate::arch::x86_64::gdt::load_tss(tss);
 
-    crate::drivers::serial::print("CPU 0 TSS RSP0 = ");
-    crate::drivers::serial::print_u64(rsp0);
-    crate::drivers::serial::println("");
+    crate::log_tss_raw!("CPU 0 TSS RSP0 = ");
+    crate::log_smp_raw!("{}", rsp0);
+    crate::log_smp!("");
 
-    crate::drivers::serial::print("SMP: BSP CPU 0 online, APIC ID = ");
-    crate::drivers::serial::print_u64(apic_id as u64);
-    crate::drivers::serial::println("");
+    crate::log_smp_raw!("SMP: BSP CPU 0 online, APIC ID = ");
+    crate::log_smp_raw!("{}", apic_id as u64);
+    crate::log_smp!("");
 }
 
 pub fn init_ap(cpu_id: usize, apic_id: u32) {
@@ -170,23 +170,23 @@ pub fn init_ap(cpu_id: usize, apic_id: u32) {
 
         crate::arch::x86_64::gdt::load_for_cpu(gdt, tss);
     }
-    crate::drivers::serial::println("TSS: LTR loaded");
+    crate::log_tss!("TSS: LTR loaded");
 
     let cpu = get(cpu_id).expect("AP PerCpu missing");
 
     let rsp0 = unsafe { (*cpu.tss.get()).kernel_stack() };
 
-    crate::drivers::serial::print("CPU ");
-    crate::drivers::serial::print_u64(cpu_id as u64);
-    crate::drivers::serial::print(" TSS RSP0 = ");
-    crate::drivers::serial::print_u64(rsp0);
-    crate::drivers::serial::println("");
+    crate::log_smp_raw!("CPU ");
+    crate::log_smp_raw!("{}", cpu_id as u64);
+    crate::log_tss_raw!(" TSS RSP0 = ");
+    crate::log_smp_raw!("{}", rsp0);
+    crate::log_smp!("");
 
-    crate::drivers::serial::print("SMP: CPU ");
-    crate::drivers::serial::print_u64(cpu_id as u64);
-    crate::drivers::serial::print(" online, APIC ID = ");
-    crate::drivers::serial::print_u64(apic_id as u64);
-    crate::drivers::serial::println("");
+    crate::log_smp_raw!("SMP: CPU ");
+    crate::log_smp_raw!("{}", cpu_id as u64);
+    crate::log_smp_raw!(" online, APIC ID = ");
+    crate::log_smp_raw!("{}", apic_id as u64);
+    crate::log_smp!("");
 }
 pub fn is_online(cpu_id: usize) -> bool {
     match get(cpu_id) {

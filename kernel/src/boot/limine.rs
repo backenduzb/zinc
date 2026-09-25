@@ -38,16 +38,14 @@ pub static FRAMEBUFFER_REQUEST: FramebufferRequest =
     
 pub fn init() {
     if !BASE_REVISION.is_supported() {
-        crate::drivers::serial::println(
-            "ERROR: unsupported Limine base revision",
-        );
+        crate::log_boot!("{}", "ERROR: unsupported Limine base revision",);
 
         loop {
             core::hint::spin_loop();
         }
     }
 
-    crate::drivers::serial::println("Limine OK");
+    crate::log_boot!("Limine OK");
 }
 
 pub fn physical_to_virtual(

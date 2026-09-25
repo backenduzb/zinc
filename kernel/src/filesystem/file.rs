@@ -135,9 +135,9 @@ pub fn read_file(
         let block_index = (current_offset / block_size_u64) as u32;
 
         if block_index >= 12 {
-            crate::drivers::serial::print("read_file: indirect block index=");
-            crate::drivers::serial::print_u64(block_index as u64);
-            crate::drivers::serial::putc(b'\n');
+            crate::log_vfs_raw!("read_file: indirect block index=");
+            crate::log_vfs_raw!("{}", block_index as u64);
+            crate::log_vfs_raw!("{}", (b'\n') as char);
         }
 
         let offset_in_block = (current_offset % block_size_u64) as usize;

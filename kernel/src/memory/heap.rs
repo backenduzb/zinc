@@ -134,17 +134,17 @@ impl KernelHeap {
     pub fn log_state(&self, tag: &str) {
         let (free_total, largest, blocks) = self.stats();
         let used = HEAP_SIZE.saturating_sub(free_total);
-        crate::drivers::serial::print("HEAP[");
-        crate::drivers::serial::print(tag);
-        crate::drivers::serial::print("] used=");
-        crate::drivers::serial::print_u64(used as u64);
-        crate::drivers::serial::print(" free=");
-        crate::drivers::serial::print_u64(free_total as u64);
-        crate::drivers::serial::print(" largest=");
-        crate::drivers::serial::print_u64(largest as u64);
-        crate::drivers::serial::print(" blocks=");
-        crate::drivers::serial::print_u64(blocks as u64);
-        crate::drivers::serial::println("");
+        crate::log_boot_raw!("HEAP[");
+        crate::log_boot_raw!("{}", tag);
+        crate::log_boot_raw!("] used=");
+        crate::log_boot_raw!("{}", used as u64);
+        crate::log_boot_raw!(" free=");
+        crate::log_boot_raw!("{}", free_total as u64);
+        crate::log_boot_raw!(" largest=");
+        crate::log_boot_raw!("{}", largest as u64);
+        crate::log_boot_raw!(" blocks=");
+        crate::log_boot_raw!("{}", blocks as u64);
+        crate::log_boot!("");
     }
 }
 
@@ -219,11 +219,11 @@ unsafe impl GlobalAlloc for KernelHeap {
         }
         release_lock();
         if !found {
-            crate::drivers::serial::print("HEAP ALLOC FAIL size=");
-            crate::drivers::serial::print_u64(size as u64);
-            crate::drivers::serial::print(" align=");
-            crate::drivers::serial::print_u64(align as u64);
-            crate::drivers::serial::println("");
+            crate::log_test_raw!("HEAP ALLOC FAIL size=");
+            crate::log_boot_raw!("{}", size as u64);
+            crate::log_boot_raw!(" align=");
+            crate::log_boot_raw!("{}", align as u64);
+            crate::log_boot!("");
             KERNEL_HEAP.log_state("alloc-fail");
             return null_mut();
         }

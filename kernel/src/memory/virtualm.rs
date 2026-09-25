@@ -39,13 +39,13 @@ impl VirtualMemoryManager {
             (*table).zero();
         }
 
-        crate::drivers::serial::println("PML4 allocated");
+        crate::log_boot!("PML4 allocated");
 
-        crate::drivers::serial::print("PML4 physical address: 0x");
+        crate::log_boot_raw!("PML4 physical address: 0x");
 
-        crate::drivers::serial::print_u64(pml4.address);
+        crate::log_boot_raw!("{}", pml4.address);
 
-        crate::drivers::serial::println("");
+        crate::log_boot!("");
 
         Some(Self {
             frame_allocator,
@@ -140,9 +140,7 @@ impl VirtualMemoryManager {
 
             if pd.entries[pd_index].is_present() {
                 if pd.entries[pd_index].is_huge() {
-                    crate::drivers::serial::println(
-                        "ERROR: cannot map 4 KiB page inside huge page",
-                    );
+                    crate::log_boot!("{}", "ERROR: cannot map 4 KiB page inside huge page",);
 
                     return false;
                 }
@@ -267,21 +265,21 @@ impl VirtualMemoryManager {
         let response = match crate::boot::limine::HHDM_REQUEST.response() {
             Some(response) => response,
             None => {
-                crate::drivers::serial::println("ERROR: HHDM unavailable");
+                crate::log_boot!("ERROR: HHDM unavailable");
                 return false;
             }
         };
 
         let hhdm_offset = response.offset;
 
-        crate::drivers::serial::print("HHDM offset: 0x");
-        crate::drivers::serial::print_u64(hhdm_offset);
-        crate::drivers::serial::println("");
+        crate::log_boot_raw!("HHDM offset: 0x");
+        crate::log_boot_raw!("{}", hhdm_offset);
+        crate::log_boot!("");
 
         let memory_map = match crate::boot::limine::MEMORY_MAP_REQUEST.response() {
             Some(response) => response,
             None => {
-                crate::drivers::serial::println("ERROR: memory map unavailable");
+                crate::log_boot!("ERROR: memory map unavailable");
                 return false;
             }
         };
@@ -302,14 +300,14 @@ impl VirtualMemoryManager {
                 let virtual_address = hhdm_offset + physical_address;
 
                 if !self.map_page(virtual_address, physical_address, true, false) {
-                    crate::drivers::serial::println("ERROR: failed to map HHDM page");
+                    crate::log_boot!("ERROR: failed to map HHDM page");
 
                     return false;
                 }
             }
         }
 
-        crate::drivers::serial::println("HHDM mapping created");
+        crate::log_boot!("HHDM mapping created");
 
         true
     }
@@ -318,7 +316,7 @@ impl VirtualMemoryManager {
         let response = match crate::boot::limine::EXECUTABLE_ADDRESS_REQUEST.response() {
             Some(response) => response,
             None => {
-                crate::drivers::serial::println("ERROR: executable address unavailable");
+                crate::log_exec!("ERROR: executable address unavailable");
                 return false;
             }
         };
@@ -332,9 +330,9 @@ impl VirtualMemoryManager {
 
         let kernel_size = kernel_end - kernel_start;
 
-        crate::drivers::serial::print("Kernel size: ");
-        crate::drivers::serial::print_u64(kernel_size);
-        crate::drivers::serial::println(" bytes");
+        crate::log_boot_raw!("Kernel size: ");
+        crate::log_boot_raw!("{}", kernel_size);
+        crate::log_boot!(" bytes");
 
         let page_count = (kernel_size + PAGE_SIZE - 1) / PAGE_SIZE;
 
@@ -344,13 +342,13 @@ impl VirtualMemoryManager {
             let physical_address = physical_base + index * PAGE_SIZE;
 
             if !self.map_page(virtual_address, physical_address, true, false) {
-                crate::drivers::serial::println("ERROR: failed to map kernel page");
+                crate::log_test!("ERROR: failed to map kernel page");
 
                 return false;
             }
         }
 
-        crate::drivers::serial::println("Kernel 4 KiB mapping created");
+        crate::log_boot!("Kernel 4 KiB mapping created");
 
         true
     }
@@ -368,14 +366,14 @@ impl VirtualMemoryManager {
             let frame = match self.frame_allocator.alloc_frame() {
                 Some(frame) => frame,
                 None => {
-                    crate::drivers::serial::println("ERROR: failed to allocate heap frame");
+                    crate::log_test!("ERROR: failed to allocate heap frame");
 
                     return false;
                 }
             };
 
             if !self.map_page(virtual_address, frame.address, true, false) {
-                crate::drivers::serial::println("ERROR: failed to map heap page");
+                crate::log_test!("ERROR: failed to map heap page");
 
                 self.frame_allocator.free_frame(frame);
 
@@ -383,7 +381,7 @@ impl VirtualMemoryManager {
             }
         }
 
-        crate::drivers::serial::println("Kernel heap mapping created");
+        crate::log_boot!("Kernel heap mapping created");
 
         true
     }
@@ -396,7 +394,7 @@ impl VirtualMemoryManager {
         let hhdm_offset = match crate::boot::limine::HHDM_REQUEST.response() {
             Some(response) => response.offset,
             None => {
-                crate::drivers::serial::println("ERROR: HHDM unavailable for MMIO");
+                crate::log_boot!("ERROR: HHDM unavailable for MMIO");
                 return false;
             }
         };
@@ -411,7 +409,7 @@ impl VirtualMemoryManager {
             let virtual_address = hhdm_offset + physical;
 
             if !self.map_page(virtual_address, physical, true, false) {
-                crate::drivers::serial::println("ERROR: failed to map MMIO page");
+                crate::log_test!("ERROR: failed to map MMIO page");
                 return false;
             }
         }

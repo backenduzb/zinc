@@ -19,22 +19,22 @@ pub fn init(fb: &Framebuffer) {
         bpp: fb.bpp
     };
 
-    serial::print("Framebuffer: ");
+    crate::log_boot_raw!("Framebuffer: ");
     
-    serial::print_u64(info.width);
-    serial::print("x");
-    serial::print_u64(info.height);
-    serial::print(" @ ");
-    serial::print_u64(info.bpp as u64);
-    serial::println("bpp");
+    crate::log_boot_raw!("{}", info.width);
+    crate::log_boot_raw!("x");
+    crate::log_boot_raw!("{}", info.height);
+    crate::log_boot_raw!(" @ ");
+    crate::log_boot_raw!("{}", info.bpp as u64);
+    crate::log_boot!("bpp");
 
     if info.bpp != 32 {
-        serial::println("ERROR: unsupported framebuffer format");
+        crate::log_boot!("ERROR: unsupported framebuffer format");
         return;
     }
 
     if info.address.is_null() {
-        serial::println("ERROR: framebuffer address is null");
+        crate::log_boot!("ERROR: framebuffer address is null");
         return;
     }
     

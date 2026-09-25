@@ -70,22 +70,22 @@ fn handle_execve(frame: &mut SyscallFrame) -> (u64, u64) {
     let argv_ptr = frame.rsi;
     let envp_ptr = frame.rdx;
 
-    crate::drivers::serial::println("SYSCALL: EXECVE");
+    crate::log_syscall!("SYSCALL: EXECVE");
 
-    crate::drivers::serial::print("EXECVE: path_ptr=0x");
-    crate::drivers::serial::print_hex_u64(path_ptr);
-    crate::drivers::serial::println("");
+    crate::log_exec_raw!("EXECVE: path_ptr=0x");
+    crate::log_syscall_raw!("{:016X}", path_ptr);
+    crate::log_syscall!("");
 
-    crate::drivers::serial::print("EXECVE: argv_ptr=0x");
-    crate::drivers::serial::print_hex_u64(argv_ptr);
-    crate::drivers::serial::println("");
+    crate::log_exec_raw!("EXECVE: argv_ptr=0x");
+    crate::log_syscall_raw!("{:016X}", argv_ptr);
+    crate::log_syscall!("");
 
-    crate::drivers::serial::print("EXECVE: envp_ptr=0x");
-    crate::drivers::serial::print_hex_u64(envp_ptr);
-    crate::drivers::serial::println("");
+    crate::log_exec_raw!("EXECVE: envp_ptr=0x");
+    crate::log_syscall_raw!("{:016X}", envp_ptr);
+    crate::log_syscall!("");
 
     if path_ptr == 0 {
-        crate::drivers::serial::println("EXECVE: invalid path pointer");
+        crate::log_exec!("EXECVE: invalid path pointer");
         frame.rax = u64::MAX;
         return (frame as *mut SyscallFrame as u64, 0);
     }
@@ -96,7 +96,7 @@ fn handle_execve(frame: &mut SyscallFrame) -> (u64, u64) {
         let pid = match (*sched).current().map(|t| t.process_id()) {
             Some(pid) => pid,
             None => {
-                crate::drivers::serial::println("EXECVE: no current process");
+                crate::log_exec!("EXECVE: no current process");
                 frame.rax = u64::MAX;
                 return (frame as *mut SyscallFrame as u64, 0);
             }
@@ -107,7 +107,7 @@ fn handle_execve(frame: &mut SyscallFrame) -> (u64, u64) {
         match (*pm).get(pid).and_then(|p| p.address_space()) {
             Some(space) => space as *const AddressSpace,
             None => {
-                crate::drivers::serial::println("EXECVE: no address space");
+                crate::log_exec!("EXECVE: no address space");
                 frame.rax = u64::MAX;
                 return (frame as *mut SyscallFrame as u64, 0);
             }
@@ -121,26 +121,26 @@ fn handle_execve(frame: &mut SyscallFrame) -> (u64, u64) {
     let path_len = match copy_user_path(space, path_ptr, &mut path_buf) {
         Some(len) => len,
         None => {
-            crate::drivers::serial::println("EXECVE: invalid or unterminated user path");
+            crate::log_exec!("EXECVE: invalid or unterminated user path");
             frame.rax = u64::MAX;
             return (frame as *mut SyscallFrame as u64, 0);
         }
     };
 
     if path_len == 0 {
-        crate::drivers::serial::println("EXECVE: empty path");
+        crate::log_exec!("EXECVE: empty path");
         frame.rax = u64::MAX;
         return (frame as *mut SyscallFrame as u64, 0);
     }
 
-    crate::drivers::serial::print("EXECVE: path=");
+    crate::log_exec_raw!("EXECVE: path=");
     for &b in &path_buf[..path_len] {
-        crate::drivers::serial::putc(b);
+        crate::log_syscall_raw!("{}", (b) as char);
     }
-    crate::drivers::serial::println("");
+    crate::log_syscall!("");
 
     if argv_ptr == 0 {
-        crate::drivers::serial::println("EXECVE: argv=NULL");
+        crate::log_exec!("EXECVE: argv=NULL");
         frame.rax = u64::MAX;
         return (frame as *mut SyscallFrame as u64, 0);
     }
@@ -159,14 +159,14 @@ fn handle_execve(frame: &mut SyscallFrame) -> (u64, u64) {
         let entry_ptr = match argv_ptr.checked_add(offset) {
             Some(v) => v,
             None => {
-                crate::drivers::serial::println("EXECVE: argv pointer overflow");
+                crate::log_exec!("EXECVE: argv pointer overflow");
                 frame.rax = u64::MAX;
                 return (frame as *mut SyscallFrame as u64, 0);
             }
         };
 
         if !is_user_range(entry_ptr, 8) {
-            crate::drivers::serial::println("EXECVE: invalid argv pointer");
+            crate::log_exec!("EXECVE: invalid argv pointer");
             frame.rax = u64::MAX;
             return (frame as *mut SyscallFrame as u64, 0);
         }
@@ -174,7 +174,7 @@ fn handle_execve(frame: &mut SyscallFrame) -> (u64, u64) {
         let mut entry_bytes = [0u8; 8];
 
         if !copy_from_user(space, entry_ptr, 8, &mut entry_bytes) {
-            crate::drivers::serial::println("EXECVE: cannot read argv entry");
+            crate::log_vfs!("EXECVE: cannot read argv entry");
             frame.rax = u64::MAX;
             return (frame as *mut SyscallFrame as u64, 0);
         }
@@ -188,7 +188,7 @@ fn handle_execve(frame: &mut SyscallFrame) -> (u64, u64) {
         let arg = match copy_user_string(space, user_string_ptr, MAX_ARG_LEN) {
             Some(arg) => arg,
             None => {
-                crate::drivers::serial::println("EXECVE: invalid argv string");
+                crate::log_exec!("EXECVE: invalid argv string");
                 frame.rax = u64::MAX;
                 return (frame as *mut SyscallFrame as u64, 0);
             }
@@ -198,14 +198,14 @@ fn handle_execve(frame: &mut SyscallFrame) -> (u64, u64) {
     }
 
     if argv_owned.is_empty() {
-        crate::drivers::serial::println("EXECVE: empty argv");
+        crate::log_exec!("EXECVE: empty argv");
         frame.rax = u64::MAX;
         return (frame as *mut SyscallFrame as u64, 0);
     }
 
-    crate::drivers::serial::print("EXECVE: argc=");
-    crate::drivers::serial::print_u64(argv_owned.len() as u64);
-    crate::drivers::serial::println("");
+    crate::log_exec_raw!("EXECVE: argc=");
+    crate::log_syscall_raw!("{}", argv_owned.len() as u64);
+    crate::log_syscall!("");
 
     let argv_refs: Vec<&str> = argv_owned.iter().map(|arg| arg.as_str()).collect();
 
@@ -215,7 +215,7 @@ fn handle_execve(frame: &mut SyscallFrame) -> (u64, u64) {
         match (*sched).current().map(|t| t.process_id()) {
             Some(pid) => pid,
             None => {
-                crate::drivers::serial::println("EXECVE: no current process");
+                crate::log_exec!("EXECVE: no current process");
                 frame.rax = u64::MAX;
                 return (frame as *mut SyscallFrame as u64, 0);
             }
@@ -225,7 +225,7 @@ fn handle_execve(frame: &mut SyscallFrame) -> (u64, u64) {
     let elf = match crate::exec::vfs::read_exec_path(&path_buf[..path_len]) {
         Ok(elf) => elf,
         Err(_) => {
-            crate::drivers::serial::println("EXECVE: VFS load failed");
+            crate::log_vfs!("EXECVE: VFS load failed");
             frame.rax = u64::MAX;
             return (frame as *mut SyscallFrame as u64, 0);
         }
@@ -249,7 +249,7 @@ fn handle_execve(frame: &mut SyscallFrame) -> (u64, u64) {
             Ok(result) => result,
 
             Err(_) => {
-                crate::drivers::serial::println("EXECVE: image replacement failed");
+                crate::log_exec!("EXECVE: image replacement failed");
                 frame.rax = u64::MAX;
                 return (frame as *mut SyscallFrame as u64, 0);
             }
@@ -258,13 +258,13 @@ fn handle_execve(frame: &mut SyscallFrame) -> (u64, u64) {
 
     let old_cr3 = crate::arch::x86_64::paging::read_cr3() & !0xFFF;
 
-    crate::drivers::serial::print("EXECVE: PID=");
-    crate::drivers::serial::print_u64(pid);
-    crate::drivers::serial::print(" path=");
+    crate::log_exec_raw!("EXECVE: PID=");
+    crate::log_syscall_raw!("{}", pid);
+    crate::log_syscall_raw!(" path=");
     for &b in &path_buf[..path_len] {
-        crate::drivers::serial::putc(b);
+        crate::log_syscall_raw!("{}", (b) as char);
     }
-    crate::drivers::serial::println("");
+    crate::log_syscall!("");
 
     let new_pml4 = unsafe {
         let pm = crate::task::process_manager();
@@ -273,24 +273,24 @@ fn handle_execve(frame: &mut SyscallFrame) -> (u64, u64) {
     let new_pml4 = match new_pml4 {
         Some(pml4) => pml4,
         None => {
-            crate::drivers::serial::println("EXECVE: new address space missing");
+            crate::log_exec!("EXECVE: new address space missing");
             frame.rax = u64::MAX;
             return (frame as *mut SyscallFrame as u64, 0);
         }
     };
 
-    crate::drivers::serial::print("EXECVE: old CR3=0x");
-    crate::drivers::serial::print_hex_u64(old_cr3);
-    crate::drivers::serial::println("");
-    crate::drivers::serial::print("EXECVE: new CR3=0x");
-    crate::drivers::serial::print_hex_u64(new_pml4);
-    crate::drivers::serial::println("");
+    crate::log_cr3_raw!("EXECVE: old CR3=0x");
+    crate::log_syscall_raw!("{:016X}", old_cr3);
+    crate::log_syscall!("");
+    crate::log_cr3_raw!("EXECVE: new CR3=0x");
+    crate::log_syscall_raw!("{:016X}", new_pml4);
+    crate::log_syscall!("");
 
     unsafe {
         crate::arch::x86_64::paging::load_cr3(new_pml4);
     }
 
-    crate::drivers::serial::println("EXECVE: new CR3 loaded");
+    crate::log_cr3!("EXECVE: new CR3 loaded");
 
     if let Some(old) = old_address_space {
         old.destroy(&mut frame_allocator);
@@ -304,20 +304,20 @@ fn handle_execve(frame: &mut SyscallFrame) -> (u64, u64) {
                 thread.interrupt_rsp()
             }
             None => {
-                crate::drivers::serial::println("EXECVE: no current thread");
+                crate::log_vfs!("EXECVE: no current thread");
                 frame.rax = u64::MAX;
                 return (frame as *mut SyscallFrame as u64, 0);
             }
         }
     };
 
-    crate::drivers::serial::print("EXECVE: image replaced PID=");
-    crate::drivers::serial::print_u64(pid);
-    crate::drivers::serial::print(" entry=0x");
-    crate::drivers::serial::print_hex_u64(entry);
-    crate::drivers::serial::print(" RSP=0x");
-    crate::drivers::serial::print_hex_u64(user_rsp);
-    crate::drivers::serial::println("");
+    crate::log_exec_raw!("EXECVE: image replaced PID=");
+    crate::log_syscall_raw!("{}", pid);
+    crate::log_syscall_raw!(" entry=0x");
+    crate::log_syscall_raw!("{:016X}", entry);
+    crate::log_syscall_raw!(" RSP=0x");
+    crate::log_syscall_raw!("{:016X}", user_rsp);
+    crate::log_syscall!("");
 
     let trampoline = crate::arch::x86_64::context::start_user_thread_context as usize as u64;
     (new_rsp, trampoline)
@@ -328,11 +328,11 @@ fn handle_write(frame: &mut SyscallFrame) -> (u64, u64) {
     let buf = frame.rsi;
     let len = frame.rdx;
 
-    crate::drivers::serial::print("SYSCALL: WRITE fd=");
-    crate::drivers::serial::print_u64(fd);
-    crate::drivers::serial::print(" len=");
-    crate::drivers::serial::print_u64(len);
-    crate::drivers::serial::println("");
+    crate::log_syscall_raw!("SYSCALL: WRITE fd=");
+    crate::log_syscall_raw!("{}", fd);
+    crate::log_syscall_raw!(" len=");
+    crate::log_syscall_raw!("{}", len);
+    crate::log_syscall!("");
 
     let fd_ok = unsafe {
         let sched = crate::task::scheduler();
@@ -340,7 +340,7 @@ fn handle_write(frame: &mut SyscallFrame) -> (u64, u64) {
         let pid = match (*sched).current().map(|t| t.process_id()) {
             Some(pid) => pid,
             None => {
-                crate::drivers::serial::println("SYSCALL WRITE: no current thread");
+                crate::log_syscall!("SYSCALL WRITE: no current thread");
                 frame.rax = u64::MAX;
                 return (frame as *mut SyscallFrame as u64, 0);
             }
@@ -351,7 +351,7 @@ fn handle_write(frame: &mut SyscallFrame) -> (u64, u64) {
         match (*pm).get(pid) {
             Some(process) => process.fd_table().is_standard_output(fd as usize),
             None => {
-                crate::drivers::serial::println("SYSCALL WRITE: process not found");
+                crate::log_syscall!("SYSCALL WRITE: process not found");
                 frame.rax = u64::MAX;
                 return (frame as *mut SyscallFrame as u64, 0);
             }
@@ -359,7 +359,7 @@ fn handle_write(frame: &mut SyscallFrame) -> (u64, u64) {
     };
 
     if !fd_ok {
-        crate::drivers::serial::println("SYSCALL WRITE: bad fd");
+        crate::log_syscall!("SYSCALL WRITE: bad fd");
         frame.rax = u64::MAX;
         return (frame as *mut SyscallFrame as u64, 0);
     }
@@ -369,12 +369,12 @@ fn handle_write(frame: &mut SyscallFrame) -> (u64, u64) {
         return (frame as *mut SyscallFrame as u64, 0);
     }
     if len > MAX_WRITE as u64 {
-        crate::drivers::serial::println("SYSCALL WRITE: len too large");
+        crate::log_syscall!("SYSCALL WRITE: len too large");
         frame.rax = u64::MAX;
         return (frame as *mut SyscallFrame as u64, 0);
     }
     if !is_user_range(buf, len) {
-        crate::drivers::serial::println("SYSCALL WRITE: bad user range");
+        crate::log_syscall!("SYSCALL WRITE: bad user range");
         frame.rax = u64::MAX;
         return (frame as *mut SyscallFrame as u64, 0);
     }
@@ -384,7 +384,7 @@ fn handle_write(frame: &mut SyscallFrame) -> (u64, u64) {
         let pid = match (*sched).current().map(|t| t.process_id()) {
             Some(p) => p,
             None => {
-                crate::drivers::serial::println("SYSCALL WRITE: no current thread");
+                crate::log_syscall!("SYSCALL WRITE: no current thread");
                 frame.rax = u64::MAX;
                 return (frame as *mut SyscallFrame as u64, 0);
             }
@@ -393,7 +393,7 @@ fn handle_write(frame: &mut SyscallFrame) -> (u64, u64) {
         match (*pm).get(pid).and_then(|p| p.address_space()) {
             Some(s) => s as *const AddressSpace,
             None => {
-                crate::drivers::serial::println("SYSCALL WRITE: no address space");
+                crate::log_syscall!("SYSCALL WRITE: no address space");
                 frame.rax = u64::MAX;
                 return (frame as *mut SyscallFrame as u64, 0);
             }
@@ -404,14 +404,14 @@ fn handle_write(frame: &mut SyscallFrame) -> (u64, u64) {
     let ulen = len as usize;
     let mut kbuf = [0u8; MAX_WRITE];
     if !copy_from_user(space, buf, ulen, &mut kbuf[..ulen]) {
-        crate::drivers::serial::println("SYSCALL WRITE: copy_from_user failed");
+        crate::log_syscall!("SYSCALL WRITE: copy_from_user failed");
         frame.rax = u64::MAX;
         return (frame as *mut SyscallFrame as u64, 0);
     }
 
-    crate::drivers::serial::print("USER OUTPUT: ");
+    crate::log_ring3_raw!("USER OUTPUT: ");
     for &b in &kbuf[..ulen] {
-        crate::drivers::serial::putc(b);
+        crate::log_syscall_raw!("{}", (b) as char);
     }
 
     frame.rax = len;
@@ -435,17 +435,17 @@ pub extern "C" fn syscall_handler(frame: *mut SyscallFrame) -> (u64, u64) {
 
     let tid = unsafe { (*crate::task::scheduler()).current_id() };
 
-    crate::drivers::serial::print("SYSCALL: CPU=");
-    crate::drivers::serial::print_u64(cpu as u64);
-    crate::drivers::serial::print(" TID=");
-    crate::drivers::serial::print_u64(tid.unwrap_or(0));
-    crate::drivers::serial::print(" nr=");
-    crate::drivers::serial::print_u64(frame.rax);
-    crate::drivers::serial::println("");
+    crate::log_syscall_raw!("SYSCALL: CPU=");
+    crate::log_syscall_raw!("{}", cpu as u64);
+    crate::log_syscall_raw!(" TID=");
+    crate::log_syscall_raw!("{}", tid.unwrap_or(0));
+    crate::log_syscall_raw!(" nr=");
+    crate::log_syscall_raw!("{}", frame.rax);
+    crate::log_syscall!("");
 
     match frame.rax {
         SYS_YIELD => {
-            crate::drivers::serial::println("SYSCALL: YIELD");
+            crate::log_syscall!("SYSCALL: YIELD");
 
             frame.rax = 0;
 
@@ -453,9 +453,9 @@ pub extern "C" fn syscall_handler(frame: *mut SyscallFrame) -> (u64, u64) {
         }
 
         SYS_EXIT => {
-            crate::drivers::serial::print("SYSCALL: EXIT code=");
-            crate::drivers::serial::print_u64(frame.rdi);
-            crate::drivers::serial::println("");
+            crate::log_syscall_raw!("SYSCALL: EXIT code=");
+            crate::log_syscall_raw!("{}", frame.rdi);
+            crate::log_syscall!("");
 
             unsafe { (*crate::task::scheduler()).syscall_exit(frame as *mut SyscallFrame) }
         }
@@ -506,7 +506,7 @@ fn copy_user_path(space: &AddressSpace, user_ptr: u64, out: &mut [u8; MAX_PATH])
 fn handle_open(frame: &mut SyscallFrame) -> (u64, u64) {
     let path_ptr = frame.rdi;
 
-    crate::drivers::serial::println("SYSCALL: OPEN");
+    crate::log_syscall!("SYSCALL: OPEN");
 
     let pid = unsafe {
         match (*crate::task::scheduler()).current() {
@@ -543,7 +543,7 @@ fn handle_open(frame: &mut SyscallFrame) -> (u64, u64) {
     let path_len = match copy_user_path(space, path_ptr, &mut path_buffer) {
         Some(len) => len,
         None => {
-            crate::drivers::serial::println("SYSCALL OPEN: invalid user path");
+            crate::log_syscall!("SYSCALL OPEN: invalid user path");
 
             frame.rax = u64::MAX;
             return (frame as *mut SyscallFrame as u64, 0);
@@ -551,24 +551,24 @@ fn handle_open(frame: &mut SyscallFrame) -> (u64, u64) {
     };
 
     if path_len == 0 {
-        crate::drivers::serial::println("SYSCALL OPEN: empty path");
+        crate::log_syscall!("SYSCALL OPEN: empty path");
 
         frame.rax = u64::MAX;
         return (frame as *mut SyscallFrame as u64, 0);
     }
 
-    crate::drivers::serial::print("OPEN path: ");
+    crate::log_vfs_raw!("OPEN path: ");
 
     for &byte in &path_buffer[..path_len] {
-        crate::drivers::serial::putc(byte);
+        crate::log_syscall_raw!("{}", (byte) as char);
     }
 
-    crate::drivers::serial::println("");
+    crate::log_syscall!("");
 
     let fs_ptr = crate::filesystem::context::filesystem();
 
     if fs_ptr.is_null() {
-        crate::drivers::serial::println("SYSCALL OPEN: filesystem unavailable");
+        crate::log_syscall!("SYSCALL OPEN: filesystem unavailable");
 
         frame.rax = u64::MAX;
         return (frame as *mut SyscallFrame as u64, 0);
@@ -579,7 +579,7 @@ fn handle_open(frame: &mut SyscallFrame) -> (u64, u64) {
     let file = match file {
         Some(file) => file,
         None => {
-            crate::drivers::serial::println("SYSCALL OPEN: file not found");
+            crate::log_syscall!("SYSCALL OPEN: file not found");
 
             frame.rax = u64::MAX;
             return (frame as *mut SyscallFrame as u64, 0);
@@ -593,7 +593,7 @@ fn handle_open(frame: &mut SyscallFrame) -> (u64, u64) {
             Some(process) => match process.fd_table_mut().alloc(file) {
                 Some(fd) => fd,
                 None => {
-                    crate::drivers::serial::println("SYSCALL OPEN: fd table full");
+                    crate::log_syscall!("SYSCALL OPEN: fd table full");
 
                     frame.rax = u64::MAX;
                     return (frame as *mut SyscallFrame as u64, 0);
@@ -607,9 +607,9 @@ fn handle_open(frame: &mut SyscallFrame) -> (u64, u64) {
         }
     };
 
-    crate::drivers::serial::print("OPEN fd: ");
-    crate::drivers::serial::print_u64(fd as u64);
-    crate::drivers::serial::println("");
+    crate::log_vfs_raw!("OPEN fd: ");
+    crate::log_syscall_raw!("{}", fd as u64);
+    crate::log_syscall!("");
 
     frame.rax = fd as u64;
 
@@ -621,11 +621,11 @@ fn handle_read(frame: &mut SyscallFrame) -> (u64, u64) {
     let buf = frame.rsi;
     let len = frame.rdx as usize;
 
-    crate::drivers::serial::print("SYSCALL: READ fd=");
-    crate::drivers::serial::print_u64(fd as u64);
-    crate::drivers::serial::print(" len=");
-    crate::drivers::serial::print_u64(len as u64);
-    crate::drivers::serial::println("");
+    crate::log_syscall_raw!("SYSCALL: READ fd=");
+    crate::log_syscall_raw!("{}", fd as u64);
+    crate::log_syscall_raw!(" len=");
+    crate::log_syscall_raw!("{}", len as u64);
+    crate::log_syscall!("");
 
     if len == 0 {
         frame.rax = 0;
@@ -633,13 +633,13 @@ fn handle_read(frame: &mut SyscallFrame) -> (u64, u64) {
     }
 
     if len > MAX_WRITE {
-        crate::drivers::serial::println("SYSCALL READ: len too large");
+        crate::log_syscall!("SYSCALL READ: len too large");
         frame.rax = u64::MAX;
         return (frame as *mut SyscallFrame as u64, 0);
     }
 
     if !is_user_range(buf, len as u64) {
-        crate::drivers::serial::println("SYSCALL READ: bad user range");
+        crate::log_syscall!("SYSCALL READ: bad user range");
         frame.rax = u64::MAX;
         return (frame as *mut SyscallFrame as u64, 0);
     }
@@ -648,7 +648,7 @@ fn handle_read(frame: &mut SyscallFrame) -> (u64, u64) {
         match (*crate::task::scheduler()).current() {
             Some(thread) => thread.process_id(),
             None => {
-                crate::drivers::serial::println("SYSCALL READ: no current thread");
+                crate::log_syscall!("SYSCALL READ: no current thread");
                 frame.rax = u64::MAX;
                 return (frame as *mut SyscallFrame as u64, 0);
             }
@@ -661,7 +661,7 @@ fn handle_read(frame: &mut SyscallFrame) -> (u64, u64) {
         match (*pm).get(pid).and_then(|p| p.address_space()) {
             Some(space) => space as *const AddressSpace,
             None => {
-                crate::drivers::serial::println("SYSCALL READ: no address space");
+                crate::log_syscall!("SYSCALL READ: no address space");
                 frame.rax = u64::MAX;
                 return (frame as *mut SyscallFrame as u64, 0);
             }
@@ -685,14 +685,14 @@ fn handle_read(frame: &mut SyscallFrame) -> (u64, u64) {
                 ),
 
                 _ => {
-                    crate::drivers::serial::println("SYSCALL READ: bad fd");
+                    crate::log_syscall!("SYSCALL READ: bad fd");
                     frame.rax = u64::MAX;
                     return (frame as *mut SyscallFrame as u64, 0);
                 }
             },
 
             None => {
-                crate::drivers::serial::println("SYSCALL READ: process not found");
+                crate::log_syscall!("SYSCALL READ: process not found");
                 frame.rax = u64::MAX;
                 return (frame as *mut SyscallFrame as u64, 0);
             }
@@ -705,7 +705,7 @@ fn handle_read(frame: &mut SyscallFrame) -> (u64, u64) {
         let fs_ptr = crate::filesystem::context::filesystem();
 
         if fs_ptr.is_null() {
-            crate::drivers::serial::println("SYSCALL READ: filesystem unavailable");
+            crate::log_syscall!("SYSCALL READ: filesystem unavailable");
 
             frame.rax = u64::MAX;
             return (frame as *mut SyscallFrame as u64, 0);
@@ -715,7 +715,7 @@ fn handle_read(frame: &mut SyscallFrame) -> (u64, u64) {
     };
 
     if !copy_to_user(space, buf, bytes_read, &kbuf[..bytes_read]) {
-        crate::drivers::serial::println("SYSCALL READ: copy_to_user failed");
+        crate::log_syscall!("SYSCALL READ: copy_to_user failed");
 
         frame.rax = u64::MAX;
         return (frame as *mut SyscallFrame as u64, 0);
@@ -733,9 +733,9 @@ fn handle_read(frame: &mut SyscallFrame) -> (u64, u64) {
         }
     }
 
-    crate::drivers::serial::print("READ bytes=");
-    crate::drivers::serial::print_u64(bytes_read as u64);
-    crate::drivers::serial::println("");
+    crate::log_vfs_raw!("READ bytes=");
+    crate::log_syscall_raw!("{}", bytes_read as u64);
+    crate::log_syscall!("");
 
     frame.rax = bytes_read as u64;
 
@@ -787,12 +787,12 @@ fn copy_to_user(space: &AddressSpace, user_ptr: u64, len: usize, input: &[u8]) -
 fn handle_close(frame: &mut SyscallFrame) -> (u64, u64) {
     let fd = frame.rdi as usize;
 
-    crate::drivers::serial::print("SYSCALL: CLOSE fd=");
-    crate::drivers::serial::print_u64(fd as u64);
-    crate::drivers::serial::println("");
+    crate::log_syscall_raw!("SYSCALL: CLOSE fd=");
+    crate::log_syscall_raw!("{}", fd as u64);
+    crate::log_syscall!("");
 
     if fd < 3 {
-        crate::drivers::serial::println("SYSCALL CLOSE: cannot close stdio");
+        crate::log_syscall!("SYSCALL CLOSE: cannot close stdio");
         frame.rax = u64::MAX;
         return (frame as *mut SyscallFrame as u64, 0);
     }
@@ -801,7 +801,7 @@ fn handle_close(frame: &mut SyscallFrame) -> (u64, u64) {
         match (*crate::task::scheduler()).current() {
             Some(thread) => thread.process_id(),
             None => {
-                crate::drivers::serial::println("SYSCALL CLOSE: no current thread");
+                crate::log_syscall!("SYSCALL CLOSE: no current thread");
                 frame.rax = u64::MAX;
                 return (frame as *mut SyscallFrame as u64, 0);
             }
@@ -814,7 +814,7 @@ fn handle_close(frame: &mut SyscallFrame) -> (u64, u64) {
         match (*pm).get_mut(pid) {
             Some(process) => process.fd_table_mut().close(fd),
             None => {
-                crate::drivers::serial::println("SYSCALL CLOSE: process not found");
+                crate::log_syscall!("SYSCALL CLOSE: process not found");
                 None
             }
         }
@@ -822,15 +822,15 @@ fn handle_close(frame: &mut SyscallFrame) -> (u64, u64) {
 
     match result {
         Some(_) => {
-            crate::drivers::serial::print("CLOSE: fd=");
-            crate::drivers::serial::print_u64(fd as u64);
-            crate::drivers::serial::println(" closed");
+            crate::log_vfs_raw!("CLOSE: fd=");
+            crate::log_syscall_raw!("{}", fd as u64);
+            crate::log_vfs!(" closed");
 
             frame.rax = 0;
         }
 
         None => {
-            crate::drivers::serial::println("SYSCALL CLOSE: bad fd");
+            crate::log_syscall!("SYSCALL CLOSE: bad fd");
 
             frame.rax = u64::MAX;
         }
@@ -870,7 +870,7 @@ fn copy_user_string(space: &AddressSpace, user_ptr: u64, max_len: usize) -> Opti
 }
 
 fn handle_wait(frame: &mut SyscallFrame) -> (u64, u64) {
-    crate::drivers::serial::println("SYSCALL: WAIT");
+    crate::log_syscall!("SYSCALL: WAIT");
 
     let parent_pid = unsafe {
         match (*crate::task::scheduler()).current() {
@@ -882,9 +882,9 @@ fn handle_wait(frame: &mut SyscallFrame) -> (u64, u64) {
         }
     };
 
-    crate::drivers::serial::print("SYS_WAIT: parent PID=");
-    crate::drivers::serial::print_u64(parent_pid);
-    crate::drivers::serial::println("");
+    crate::log_syscall_raw!("SYS_WAIT: parent PID=");
+    crate::log_syscall_raw!("{}", parent_pid);
+    crate::log_syscall!("");
     let terminated_child = unsafe {
         let pm = crate::task::process_manager();
 
@@ -892,12 +892,12 @@ fn handle_wait(frame: &mut SyscallFrame) -> (u64, u64) {
     };
 
     if let Some(child_pid) = terminated_child {
-        crate::drivers::serial::print("SYS_WAIT: terminated child=");
-        crate::drivers::serial::print_u64(child_pid);
-        crate::drivers::serial::println("");
-        crate::drivers::serial::print("WAIT: terminated child PID=");
-        crate::drivers::serial::print_u64(child_pid);
-        crate::drivers::serial::println("");
+        crate::log_syscall_raw!("SYS_WAIT: terminated child=");
+        crate::log_syscall_raw!("{}", child_pid);
+        crate::log_syscall!("");
+        crate::log_syscall_raw!("WAIT: terminated child PID=");
+        crate::log_syscall_raw!("{}", child_pid);
+        crate::log_syscall!("");
 
         let mut frame_allocator =
             crate::memory::physical::FrameAllocator::new();
@@ -909,9 +909,9 @@ fn handle_wait(frame: &mut SyscallFrame) -> (u64, u64) {
         };
 
         if reaped {
-            crate::drivers::serial::print("WAIT: reaped PID=");
-            crate::drivers::serial::print_u64(child_pid);
-            crate::drivers::serial::println("");
+            crate::log_exec_raw!("WAIT: reaped PID=");
+            crate::log_syscall_raw!("{}", child_pid);
+            crate::log_syscall!("");
 
             frame.rax = child_pid;
 
@@ -932,42 +932,42 @@ fn handle_wait(frame: &mut SyscallFrame) -> (u64, u64) {
     let child_pid = match live_child {
         Some(pid) => pid,
         None => {
-            crate::drivers::serial::println("SYS_WAIT: no child");
+            crate::log_syscall!("SYS_WAIT: no child");
             if parent_pid == 1 {
-                crate::drivers::serial::print("WAIT: blocking PID=");
-                crate::drivers::serial::print_u64(parent_pid);
-                crate::drivers::serial::println("");
+                crate::log_syscall_raw!("WAIT: blocking PID=");
+                crate::log_syscall_raw!("{}", parent_pid);
+                crate::log_syscall!("");
                 unsafe {
                     let scheduler = crate::task::scheduler();
                     (*scheduler).wait_for_any_child();
                 }
-                crate::drivers::serial::println("WAIT: scheduler switch");
+                crate::log_sched!("WAIT: scheduler switch");
                 unsafe {
                     let scheduler = crate::task::scheduler();
                     return (*scheduler).syscall_yield(frame as *mut SyscallFrame);
                 }
             }
-            crate::drivers::serial::println("WAIT: no child");
+            crate::log_syscall!("WAIT: no child");
             frame.rax = u64::MAX;
             return (frame as *mut SyscallFrame as u64, 0);
         }
     };
 
-    crate::drivers::serial::print("SYS_WAIT: live child=");
-    crate::drivers::serial::print_u64(child_pid);
-    crate::drivers::serial::println("");
-    crate::drivers::serial::print("WAIT: blocking on child PID=");
-    crate::drivers::serial::print_u64(child_pid);
-    crate::drivers::serial::println("");
+    crate::log_syscall_raw!("SYS_WAIT: live child=");
+    crate::log_syscall_raw!("{}", child_pid);
+    crate::log_syscall!("");
+    crate::log_syscall_raw!("WAIT: blocking on child PID=");
+    crate::log_syscall_raw!("{}", child_pid);
+    crate::log_syscall!("");
     {
         let tid = unsafe { (*crate::task::scheduler()).current_id().unwrap_or(0) };
-        crate::drivers::serial::print("WAIT: blocking parent PID=");
-        crate::drivers::serial::print_u64(parent_pid);
-        crate::drivers::serial::print(" child PID=");
-        crate::drivers::serial::print_u64(child_pid);
-        crate::drivers::serial::print(" TID=");
-        crate::drivers::serial::print_u64(tid);
-        crate::drivers::serial::println("");
+        crate::log_syscall_raw!("WAIT: blocking parent PID=");
+        crate::log_syscall_raw!("{}", parent_pid);
+        crate::log_syscall_raw!(" child PID=");
+        crate::log_syscall_raw!("{}", child_pid);
+        crate::log_syscall_raw!(" TID=");
+        crate::log_syscall_raw!("{}", tid);
+        crate::log_syscall!("");
     }
 
     unsafe {
@@ -976,7 +976,7 @@ fn handle_wait(frame: &mut SyscallFrame) -> (u64, u64) {
         (*scheduler).wait_for_child(child_pid);
     }
 
-    crate::drivers::serial::println("WAIT: scheduler switch");
+    crate::log_sched!("WAIT: scheduler switch");
 
     unsafe {
         let scheduler = crate::task::scheduler();

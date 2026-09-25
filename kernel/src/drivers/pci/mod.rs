@@ -3,8 +3,8 @@ pub mod device;
 pub mod scan;
 
 pub fn init() {
-    crate::drivers::serial::println("PCI: scanning ...");
+    crate::log_boot!("PCI: scanning ...");
 
     scan::scan();
-    crate::drivers::serial::println("PCI: scan complete");
+    crate::log_boot!("PCI: scan complete");
 }

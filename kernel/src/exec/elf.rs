@@ -52,15 +52,15 @@ impl ElfExecutor {
         frame_allocator: &mut FrameAllocator,
         cpu_id: usize,
     ) -> Result<ExecResult, ExecError> {
-        crate::drivers::serial::println("EXEC: creating user process");
+        crate::log_exec!("EXEC: creating user process");
 
         let pid = process_manager
             .create_user(frame_allocator, None)
             .ok_or(ExecError::ProcessCreationFailed)?;
 
-        crate::drivers::serial::print("EXEC: PID=");
-        crate::drivers::serial::print_u64(pid);
-        crate::drivers::serial::println("");
+        crate::log_exec_raw!("EXEC: PID=");
+        crate::log_exec_raw!("{}", pid);
+        crate::log_exec!("");
 
         let inner: Result<(u64, u64), ExecError> = (|| -> Result<(u64, u64), ExecError> {
             let process = process_manager
@@ -70,32 +70,32 @@ impl ElfExecutor {
                 .address_space_mut()
                 .ok_or(ExecError::ProcessNotFound)?;
 
-            crate::drivers::serial::println("EXEC: loading ELF");
+            crate::log_exec!("EXEC: loading ELF");
             let loaded = ElfLoader::load(data, address_space, frame_allocator)
                 .map_err(ExecError::Elf)?;
 
-            crate::drivers::serial::print("EXEC: entry=0x");
-            crate::drivers::serial::print_u64(loaded.entry);
-            crate::drivers::serial::println("");
+            crate::log_exec_raw!("EXEC: entry=0x");
+            crate::log_exec_raw!("{}", loaded.entry);
+            crate::log_exec!("");
 
-            crate::drivers::serial::println("EXEC: creating user stack");
+            crate::log_exec!("EXEC: creating user stack");
             let stack = UserStack::map(address_space, frame_allocator)
                 .ok_or(ExecError::UserStackCreationFailed)?;
 
-            crate::drivers::serial::print("EXEC: argv len=");
-            crate::drivers::serial::print_u64(argv.len() as u64);
-            crate::drivers::serial::println("");
+            crate::log_exec_raw!("EXEC: argv len=");
+            crate::log_exec_raw!("{}", argv.len() as u64);
+            crate::log_exec!("");
 
             let user_rsp = stack
                 .setup_argv(address_space, argv)
                 .ok_or(ExecError::StackSetupFailed)?;
 
-            crate::drivers::serial::print("EXEC: user RSP(argc)=0x");
-            crate::drivers::serial::print_u64(user_rsp);
-            crate::drivers::serial::println("");
-            crate::drivers::serial::print("EXEC: stack top=0x");
-            crate::drivers::serial::print_u64(stack.top);
-            crate::drivers::serial::println("");
+            crate::log_exec_raw!("EXEC: user RSP(argc)=0x");
+            crate::log_exec_raw!("{}", user_rsp);
+            crate::log_exec!("");
+            crate::log_exec_raw!("EXEC: stack top=0x");
+            crate::log_exec_raw!("{}", stack.top);
+            crate::log_exec!("");
 
             Ok((loaded.entry, user_rsp))
         })();
@@ -104,14 +104,14 @@ impl ElfExecutor {
             Ok(v) => v,
             Err(e) => {
                 process_manager.remove_process(pid, frame_allocator);
-                crate::drivers::serial::println("EXEC: cleaned up failed process");
+                crate::log_exec!("EXEC: cleaned up failed process");
                 return Err(e);
             }
         };
 
-        crate::drivers::serial::print("EXEC: creating user thread on CPU=");
-        crate::drivers::serial::print_u64(cpu_id as u64);
-        crate::drivers::serial::println("");
+        crate::log_vfs_raw!("EXEC: creating user thread on CPU=");
+        crate::log_exec_raw!("{}", cpu_id as u64);
+        crate::log_exec!("");
 
         let tid = if cpu_id < crate::arch::x86_64::smp::percpu::MAX_CPUS {
             unsafe {
@@ -125,16 +125,16 @@ impl ElfExecutor {
             Some(t) => t,
             None => {
                 process_manager.remove_process(pid, frame_allocator);
-                crate::drivers::serial::println("EXEC: cleaned up failed process (thread)");
+                crate::log_vfs!("EXEC: cleaned up failed process (thread)");
                 return Err(ExecError::ThreadCreationFailed);
             }
         };
 
-        crate::drivers::serial::print("EXEC: TID=");
-        crate::drivers::serial::print_u64(tid);
-        crate::drivers::serial::println("");
+        crate::log_exec_raw!("EXEC: TID=");
+        crate::log_exec_raw!("{}", tid);
+        crate::log_exec!("");
 
-        crate::drivers::serial::println("EXEC: process ready");
+        crate::log_vfs!("EXEC: process ready");
 
         Ok(ExecResult {
             process_id: pid,
@@ -153,7 +153,7 @@ impl ElfExecutor {
         pid: ProcessID,
         _cpu_id: usize,
     ) -> Result<(u64, u64, Option<AddressSpace>), ExecError> {
-        crate::drivers::serial::println("EXEC: preparing replacement image");
+        crate::log_exec!("EXEC: preparing replacement image");
     
         let mut new_address_space =
             AddressSpace::new_user(frame_allocator)
@@ -171,9 +171,9 @@ impl ElfExecutor {
             }
         };
     
-        crate::drivers::serial::print("EXEC: replacement entry=0x");
-        crate::drivers::serial::print_u64(loaded.entry);
-        crate::drivers::serial::println("");
+        crate::log_exec_raw!("EXEC: replacement entry=0x");
+        crate::log_exec_raw!("{}", loaded.entry);
+        crate::log_exec!("");
     
         let stack = match UserStack::map(
             &mut new_address_space,
@@ -197,9 +197,9 @@ impl ElfExecutor {
             }
         };
     
-        crate::drivers::serial::print("EXEC: replacement RSP=0x");
-        crate::drivers::serial::print_u64(user_rsp);
-        crate::drivers::serial::println("");
+        crate::log_exec_raw!("EXEC: replacement RSP=0x");
+        crate::log_exec_raw!("{}", user_rsp);
+        crate::log_exec!("");
     
         let process = match process_manager.get_mut(pid) {
             Some(process) => process,
@@ -212,9 +212,9 @@ impl ElfExecutor {
         let old_address_space = process.replace_address_space(new_address_space);
       
     
-        crate::drivers::serial::print("EXEC: image replaced PID=");
-        crate::drivers::serial::print_u64(pid);
-        crate::drivers::serial::println("");
+        crate::log_exec_raw!("EXEC: image replaced PID=");
+        crate::log_exec_raw!("{}", pid);
+        crate::log_exec!("");
     
         Ok((loaded.entry, user_rsp, old_address_space))
     }

@@ -20,9 +20,9 @@ impl AddressSpace {
             (*table).zero();
         }
 
-        crate::drivers::serial::print("AddressSpace: new PML4 = 0x");
-        crate::drivers::serial::print_u64(pml4.address);
-        crate::drivers::serial::println("");
+        crate::log_boot_raw!("AddressSpace: new PML4 = 0x");
+        crate::log_boot_raw!("{}", pml4.address);
+        crate::log_boot!("");
 
         Some(Self { pml4 })
     }
@@ -50,11 +50,11 @@ impl AddressSpace {
             }
         }
 
-        crate::drivers::serial::print("AddressSpace: user PML4 = 0x");
-        crate::drivers::serial::print_u64(pml4.address);
-        crate::drivers::serial::println("");
+        crate::log_ring3_raw!("AddressSpace: user PML4 = 0x");
+        crate::log_boot_raw!("{}", pml4.address);
+        crate::log_boot!("");
 
-        crate::drivers::serial::println("AddressSpace: kernel mappings copied");
+        crate::log_boot!("AddressSpace: kernel mappings copied");
 
         Some(Self { pml4 })
     }
@@ -93,15 +93,15 @@ impl AddressSpace {
             None => return false,
         };
 
-        crate::drivers::serial::print("MAP: va=0x");
-        crate::drivers::serial::print_u64(virtual_address);
-        crate::drivers::serial::print(" pa=0x");
-        crate::drivers::serial::print_u64(physical_address);
-        crate::drivers::serial::print(" W=");
-        crate::drivers::serial::print_u64(writable as u64);
-        crate::drivers::serial::print(" X=");
-        crate::drivers::serial::print_u64(executable as u64);
-        crate::drivers::serial::println("");
+        crate::log_boot_raw!("MAP: va=0x");
+        crate::log_boot_raw!("{}", virtual_address);
+        crate::log_boot_raw!(" pa=0x");
+        crate::log_boot_raw!("{}", physical_address);
+        crate::log_boot_raw!(" W=");
+        crate::log_boot_raw!("{}", writable as u64);
+        crate::log_boot_raw!(" X=");
+        crate::log_boot_raw!("{}", executable as u64);
+        crate::log_boot!("");
 
         unsafe {
             let pml4 = &mut *(pml4_va as *mut PageTable);
@@ -363,7 +363,7 @@ impl AddressSpace {
         let pml4_va = match physical_to_virtual(pml4_phys) {
             Some(v) => v,
             None => {
-                crate::drivers::serial::println("AddressSpace::destroy: HHDM unavailable, leaking");
+                crate::log_boot!("AddressSpace::destroy: HHDM unavailable, leaking");
                 return;
             }
         };
@@ -434,9 +434,9 @@ impl AddressSpace {
                 frame_allocator.free_frame(PhysFrame::new(pdpt_phys));
             }
         }
-        crate::drivers::serial::print("AddressSpace: destroyed PML4=0x");
-        crate::drivers::serial::print_u64(pml4_phys);
-        crate::drivers::serial::println("");
+        crate::log_boot_raw!("AddressSpace: destroyed PML4=0x");
+        crate::log_boot_raw!("{}", pml4_phys);
+        crate::log_boot!("");
         frame_allocator.free_frame(PhysFrame::new(pml4_phys));
     }
 

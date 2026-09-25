@@ -6,11 +6,11 @@ use crate::drivers::storage::{
 use super::block::RamBlockDevice;
 
 pub fn test_create() {
-    crate::drivers::serial::println("=========== RAMBLOCK TESTS =========");
-    crate::drivers::serial::println("=========== RAMBLOCK TESTS =========");
-    crate::drivers::serial::println("=========== RAMBLOCK TESTS =========");
-    crate::drivers::serial::println("=========== RAMBLOCK TESTS =========");
-    crate::drivers::serial::println("=========== RAMBLOCK TESTS =========");
+    crate::log_test!("=========== RAMBLOCK TESTS =========");
+    crate::log_test!("=========== RAMBLOCK TESTS =========");
+    crate::log_test!("=========== RAMBLOCK TESTS =========");
+    crate::log_test!("=========== RAMBLOCK TESTS =========");
+    crate::log_test!("=========== RAMBLOCK TESTS =========");
 
     let mut device = RamBlockDevice::new(4);
 
@@ -30,7 +30,7 @@ pub fn test_create() {
     assert_eq!(read_buffer[1], 0xC0);
     assert_eq!(read_buffer[511], 0xFF);
 
-    crate::drivers::serial::println("RAMBLOCK READ/WRITE: PASS");
+    crate::log_vfs!("RAMBLOCK READ/WRITE: PASS");
 
     test_errors();
     test_ext2();
@@ -39,7 +39,7 @@ pub fn test_create() {
 }
 
 pub fn test_wait() {
-    crate::drivers::serial::println("=== WAIT TEST ===");
+    crate::log_test!("=== WAIT TEST ===");
 
     let mut frame_allocator =
         crate::memory::physical::FrameAllocator::new();
@@ -56,7 +56,7 @@ pub fn test_wait() {
         ) {
             Some(pid) => pid,
             None => {
-                crate::drivers::serial::println("WAIT TEST: parent create FAILED");
+                crate::log_test!("WAIT TEST: parent create FAILED");
                 return;
             }
         };
@@ -67,34 +67,30 @@ pub fn test_wait() {
         ) {
             Some(pid) => pid,
             None => {
-                crate::drivers::serial::println("WAIT TEST: child create FAILED");
+                crate::log_test!("WAIT TEST: child create FAILED");
                 return;
             }
         };
     }
 
-    crate::drivers::serial::print("WAIT TEST: parent PID=");
-    crate::drivers::serial::print_u64(parent_pid);
-    crate::drivers::serial::println("");
+    crate::log_test_raw!("WAIT TEST: parent PID=");
+    crate::log_test_raw!("{}", parent_pid);
+    crate::log_test!("");
 
-    crate::drivers::serial::print("WAIT TEST: child PID=");
-    crate::drivers::serial::print_u64(child_pid);
-    crate::drivers::serial::println("");
+    crate::log_test_raw!("WAIT TEST: child PID=");
+    crate::log_test_raw!("{}", child_pid);
+    crate::log_test!("");
 
     unsafe {
         let pm = crate::task::process_manager();
 
         if !(*pm).terminate(child_pid) {
-            crate::drivers::serial::println(
-                "WAIT TEST: child terminate FAILED"
-            );
+            crate::log_test!("WAIT TEST: child terminate FAILED");
             return;
         }
     }
 
-    crate::drivers::serial::println(
-        "WAIT TEST: child terminated"
-    );
+    crate::log_test!("WAIT TEST: child terminated");
 
     let found = unsafe {
         let pm = crate::task::process_manager();
@@ -103,15 +99,11 @@ pub fn test_wait() {
     };
 
     if found != Some(child_pid) {
-        crate::drivers::serial::println(
-            "WAIT TEST: child lookup FAILED"
-        );
+        crate::log_test!("WAIT TEST: child lookup FAILED");
         return;
     }
 
-    crate::drivers::serial::println(
-        "WAIT TEST: terminated child found"
-    );
+    crate::log_test!("WAIT TEST: terminated child found");
 
     let reaped = unsafe {
         let pm = crate::task::process_manager();
@@ -123,17 +115,13 @@ pub fn test_wait() {
     };
 
     if !reaped {
-        crate::drivers::serial::println(
-            "WAIT TEST: reap FAILED"
-        );
+        crate::log_exec!("WAIT TEST: reap FAILED");
         return;
     }
 
-    crate::drivers::serial::print(
-        "WAIT TEST: reaped child PID="
-    );
-    crate::drivers::serial::print_u64(child_pid);
-    crate::drivers::serial::println("");
+    crate::log_exec_raw!("WAIT TEST: reaped child PID=");
+    crate::log_test_raw!("{}", child_pid);
+    crate::log_test!("");
 
     let exists = unsafe {
         let pm = crate::task::process_manager();
@@ -141,67 +129,63 @@ pub fn test_wait() {
     };
 
     if exists {
-        crate::drivers::serial::println(
-            "WAIT TEST: child still exists FAIL"
-        );
+        crate::log_test!("WAIT TEST: child still exists FAIL");
         return;
     }
 
-    crate::drivers::serial::println(
-        "WAIT TEST: PASS"
-    );
+    crate::log_test!("WAIT TEST: PASS");
 }
 
 pub fn test_ext2() {
-    crate::drivers::serial::println("=========== EXT2 TESTS =========");
+    crate::log_test!("=========== EXT2 TESTS =========");
 
     let mut ide = crate::drivers::storage::ide::IdeDevice::new();
     let mut buffer = [0u8; 512];
 
     if ide.read_sector(2, &mut buffer).is_err() {
-        crate::drivers::serial::println("EXT2: SUPERBLOCK READ FAILED");
+        crate::log_vfs!("EXT2: SUPERBLOCK READ FAILED");
         return;
     }
 
     let sb = match crate::filesystem::ext2::parse_superblock(&buffer) {
         Some(sb) => sb,
         None => {
-            crate::drivers::serial::println("EXT2: INVALID SUPERBLOCK");
+            crate::log_test!("EXT2: INVALID SUPERBLOCK");
             return;
         }
     };
 
-    crate::drivers::serial::println("EXT2 SUPERBLOCK: PASS");
+    crate::log_test!("EXT2 SUPERBLOCK: PASS");
 
     let mut gd_buffer = [0u8; 512];
 
     if ide.read_sector(4, &mut gd_buffer).is_err() {
-        crate::drivers::serial::println("EXT2: GROUP DESCRIPTOR READ FAILED");
+        crate::log_vfs!("EXT2: GROUP DESCRIPTOR READ FAILED");
         return;
     }
 
     let gd = match crate::filesystem::ext2::parse_group_descriptor(&gd_buffer) {
         Some(gd) => gd,
         None => {
-            crate::drivers::serial::println("EXT2: INVALID GROUP DESCRIPTOR");
+            crate::log_test!("EXT2: INVALID GROUP DESCRIPTOR");
             return;
         }
     };
 
-    crate::drivers::serial::println("EXT2 GROUP DESCRIPTOR: PASS");
+    crate::log_test!("EXT2 GROUP DESCRIPTOR: PASS");
 
     let inode_table_block = gd.inode_table;
 
-    crate::drivers::serial::print("EXT2 inode table block: ");
-    crate::drivers::serial::print_u64(inode_table_block as u64);
-    crate::drivers::serial::putc(b'\n');
+    crate::log_vfs_raw!("EXT2 inode table block: ");
+    crate::log_test_raw!("{}", inode_table_block as u64);
+    crate::log_test_raw!("{}", (b'\n') as char);
 
     let inode_table_lba = inode_table_block * 2;
 
     let mut inode_sector = [0u8; 512];
 
     if ide.read_sector(inode_table_lba, &mut inode_sector).is_err() {
-        crate::drivers::serial::println("EXT2: INODE READ FAILED");
+        crate::log_vfs!("EXT2: INODE READ FAILED");
         return;
     }
 
@@ -211,28 +195,28 @@ pub fn test_ext2() {
         Some(inode) => inode,
 
         None => {
-            crate::drivers::serial::println("EXT2: INVALID INODE");
+            crate::log_vfs!("EXT2: INVALID INODE");
             return;
         }
     };
 
-    crate::drivers::serial::print("EXT2 inode #2 mode: 0x");
-    crate::drivers::serial::print_hex_u32(inode.mode as u32);
-    crate::drivers::serial::putc(b'\n');
+    crate::log_vfs_raw!("EXT2 inode #2 mode: 0x");
+    crate::log_test_raw!("{:08X}", inode.mode as u32);
+    crate::log_test_raw!("{}", (b'\n') as char);
 
-    crate::drivers::serial::print("EXT2 inode #2 size: ");
-    crate::drivers::serial::print_u64(inode.size as u64);
-    crate::drivers::serial::putc(b'\n');
+    crate::log_vfs_raw!("EXT2 inode #2 size: ");
+    crate::log_test_raw!("{}", inode.size as u64);
+    crate::log_test_raw!("{}", (b'\n') as char);
 
-    crate::drivers::serial::print("EXT2 inode #2 first block: ");
-    crate::drivers::serial::print_u64(inode.block[0] as u64);
-    crate::drivers::serial::putc(b'\n');
+    crate::log_vfs_raw!("EXT2 inode #2 first block: ");
+    crate::log_test_raw!("{}", inode.block[0] as u64);
+    crate::log_test_raw!("{}", (b'\n') as char);
 
     if inode.is_directory() {
-        crate::drivers::serial::println("EXT2 INODE #2: ROOT DIRECTORY");
-        crate::drivers::serial::println("EXT2 INODE #2: PASS");
+        crate::log_vfs!("EXT2 INODE #2: ROOT DIRECTORY");
+        crate::log_vfs!("EXT2 INODE #2: PASS");
     } else {
-        crate::drivers::serial::println("EXT2 INODE #2: NOT A DIRECTORY");
+        crate::log_vfs!("EXT2 INODE #2: NOT A DIRECTORY");
     }
 
     let root_block = inode.block[0];
@@ -241,7 +225,7 @@ pub fn test_ext2() {
     let mut root_data = [0u8; 1024];
 
     if ide.read_sector(root_lba, &mut root_data[0..512]).is_err() {
-        crate::drivers::serial::println("EXT2: ROOT BLOCK READ FAILED");
+        crate::log_vfs!("EXT2: ROOT BLOCK READ FAILED");
         return;
     }
 
@@ -249,11 +233,11 @@ pub fn test_ext2() {
         .read_sector(root_lba + 1, &mut root_data[512..1024])
         .is_err()
     {
-        crate::drivers::serial::println("EXT2: ROOT BLOCK READ FAILED");
+        crate::log_vfs!("EXT2: ROOT BLOCK READ FAILED");
         return;
     }
 
-    crate::drivers::serial::println("EXT2 ROOT DIRECTORY: READ OK");
+    crate::log_vfs!("EXT2 ROOT DIRECTORY: READ OK");
 
     let mut offset = 0usize;
 
@@ -263,23 +247,23 @@ pub fn test_ext2() {
         let entry = match crate::filesystem::directory::parse_entry(current) {
             Some(entry) => entry,
             None => {
-                crate::drivers::serial::println("EXT2: INVALID DIRECTORY ENTRY");
+                crate::log_vfs!("EXT2: INVALID DIRECTORY ENTRY");
                 break;
             }
         };
 
         if entry.inode != 0 {
             if let Some(name) = crate::filesystem::directory::entry_name(current, &entry) {
-                crate::drivers::serial::print("  inode=");
-                crate::drivers::serial::print_u64(entry.inode as u64);
+                crate::log_vfs_raw!("  inode=");
+                crate::log_test_raw!("{}", entry.inode as u64);
 
-                crate::drivers::serial::print(" name=");
+                crate::log_test_raw!(" name=");
 
                 for &byte in name {
-                    crate::drivers::serial::putc(byte);
+                    crate::log_test_raw!("{}", (byte) as char);
                 }
 
-                crate::drivers::serial::println("");
+                crate::log_test!("");
             }
         }
 
@@ -295,13 +279,13 @@ pub fn test_ext2() {
 
     match found {
         Some(inode_number) => {
-            crate::drivers::serial::print("lookup(lost+found): inode=");
-            crate::drivers::serial::print_u64(inode_number as u64);
-            crate::drivers::serial::putc(b'\n');
+            crate::log_vfs_raw!("lookup(lost+found): inode=");
+            crate::log_test_raw!("{}", inode_number as u64);
+            crate::log_test_raw!("{}", (b'\n') as char);
         }
 
         None => {
-            crate::drivers::serial::println("lookup(lost+found): NOT FOUND");
+            crate::log_test!("lookup(lost+found): NOT FOUND");
         }
     }
 
@@ -310,24 +294,24 @@ pub fn test_ext2() {
 
     match lost_found_inode {
         Some(lost_inode) => {
-            crate::drivers::serial::print("read_inode(11): mode=0x");
-            crate::drivers::serial::print_hex_u32(lost_inode.mode as u32);
-            crate::drivers::serial::putc(b'\n');
+            crate::log_vfs_raw!("read_inode(11): mode=0x");
+            crate::log_test_raw!("{:08X}", lost_inode.mode as u32);
+            crate::log_test_raw!("{}", (b'\n') as char);
 
-            crate::drivers::serial::print("read_inode(11): size=");
-            crate::drivers::serial::print_u64(lost_inode.size as u64);
-            crate::drivers::serial::putc(b'\n');
+            crate::log_vfs_raw!("read_inode(11): size=");
+            crate::log_test_raw!("{}", lost_inode.size as u64);
+            crate::log_test_raw!("{}", (b'\n') as char);
 
-            crate::drivers::serial::print("read_inode(11): first block=");
-            crate::drivers::serial::print_u64(lost_inode.block[0] as u64);
-            crate::drivers::serial::putc(b'\n');
+            crate::log_vfs_raw!("read_inode(11): first block=");
+            crate::log_test_raw!("{}", lost_inode.block[0] as u64);
+            crate::log_test_raw!("{}", (b'\n') as char);
 
             if lost_inode.is_directory() {
-                crate::drivers::serial::println("read_inode(11): DIRECTORY");
+                crate::log_vfs!("read_inode(11): DIRECTORY");
             } else if lost_inode.is_regular_file() {
-                crate::drivers::serial::println("read_inode(11): REGULAR FILE");
+                crate::log_vfs!("read_inode(11): REGULAR FILE");
             } else {
-                crate::drivers::serial::println("read_inode(11): OTHER");
+                crate::log_vfs!("read_inode(11): OTHER");
             }
 
             let mut directory_data = [0u8; 12288];
@@ -348,22 +332,22 @@ pub fn test_ext2() {
                 let entry = match crate::filesystem::directory::parse_entry(current) {
                     Some(entry) => entry,
                     None => {
-                        crate::drivers::serial::println("inode #11 DIRECTORY ENTRY: PARSE FAIL");
+                        crate::log_vfs!("inode #11 DIRECTORY ENTRY: PARSE FAIL");
                         break;
                     }
                 };
 
                 if entry.inode != 0 {
                     if let Some(name) = crate::filesystem::directory::entry_name(current, &entry) {
-                        crate::drivers::serial::print("inode #11 entry: ");
+                        crate::log_vfs_raw!("inode #11 entry: ");
 
                         for &byte in name {
-                            crate::drivers::serial::putc(byte);
+                            crate::log_test_raw!("{}", (byte) as char);
                         }
 
-                        crate::drivers::serial::print(" -> inode=");
-                        crate::drivers::serial::print_u64(entry.inode as u64);
-                        crate::drivers::serial::putc(b'\n');
+                        crate::log_vfs_raw!(" -> inode=");
+                        crate::log_test_raw!("{}", entry.inode as u64);
+                        crate::log_test_raw!("{}", (b'\n') as char);
                     }
                 }
 
@@ -375,27 +359,27 @@ pub fn test_ext2() {
             }
 
             if offset == bytes_read {
-                crate::drivers::serial::println("inode #11 DIRECTORY PARSE: PASS");
+                crate::log_vfs!("inode #11 DIRECTORY PARSE: PASS");
             }
 
-            crate::drivers::serial::print("inode #11 data bytes read: ");
-            crate::drivers::serial::print_u64(bytes_read as u64);
-            crate::drivers::serial::putc(b'\n');
+            crate::log_vfs_raw!("inode #11 data bytes read: ");
+            crate::log_test_raw!("{}", bytes_read as u64);
+            crate::log_test_raw!("{}", (b'\n') as char);
 
             if bytes_read == lost_inode.size as usize {
-                crate::drivers::serial::println("inode #11 FULL DATA READ: PASS");
+                crate::log_vfs!("inode #11 FULL DATA READ: PASS");
             } else {
-                crate::drivers::serial::println("inode #11 FULL DATA READ: FAIL");
+                crate::log_vfs!("inode #11 FULL DATA READ: FAIL");
             }
 
             for i in 0..15 {
-                crate::drivers::serial::print("inode #11 block[");
-                crate::drivers::serial::print_u64(i as u64);
-                crate::drivers::serial::print("]: ");
+                crate::log_vfs_raw!("inode #11 block[");
+                crate::log_test_raw!("{}", i as u64);
+                crate::log_test_raw!("]: ");
 
-                crate::drivers::serial::print_u64(lost_inode.block[i] as u64);
+                crate::log_test_raw!("{}", lost_inode.block[i] as u64);
 
-                crate::drivers::serial::putc(b'\n');
+                crate::log_test_raw!("{}", (b'\n') as char);
             }
 
             let dot_inode = crate::filesystem::directory::lookup(&directory_data, bytes_read, b".");
@@ -403,27 +387,27 @@ pub fn test_ext2() {
             let parent_inode =
                 crate::filesystem::directory::lookup(&directory_data, bytes_read, b"..");
 
-            crate::drivers::serial::print("lookup(.) -> inode=");
+            crate::log_vfs_raw!("lookup(.) -> inode=");
 
-            crate::drivers::serial::print_u64(dot_inode.unwrap_or(0) as u64);
+            crate::log_test_raw!("{}", dot_inode.unwrap_or(0) as u64);
 
-            crate::drivers::serial::putc(b'\n');
+            crate::log_test_raw!("{}", (b'\n') as char);
 
-            crate::drivers::serial::print("lookup(..) -> inode=");
+            crate::log_vfs_raw!("lookup(..) -> inode=");
 
-            crate::drivers::serial::print_u64(parent_inode.unwrap_or(0) as u64);
+            crate::log_test_raw!("{}", parent_inode.unwrap_or(0) as u64);
 
-            crate::drivers::serial::putc(b'\n');
+            crate::log_test_raw!("{}", (b'\n') as char);
 
             if dot_inode == Some(11) && parent_inode == Some(2) {
-                crate::drivers::serial::println("EXT2 DIRECTORY LOOKUP: PASS");
+                crate::log_vfs!("EXT2 DIRECTORY LOOKUP: PASS");
             } else {
-                crate::drivers::serial::println("EXT2 DIRECTORY LOOKUP: FAIL");
+                crate::log_vfs!("EXT2 DIRECTORY LOOKUP: FAIL");
             }
         }
 
         None => {
-            crate::drivers::serial::println("read_inode(11): FAILED");
+            crate::log_vfs!("read_inode(11): FAILED");
         }
     }
 
@@ -438,24 +422,24 @@ pub fn test_ext2() {
 
     match resolved {
         Some((resolved_number, resolved_inode)) => {
-            crate::drivers::serial::print("PATH lookup(lost+found): inode=");
+            crate::log_vfs_raw!("PATH lookup(lost+found): inode=");
 
-            crate::drivers::serial::print_u64(resolved_number as u64);
+            crate::log_test_raw!("{}", resolved_number as u64);
 
-            crate::drivers::serial::putc(b'\n');
+            crate::log_test_raw!("{}", (b'\n') as char);
 
             if resolved_number == 11
                 && resolved_inode.is_directory()
                 && resolved_inode.size == 12288
             {
-                crate::drivers::serial::println("EXT2 PATH COMPONENT: PASS");
+                crate::log_test!("EXT2 PATH COMPONENT: PASS");
             } else {
-                crate::drivers::serial::println("EXT2 PATH COMPONENT: FAIL");
+                crate::log_test!("EXT2 PATH COMPONENT: FAIL");
             }
         }
 
         None => {
-            crate::drivers::serial::println("EXT2 PATH COMPONENT: FAIL");
+            crate::log_test!("EXT2 PATH COMPONENT: FAIL");
         }
     }
 
@@ -470,21 +454,21 @@ pub fn test_ext2() {
 
     match path_result {
         Some((inode_number, inode)) => {
-            crate::drivers::serial::print("PATH /lost+found -> inode=");
+            crate::log_vfs_raw!("PATH /lost+found -> inode=");
 
-            crate::drivers::serial::print_u64(inode_number as u64);
+            crate::log_test_raw!("{}", inode_number as u64);
 
-            crate::drivers::serial::putc(b'\n');
+            crate::log_test_raw!("{}", (b'\n') as char);
 
             if inode_number == 11 && inode.is_directory() && inode.size == 12288 {
-                crate::drivers::serial::println("EXT2 PATH RESOLUTION: PASS");
+                crate::log_test!("EXT2 PATH RESOLUTION: PASS");
             } else {
-                crate::drivers::serial::println("EXT2 PATH RESOLUTION: FAIL");
+                crate::log_test!("EXT2 PATH RESOLUTION: FAIL");
             }
         }
 
         None => {
-            crate::drivers::serial::println("EXT2 PATH RESOLUTION: FAIL");
+            crate::log_test!("EXT2 PATH RESOLUTION: FAIL");
         }
     }
 
@@ -499,22 +483,22 @@ pub fn test_ext2() {
 
     match hello_result {
         Some((inode_number, hello_inode)) => {
-            crate::drivers::serial::print("PATH /bin/hello -> inode=");
+            crate::log_vfs_raw!("PATH /bin/hello -> inode=");
 
-            crate::drivers::serial::print_u64(inode_number as u64);
+            crate::log_test_raw!("{}", inode_number as u64);
 
-            crate::drivers::serial::putc(b'\n');
+            crate::log_test_raw!("{}", (b'\n') as char);
 
-            crate::drivers::serial::print("PATH /bin/hello size=");
+            crate::log_test_raw!("PATH /bin/hello size=");
 
-            crate::drivers::serial::print_u64(hello_inode.size as u64);
+            crate::log_test_raw!("{}", hello_inode.size as u64);
 
-            crate::drivers::serial::putc(b'\n');
+            crate::log_test_raw!("{}", (b'\n') as char);
 
             if hello_inode.is_regular_file() {
-                crate::drivers::serial::println("EXT2 FILE LOOKUP: PASS");
+                crate::log_vfs!("EXT2 FILE LOOKUP: PASS");
             } else {
-                crate::drivers::serial::println("EXT2 FILE LOOKUP: FAIL");
+                crate::log_vfs!("EXT2 FILE LOOKUP: FAIL");
             }
 
             let mut hello_data = [0u8; 8192];
@@ -527,19 +511,19 @@ pub fn test_ext2() {
                 &mut hello_data,
             );
 
-            crate::drivers::serial::print("/bin/hello bytes read: ");
-            crate::drivers::serial::print_u64(bytes_read as u64);
-            crate::drivers::serial::putc(b'\n');
+            crate::log_vfs_raw!("/bin/hello bytes read: ");
+            crate::log_test_raw!("{}", bytes_read as u64);
+            crate::log_test_raw!("{}", (b'\n') as char);
 
             if bytes_read == hello_inode.size as usize {
-                crate::drivers::serial::println("EXT2 FILE READ: PASS");
+                crate::log_vfs!("EXT2 FILE READ: PASS");
             } else {
-                crate::drivers::serial::println("EXT2 FILE READ: FAIL");
+                crate::log_vfs!("EXT2 FILE READ: FAIL");
             }
         }
 
         None => {
-            crate::drivers::serial::println("EXT2 FILE LOOKUP: FAIL");
+            crate::log_vfs!("EXT2 FILE LOOKUP: FAIL");
         }
     }
 
@@ -554,23 +538,23 @@ pub fn test_ext2() {
 
     match big_result {
         Some((inode_number, big_inode)) => {
-            crate::drivers::serial::print("PATH /test/big -> inode=");
+            crate::log_vfs_raw!("PATH /test/big -> inode=");
 
-            crate::drivers::serial::print_u64(inode_number as u64);
+            crate::log_test_raw!("{}", inode_number as u64);
 
-            crate::drivers::serial::putc(b'\n');
+            crate::log_test_raw!("{}", (b'\n') as char);
 
-            crate::drivers::serial::print("/test/big size=");
+            crate::log_test_raw!("/test/big size=");
 
-            crate::drivers::serial::print_u64(big_inode.size as u64);
+            crate::log_test_raw!("{}", big_inode.size as u64);
 
-            crate::drivers::serial::putc(b'\n');
+            crate::log_test_raw!("{}", (b'\n') as char);
 
-            crate::drivers::serial::print("/test/big indirect block=");
+            crate::log_vfs_raw!("/test/big indirect block=");
 
-            crate::drivers::serial::print_u64(big_inode.block[12] as u64);
+            crate::log_test_raw!("{}", big_inode.block[12] as u64);
 
-            crate::drivers::serial::putc(b'\n');
+            crate::log_test_raw!("{}", (b'\n') as char);
 
             let mut big_data = [0u8; 13312];
 
@@ -582,33 +566,33 @@ pub fn test_ext2() {
                 &mut big_data,
             );
 
-            crate::drivers::serial::print("/test/big bytes read: ");
+            crate::log_vfs_raw!("/test/big bytes read: ");
 
-            crate::drivers::serial::print_u64(bytes_read as u64);
+            crate::log_test_raw!("{}", bytes_read as u64);
 
-            crate::drivers::serial::putc(b'\n');
+            crate::log_test_raw!("{}", (b'\n') as char);
 
             if bytes_read == big_inode.size as usize {
-                crate::drivers::serial::println("EXT2 INDIRECT READ: PASS");
+                crate::log_vfs!("EXT2 INDIRECT READ: PASS");
             } else {
-                crate::drivers::serial::println("EXT2 INDIRECT READ: FAIL");
+                crate::log_vfs!("EXT2 INDIRECT READ: FAIL");
             }
 
             for i in 0..15 {
-                crate::drivers::serial::print("/test/big block[");
+                crate::log_test_raw!("/test/big block[");
 
-                crate::drivers::serial::print_u64(i as u64);
+                crate::log_test_raw!("{}", i as u64);
 
-                crate::drivers::serial::print("]=");
+                crate::log_test_raw!("]=");
 
-                crate::drivers::serial::print_u64(big_inode.block[i] as u64);
+                crate::log_test_raw!("{}", big_inode.block[i] as u64);
 
-                crate::drivers::serial::putc(b'\n');
+                crate::log_test_raw!("{}", (b'\n') as char);
             }
         }
 
         None => {
-            crate::drivers::serial::println("PATH /test/big: FAIL");
+            crate::log_test!("PATH /test/big: FAIL");
         }
     }
 
@@ -616,17 +600,17 @@ pub fn test_ext2() {
 
     let mut file = match vfs.open(&mut ide, b"/bin/hello") {
         Some(file) => {
-            crate::drivers::serial::print("VFS OPEN /bin/hello: inode=");
+            crate::log_vfs_raw!("VFS OPEN /bin/hello: inode=");
 
-            crate::drivers::serial::print_u64(file.inode_number as u64);
+            crate::log_test_raw!("{}", file.inode_number as u64);
 
-            crate::drivers::serial::putc(b'\n');
+            crate::log_test_raw!("{}", (b'\n') as char);
 
             file
         }
 
         None => {
-            crate::drivers::serial::println("VFS OPEN /bin/hello: FAIL");
+            crate::log_vfs!("VFS OPEN /bin/hello: FAIL");
 
             return;
         }
@@ -636,11 +620,11 @@ pub fn test_ext2() {
 
     let bytes_read = vfs.read(&mut ide, &mut file, &mut buffer);
 
-    crate::drivers::serial::print("VFS READ bytes: ");
+    crate::log_vfs_raw!("VFS READ bytes: ");
 
-    crate::drivers::serial::print_u64(bytes_read as u64);
+    crate::log_test_raw!("{}", bytes_read as u64);
 
-    crate::drivers::serial::putc(b'\n');
+    crate::log_test_raw!("{}", (b'\n') as char);
 }
 
 pub fn test_errors() {
@@ -670,7 +654,7 @@ pub fn test_errors() {
         Err(BlockError::BufferTooSmall)
     ));
 
-    crate::drivers::serial::println("RAMBLOCK ERROR TEST: PASS");
+    crate::log_test!("RAMBLOCK ERROR TEST: PASS");
 }
 
 pub fn test_ide() {
@@ -679,30 +663,30 @@ pub fn test_ide() {
 
     match ide.read_sector(0, &mut buffer) {
         Ok(()) => {
-            crate::drivers::serial::println("IDE READ: PASS");
+            crate::log_vfs!("IDE READ: PASS");
 
             for i in 0..13 {
-                crate::drivers::serial::print_char(buffer[i] as char);
+                crate::log_test_raw!("{}", buffer[i] as char);
             }
 
-            crate::drivers::serial::println("");
+            crate::log_test!("");
         }
 
         Err(_) => {
-            crate::drivers::serial::println("IDE READ: FAIL");
+            crate::log_vfs!("IDE READ: FAIL");
         }
     }
 }
 
 pub fn test_vfs_elf() {
-    crate::drivers::serial::println("=========== ELF FROM VFS TEST =========");
+    crate::log_vfs!("=========== ELF FROM VFS TEST =========");
 
     let mut ide = crate::drivers::storage::ide::IdeDevice::new();
 
     let mut sb_buffer = [0u8; 512];
 
     if ide.read_sector(2, &mut sb_buffer).is_err() {
-        crate::drivers::serial::println("ELF VFS: SUPERBLOCK READ FAILED");
+        crate::log_vfs!("ELF VFS: SUPERBLOCK READ FAILED");
         return;
     }
 
@@ -710,7 +694,7 @@ pub fn test_vfs_elf() {
         Some(sb) => sb,
 
         None => {
-            crate::drivers::serial::println("ELF VFS: INVALID SUPERBLOCK");
+            crate::log_vfs!("ELF VFS: INVALID SUPERBLOCK");
             return;
         }
     };
@@ -718,7 +702,7 @@ pub fn test_vfs_elf() {
     let mut gd_buffer = [0u8; 512];
 
     if ide.read_sector(4, &mut gd_buffer).is_err() {
-        crate::drivers::serial::println("ELF VFS: GROUP DESCRIPTOR READ FAILED");
+        crate::log_vfs!("ELF VFS: GROUP DESCRIPTOR READ FAILED");
         return;
     }
 
@@ -726,7 +710,7 @@ pub fn test_vfs_elf() {
         Some(gd) => gd,
 
         None => {
-            crate::drivers::serial::println("ELF VFS: INVALID GROUP DESCRIPTOR");
+            crate::log_vfs!("ELF VFS: INVALID GROUP DESCRIPTOR");
             return;
         }
     };
@@ -737,40 +721,40 @@ pub fn test_vfs_elf() {
         Some(file) => file,
 
         None => {
-            crate::drivers::serial::println("ELF VFS: OPEN FAILED");
+            crate::log_vfs!("ELF VFS: OPEN FAILED");
             return;
         }
     };
 
-    crate::drivers::serial::print("ELF VFS: inode=");
-    crate::drivers::serial::print_u64(file.inode_number as u64);
-    crate::drivers::serial::println("");
+    crate::log_vfs_raw!("ELF VFS: inode=");
+    crate::log_test_raw!("{}", file.inode_number as u64);
+    crate::log_test!("");
 
     if !file.inode.is_regular_file() {
-        crate::drivers::serial::println("ELF VFS: NOT REGULAR FILE");
+        crate::log_vfs!("ELF VFS: NOT REGULAR FILE");
         return;
     }
 
     let file_size = file.inode.size as usize;
 
-    crate::drivers::serial::print("ELF VFS: file size=");
-    crate::drivers::serial::print_u64(file_size as u64);
-    crate::drivers::serial::println("");
+    crate::log_vfs_raw!("ELF VFS: file size=");
+    crate::log_test_raw!("{}", file_size as u64);
+    crate::log_test!("");
 
     let mut elf_data = alloc::vec![0u8; file_size];
 
     let bytes_read = vfs.read(&mut ide, &mut file, &mut elf_data);
 
-    crate::drivers::serial::print("ELF VFS: bytes read=");
-    crate::drivers::serial::print_u64(bytes_read as u64);
-    crate::drivers::serial::println("");
+    crate::log_vfs_raw!("ELF VFS: bytes read=");
+    crate::log_test_raw!("{}", bytes_read as u64);
+    crate::log_test!("");
 
     if bytes_read != file_size {
-        crate::drivers::serial::println("ELF VFS: READ FAILED");
+        crate::log_vfs!("ELF VFS: READ FAILED");
         return;
     }
 
-    crate::drivers::serial::println("ELF VFS: FILE READ OK");
+    crate::log_vfs!("ELF VFS: FILE READ OK");
 
     if elf_data.len() < 4
         || elf_data[0] != 0x7F
@@ -778,11 +762,11 @@ pub fn test_vfs_elf() {
         || elf_data[2] != b'L'
         || elf_data[3] != b'F'
     {
-        crate::drivers::serial::println("ELF VFS: BAD MAGIC");
+        crate::log_vfs!("ELF VFS: BAD MAGIC");
         return;
     }
 
-    crate::drivers::serial::println("ELF VFS: ELF MAGIC OK");
+    crate::log_vfs!("ELF VFS: ELF MAGIC OK");
 
     let mut allocator = crate::memory::physical::FrameAllocator::new();
 
@@ -791,7 +775,7 @@ pub fn test_vfs_elf() {
             Some(space) => space,
 
             None => {
-                crate::drivers::serial::println("ELF VFS: ADDRESS SPACE FAILED");
+                crate::log_vfs!("ELF VFS: ADDRESS SPACE FAILED");
                 return;
             }
         };
@@ -801,28 +785,28 @@ pub fn test_vfs_elf() {
             Ok(loaded) => loaded,
 
             Err(error) => {
-                crate::drivers::serial::println("ELF VFS: ELF LOAD FAILED");
+                crate::log_vfs!("ELF VFS: ELF LOAD FAILED");
 
                 crate::elf::test::print_error(error);
                 return;
             }
         };
 
-    crate::drivers::serial::print("ELF VFS: entry=0x");
-    crate::drivers::serial::print_u64(loaded.entry);
-    crate::drivers::serial::println("");
+    crate::log_vfs_raw!("ELF VFS: entry=0x");
+    crate::log_test_raw!("{}", loaded.entry);
+    crate::log_test!("");
 
     if loaded.entry != 0x401000 {
-        crate::drivers::serial::println("ELF VFS: ENTRY FAILED");
+        crate::log_vfs!("ELF VFS: ENTRY FAILED");
         return;
     }
 
     if address_space.translate_page(loaded.entry).is_none() {
-        crate::drivers::serial::println("ELF VFS: ENTRY PAGE FAILED");
+        crate::log_vfs!("ELF VFS: ENTRY PAGE FAILED");
         return;
     }
 
-    crate::drivers::serial::println("ELF VFS: ELF LOAD OK");
+    crate::log_vfs!("ELF VFS: ELF LOAD OK");
 
-    crate::drivers::serial::println("ELF FROM VFS: PASS");
+    crate::log_vfs!("ELF FROM VFS: PASS");
 }

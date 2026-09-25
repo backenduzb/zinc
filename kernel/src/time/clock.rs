@@ -1,10 +1,10 @@
 const TICK_FREQUENCY: u64 = 100;
 
 pub fn init() {
-    crate::drivers::serial::println("Clock initalized");
-    crate::drivers::serial::print("Clock frequency: ");
-    crate::drivers::serial::print_u64(TICK_FREQUENCY);
-    crate::drivers::serial::println("hz");
+    crate::log_boot!("Clock initalized");
+    crate::log_boot_raw!("Clock frequency: ");
+    crate::log_boot_raw!("{}", TICK_FREQUENCY);
+    crate::log_boot!("hz");
 }
 
 #[inline]
@@ -23,11 +23,11 @@ pub fn uptime_seconds() -> u64 {
 }
 
 pub fn test() {
-    crate::drivers::serial::println("CLOCK TEST: ENTER");
+    crate::log_test!("CLOCK TEST: ENTER");
 
     let start = ticks();
 
-    crate::drivers::serial::println("CLOCK TEST: TICKS READ");
+    crate::log_vfs!("CLOCK TEST: TICKS READ");
 
     let mut spins: u64 = 0;
     const SPIN_TIMEOUT: u64 = 1_000_000_000;
@@ -36,18 +36,16 @@ pub fn test() {
         let now = ticks();
 
         if now >= start + 100 {
-            crate::drivers::serial::print("Clock test: 100 ticks PASS (ticks=");
-            crate::drivers::serial::print_u64(now);
-            crate::drivers::serial::println(")");
+            crate::log_sched_raw!("Clock test: 100 ticks PASS (ticks=");
+            crate::log_boot_raw!("{}", now);
+            crate::log_boot!(")");
             return;
         }
 
         spins += 1;
 
         if spins >= SPIN_TIMEOUT {
-            crate::drivers::serial::println(
-                "Clock test: TIMEOUT, timer IRQ kelmayapti!"
-            );
+            crate::log_test!("Clock test: TIMEOUT, timer IRQ kelmayapti!");
             return;
         }
 

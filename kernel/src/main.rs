@@ -26,18 +26,18 @@ unsafe extern "C" {
 pub extern "C" fn kmain() -> ! {
     drivers::serial::init();
 
-    drivers::serial::println("ZincOS started!");
+    crate::log_boot!("ZincOS started!");
 
     boot::init();
 
     if let Some(rsdp) = crate::boot::limine::rsdp_address() {
-        crate::drivers::serial::println("ACPI RSDP found");
+        crate::log_boot!("ACPI RSDP found");
 
-        crate::drivers::serial::print("RSDP address: ");
-        crate::drivers::serial::print_u64(rsdp);
-        crate::drivers::serial::println("");
+        crate::log_boot_raw!("RSDP address: ");
+        crate::log_boot_raw!("{}", rsdp);
+        crate::log_boot!("");
     } else {
-        crate::drivers::serial::println("ERROR: ACPI RSDP not found");
+        crate::log_boot!("ERROR: ACPI RSDP not found");
     }
 
     arch::init();
@@ -47,11 +47,11 @@ pub extern "C" fn kmain() -> ! {
     drivers::input::init();
     
     if crate::filesystem::context::init() {
-        crate::drivers::serial::println("FILESYSTEM: INIT OK");
+        crate::log_vfs!("FILESYSTEM: INIT OK");
     } else {
-        crate::drivers::serial::println("FILESYSTEM: INIT FAILED");
+        crate::log_vfs!("FILESYSTEM: INIT FAILED");
     }
-    crate::drivers::serial::println("BEFORE PMM TEST");
+    crate::log_test!("BEFORE PMM TEST");
 
     crate::memory::test::address_space_test();
     crate::memory::test::user_address_space_test();
@@ -66,20 +66,20 @@ pub extern "C" fn kmain() -> ! {
         crate::drivers::storage::tests::test_vfs_elf();
         crate::exec::test::test_loader();
     } else {
-        crate::drivers::serial::println("SKIP ELF VFS / EXEC tests before heap (defer after init)");
+        crate::log_vfs!("SKIP ELF VFS / EXEC tests before heap (defer after init)");
     }
 
-    crate::drivers::serial::println("AFTER PMM TEST");
+    crate::log_test!("AFTER PMM TEST");
 
     // time::clock::test();
 
-    crate::drivers::serial::println("AFTER CLOCK TEST");
+    crate::log_test!("AFTER CLOCK TEST");
 
     unsafe {
         c_test();
     }
 
-    drivers::serial::println("C integration OK");
+    crate::log_boot!("C integration OK");
 
     drivers::display::init();
 

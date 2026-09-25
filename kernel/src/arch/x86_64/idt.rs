@@ -106,7 +106,7 @@ pub fn init() {
         );
     }
 
-    crate::drivers::serial::println("IDT initalized");
+    crate::log_boot!("IDT initalized");
 }
 
 pub fn load_ap() {

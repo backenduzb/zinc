@@ -19,7 +19,7 @@ unsafe extern "C" {
 }
 
 pub fn virtual_memory_test() -> ! {
-    crate::drivers::serial::println("Virtual memory test");
+    crate::log_test!("Virtual memory test");
 
     let frame_allocator = FrameAllocator::new();
 
@@ -27,7 +27,7 @@ pub fn virtual_memory_test() -> ! {
         Some(vm) => vm,
 
         None => {
-            crate::drivers::serial::println("ERROR: failed to create virtual memory manager");
+            crate::log_test!("ERROR: failed to create virtual memory manager");
 
             loop {
                 unsafe {
@@ -37,34 +37,34 @@ pub fn virtual_memory_test() -> ! {
         }
     };
 
-    crate::drivers::serial::println("Virtual memory manager created");
+    crate::log_boot!("Virtual memory manager created");
 
     let pml4 = virtual_memory.pml4();
 
-    crate::drivers::serial::print("PML4 address: 0x");
+    crate::log_boot_raw!("PML4 address: 0x");
 
-    crate::drivers::serial::print_u64(pml4.address);
+    crate::log_boot_raw!("{}", pml4.address);
 
-    crate::drivers::serial::println("");
+    crate::log_boot!("");
 
     if virtual_memory.map_identity_2mb(512 * 1024 * 1024) {
-        crate::drivers::serial::println("Identity map: 512 MiB");
+        crate::log_boot!("Identity map: 512 MiB");
 
-        crate::drivers::serial::println("PML4 -> PDPT -> PD: OK");
+        crate::log_boot!("PML4 -> PDPT -> PD: OK");
     } else {
-        crate::drivers::serial::println("ERROR: failed to create identity map");
+        crate::log_test!("ERROR: failed to create identity map");
     }
 
     if virtual_memory.map_hhdm() {
-        crate::drivers::serial::println("HHDM mapping: OK");
+        crate::log_boot!("HHDM mapping: OK");
     } else {
-        crate::drivers::serial::println("ERROR: HHDM mapping failed");
+        crate::log_boot!("ERROR: HHDM mapping failed");
     }
 
     if virtual_memory.map_kernel() {
-        crate::drivers::serial::println("Kernel higher-half mapping: OK");
+        crate::log_boot!("Kernel higher-half mapping: OK");
     } else {
-        crate::drivers::serial::println("ERROR: kernel mapping failed");
+        crate::log_test!("ERROR: kernel mapping failed");
     }
 
     {
@@ -77,9 +77,9 @@ pub fn virtual_memory_test() -> ! {
         };
 
         if !virtual_memory.map_mmio(lapic_phys, crate::arch::x86_64::lapic::LAPIC_SIZE) {
-            crate::drivers::serial::println("SMP: LAPIC MMIO mapping FAILED");
+            crate::log_smp!("SMP: LAPIC MMIO mapping FAILED");
         } else {
-            crate::drivers::serial::println("SMP: LAPIC MMIO mapping OK");
+            crate::log_smp!("SMP: LAPIC MMIO mapping OK");
         }
     }
 
@@ -88,26 +88,26 @@ pub fn virtual_memory_test() -> ! {
     let test_physical = 0x0040_0000u64;
 
     if virtual_memory.map_page(test_virtual, test_physical, true, false) {
-        crate::drivers::serial::println("4 KiB page mapping: OK");
+        crate::log_boot!("4 KiB page mapping: OK");
     } else {
-        crate::drivers::serial::println("ERROR: 4 KiB page mapping failed");
+        crate::log_test!("ERROR: 4 KiB page mapping failed");
     }
 
     let stack_top = match virtual_memory.create_bootstrap_stack() {
         Some(address) => {
-            crate::drivers::serial::println("Bootstrap stack: OK");
+            crate::log_boot!("Bootstrap stack: OK");
 
-            crate::drivers::serial::print("Stack top: 0x");
+            crate::log_boot_raw!("Stack top: 0x");
 
-            crate::drivers::serial::print_u64(address);
+            crate::log_boot_raw!("{}", address);
 
-            crate::drivers::serial::println("");
+            crate::log_boot!("");
 
             address
         }
 
         None => {
-            crate::drivers::serial::println("ERROR: failed to create bootstrap stack");
+            crate::log_boot!("ERROR: failed to create bootstrap stack");
 
             loop {
                 unsafe {
@@ -127,17 +127,17 @@ pub fn virtual_memory_test() -> ! {
 
         ap_stack_tops[index] = match virtual_memory.create_ap_stack(base, AP_STACK_SIZE) {
             Some(stack_top) => {
-                crate::drivers::serial::print("AP stack ");
-                crate::drivers::serial::print_u64((index + 1) as u64);
-                crate::drivers::serial::print(": 0x");
-                crate::drivers::serial::print_u64(stack_top);
-                crate::drivers::serial::println("");
+                crate::log_boot_raw!("AP stack ");
+                crate::log_boot_raw!("{}", (index + 1) as u64);
+                crate::log_boot_raw!(": 0x");
+                crate::log_boot_raw!("{}", stack_top);
+                crate::log_boot!("");
 
                 stack_top
             }
 
             None => {
-                crate::drivers::serial::println("ERROR: failed to create AP stack");
+                crate::log_test!("ERROR: failed to create AP stack");
 
                 loop {
                     unsafe {
@@ -148,12 +148,12 @@ pub fn virtual_memory_test() -> ! {
         };
     }
 
-    crate::drivers::serial::println("Entering new address space...");
+    crate::log_boot!("Entering new address space...");
 
     if virtual_memory.map_heap() {
-        crate::drivers::serial::println("Kernel heap mapping: OK");
+        crate::log_boot!("Kernel heap mapping: OK");
     } else {
-        crate::drivers::serial::println("ERROR: kernel heap mapping failed");
+        crate::log_test!("ERROR: kernel heap mapping failed");
 
         loop {
             unsafe {
@@ -174,9 +174,9 @@ use core::sync::atomic::{AtomicBool, Ordering};
 /// Dump CPU3 scheduler slot occupancy for diagnosing "scheduler full".
 /// Prints slot / TID / PID / ThreadState / cpu_id per occupied slot.
 fn log_cpu3_slots(reason: &str) {
-    crate::drivers::serial::print("CPU3 SLOTS (");
-    crate::drivers::serial::print(reason);
-    crate::drivers::serial::println(")");
+    crate::log_smp_raw!("CPU3 SLOTS (");
+    crate::log_boot_raw!("{}", reason);
+    crate::log_boot!(")");
     unsafe {
         for slot in 0..8 {
             match crate::task::SCHEDULERS[3].thread(slot) {
@@ -188,28 +188,28 @@ fn log_cpu3_slots(reason: &str) {
                         crate::task::thread::ThreadState::Sleeping => "Sleeping",
                         crate::task::thread::ThreadState::Terminated => "Terminated",
                     };
-                    crate::drivers::serial::print("  slot=");
-                    crate::drivers::serial::print_u64(slot as u64);
-                    crate::drivers::serial::print(" TID=");
-                    crate::drivers::serial::print_u64(t.id());
-                    crate::drivers::serial::print(" PID=");
-                    crate::drivers::serial::print_u64(t.process_id());
-                    crate::drivers::serial::print(" state=");
-                    crate::drivers::serial::println(state);
-                    crate::drivers::serial::print("  cpu_id=");
-                    crate::drivers::serial::print_u64(t.cpu_id() as u64);
-                    crate::drivers::serial::println("");
+                    crate::log_boot_raw!("  slot=");
+                    crate::log_boot_raw!("{}", slot as u64);
+                    crate::log_boot_raw!(" TID=");
+                    crate::log_boot_raw!("{}", t.id());
+                    crate::log_boot_raw!(" PID=");
+                    crate::log_boot_raw!("{}", t.process_id());
+                    crate::log_boot_raw!(" state=");
+                    crate::log_boot!("{}", state);
+                    crate::log_smp_raw!("  cpu_id=");
+                    crate::log_boot_raw!("{}", t.cpu_id() as u64);
+                    crate::log_boot!("");
                 }
                 None => {
-                    crate::drivers::serial::print("  slot=");
-                    crate::drivers::serial::print_u64(slot as u64);
-                    crate::drivers::serial::println(" empty");
+                    crate::log_boot_raw!("  slot=");
+                    crate::log_boot_raw!("{}", slot as u64);
+                    crate::log_boot!(" empty");
                 }
             }
         }
-        crate::drivers::serial::print("  count=");
-        crate::drivers::serial::print_u64(crate::task::SCHEDULERS[3].count() as u64);
-        crate::drivers::serial::println("");
+        crate::log_boot_raw!("  count=");
+        crate::log_boot_raw!("{}", crate::task::SCHEDULERS[3].count() as u64);
+        crate::log_boot!("");
     }
 }
 
@@ -226,8 +226,8 @@ fn log_cpu3_slots(reason: &str) {
 /// fail-open: on timeout dumps CPU3 slots and returns so boot always
 /// continues. Only atomics are polled (no cross-CPU struct walks).
 fn wait_for_vfs_complete(flag: &AtomicBool, name: &str) {
-    crate::drivers::serial::print("VFS EXEC WAIT: ");
-    crate::drivers::serial::println(name);
+    crate::log_vfs_raw!("VFS EXEC WAIT: ");
+    crate::log_boot!("{}", name);
 
     const INNER_SPINS: u64 = 2048;
     const HEARTBEAT_OUTER: u64 = 20000;
@@ -243,11 +243,11 @@ fn wait_for_vfs_complete(flag: &AtomicBool, name: &str) {
             break true;
         }
         if outer % HEARTBEAT_OUTER == 0 {
-            crate::drivers::serial::print("VFS EXEC WAIT ALIVE: ");
-            crate::drivers::serial::print(name);
-            crate::drivers::serial::print(" ticks=");
-            crate::drivers::serial::print_u64(crate::arch::x86_64::lapic::ticks());
-            crate::drivers::serial::println("");
+            crate::log_vfs_raw!("VFS EXEC WAIT ALIVE: ");
+            crate::log_boot_raw!("{}", name);
+            crate::log_sched_raw!(" ticks=");
+            crate::log_boot_raw!("{}", crate::arch::x86_64::lapic::ticks());
+            crate::log_boot!("");
         }
         if outer >= TIMEOUT_OUTER {
             break false;
@@ -255,23 +255,23 @@ fn wait_for_vfs_complete(flag: &AtomicBool, name: &str) {
     };
 
     if done {
-        crate::drivers::serial::print("VFS EXEC WAIT DONE: ");
-        crate::drivers::serial::println(name);
+        crate::log_vfs_raw!("VFS EXEC WAIT DONE: ");
+        crate::log_boot!("{}", name);
     } else {
-        crate::drivers::serial::print("VFS EXEC WAIT TIMEOUT: ");
-        crate::drivers::serial::println(name);
+        crate::log_vfs_raw!("VFS EXEC WAIT TIMEOUT: ");
+        crate::log_boot!("{}", name);
         log_cpu3_slots(name);
     }
 }
 
 extern "C" fn after_address_space_switch() -> ! {
-    crate::drivers::serial::println("Entered new address space!");
+    crate::log_boot!("Entered new address space!");
 
     let cr3 = crate::arch::x86_64::paging::read_cr3();
 
-    crate::drivers::serial::print("New CR3: 0x");
-    crate::drivers::serial::print_u64(cr3);
-    crate::drivers::serial::println("");
+    crate::log_cr3_raw!("New CR3: 0x");
+    crate::log_boot_raw!("{}", cr3);
+    crate::log_boot!("");
 
     let lapic_phys_raw = crate::arch::x86_64::smp::acpi::lapic_phys();
 
@@ -287,26 +287,26 @@ extern "C" fn after_address_space_switch() -> ! {
 
         let apic_msr_before = crate::arch::x86_64::io::rdmsr(IA32_APIC_BASE);
 
-        crate::drivers::serial::print("APIC MSR before enable: 0x");
-        crate::drivers::serial::print_hex_u64(apic_msr_before);
-        crate::drivers::serial::println("");
+        crate::log_smp_raw!("APIC MSR before enable: 0x");
+        crate::log_boot_raw!("{:016X}", apic_msr_before);
+        crate::log_boot!("");
 
         crate::arch::x86_64::io::wrmsr(IA32_APIC_BASE, apic_msr_before | APIC_ENABLE);
 
         let apic_msr_after = crate::arch::x86_64::io::rdmsr(IA32_APIC_BASE);
 
-        crate::drivers::serial::print("APIC MSR after enable: 0x");
-        crate::drivers::serial::print_hex_u64(apic_msr_after);
-        crate::drivers::serial::println("");
+        crate::log_smp_raw!("APIC MSR after enable: 0x");
+        crate::log_boot_raw!("{:016X}", apic_msr_after);
+        crate::log_boot!("");
     }
 
     crate::arch::x86_64::lapic::init(lapic_phys);
 
     let bsp_apic_id = crate::arch::x86_64::lapic::id();
 
-    crate::drivers::serial::print("LAPIC ID after switch: ");
-    crate::drivers::serial::print_u64(bsp_apic_id as u64);
-    crate::drivers::serial::println("");
+    crate::log_smp_raw!("LAPIC ID after switch: ");
+    crate::log_boot_raw!("{}", bsp_apic_id as u64);
+    crate::log_boot!("");
 
     crate::arch::x86_64::smp::percpu::init_bsp(bsp_apic_id);
 
@@ -332,22 +332,22 @@ extern "C" fn after_address_space_switch() -> ! {
         );
     }
 
-    crate::drivers::serial::print("RFLAGS.IF (1=enabled): ");
-    crate::drivers::serial::print_u64((rflags >> 9) & 1);
-    crate::drivers::serial::println("");
+    crate::log_boot_raw!("RFLAGS.IF (1=enabled): ");
+    crate::log_boot_raw!("{}", (rflags >> 9) & 1);
+    crate::log_boot!("");
 
     unsafe {
         core::arch::asm!("sti", options(nomem, nostack, preserves_flags));
     }
 
-    crate::drivers::serial::println("STI: interrupts enabled");
+    crate::log_boot!("STI: interrupts enabled");
 
     crate::memory::heap::KERNEL_HEAP.init();
 
-    crate::drivers::serial::println("Kernel heap initialized");
-    crate::drivers::serial::print("Heap remaining: ");
-    crate::drivers::serial::print_u64(crate::memory::heap::KERNEL_HEAP.remaining() as u64);
-    crate::drivers::serial::println(" bytes");
+    crate::log_boot!("Kernel heap initialized");
+    crate::log_boot_raw!("Heap remaining: ");
+    crate::log_boot_raw!("{}", crate::memory::heap::KERNEL_HEAP.remaining() as u64);
+    crate::log_boot!(" bytes");
 
     crate::drivers::storage::tests::test_create();
 
@@ -362,11 +362,11 @@ extern "C" fn after_address_space_switch() -> ! {
     ];
 
     for &(apic_id, stack_top) in &aps {
-        crate::drivers::serial::println("--------------------------------");
+        crate::log_boot!("--------------------------------");
 
-        crate::drivers::serial::print("SMP: preparing APIC ");
-        crate::drivers::serial::print_u64(apic_id as u64);
-        crate::drivers::serial::println("");
+        crate::log_smp_raw!("SMP: preparing APIC ");
+        crate::log_boot_raw!("{}", apic_id as u64);
+        crate::log_boot!("");
 
         crate::arch::x86_64::smp::trampoline::reset_ap_state(apic_id as usize);
 
@@ -386,30 +386,30 @@ extern "C" fn after_address_space_switch() -> ! {
         }
 
         if started {
-            crate::drivers::serial::print("SMP: APIC ");
-            crate::drivers::serial::print_u64(apic_id as u64);
-            crate::drivers::serial::println(" started successfully");
+            crate::log_smp_raw!("SMP: APIC ");
+            crate::log_boot_raw!("{}", apic_id as u64);
+            crate::log_boot!(" started successfully");
         } else {
-            crate::drivers::serial::print("ERROR: APIC ");
-            crate::drivers::serial::print_u64(apic_id as u64);
-            crate::drivers::serial::println(" failed to start");
+            crate::log_smp_raw!("ERROR: APIC ");
+            crate::log_boot_raw!("{}", apic_id as u64);
+            crate::log_test!(" failed to start");
         }
     }
 
     let online = crate::arch::x86_64::smp::percpu::online_count();
 
-    crate::drivers::serial::print("SMP: CPUs online = ");
-    crate::drivers::serial::print_u64(online as u64);
-    crate::drivers::serial::println("");
+    crate::log_smp_raw!("SMP: CPUs online = ");
+    crate::log_boot_raw!("{}", online as u64);
+    crate::log_boot!("");
 
     let kernel_created = unsafe { (*crate::task::process_manager()).create_with_pid(0) };
 
     if !kernel_created {
-        crate::drivers::serial::println("ERROR: failed to create kernel process");
+        crate::log_test!("ERROR: failed to create kernel process");
     } else {
-        crate::drivers::serial::println("Process manager: initialized");
+        crate::log_boot!("Process manager: initialized");
 
-        crate::drivers::serial::println("Kernel process: PID=0");
+        crate::log_boot!("Kernel process: PID=0");
 
         unsafe {
             let pm = crate::task::process_manager();
@@ -421,20 +421,20 @@ extern "C" fn after_address_space_switch() -> ! {
             let gamma = (*pm).add_thread(0, crate::task::test::AP_GAMMA_ID);
 
             if beta && silf && gamma {
-                crate::drivers::serial::println("AP threads registered to kernel process");
+                crate::log_vfs!("AP threads registered to kernel process");
             } else {
-                crate::drivers::serial::println("ERROR: failed to register AP threads");
+                crate::log_vfs!("ERROR: failed to register AP threads");
 
                 if !beta {
-                    crate::drivers::serial::println("  AP_BETA registration failed");
+                    crate::log_test!("  AP_BETA registration failed");
                 }
 
                 if !silf {
-                    crate::drivers::serial::println("  AP_SILF registration failed");
+                    crate::log_test!("  AP_SILF registration failed");
                 }
 
                 if !gamma {
-                    crate::drivers::serial::println("  AP_GAMMA registration failed");
+                    crate::log_test!("  AP_GAMMA registration failed");
                 }
             }
         }
@@ -444,7 +444,7 @@ extern "C" fn after_address_space_switch() -> ! {
         Ok(layout) => layout,
 
         Err(_) => {
-            crate::drivers::serial::println("ERROR: invalid layout");
+            crate::log_boot!("ERROR: invalid layout");
 
             loop {
                 unsafe {
@@ -456,36 +456,36 @@ extern "C" fn after_address_space_switch() -> ! {
 
     let bsp = crate::arch::x86_64::smp::percpu::current();
 
-    crate::drivers::serial::print("SMP: current CPU = ");
+    crate::log_smp_raw!("SMP: current CPU = ");
 
-    crate::drivers::serial::print_u64(bsp.cpu_id as u64);
+    crate::log_boot_raw!("{}", bsp.cpu_id as u64);
 
-    crate::drivers::serial::println("");
+    crate::log_boot!("");
 
     let ptr = unsafe { core::alloc::GlobalAlloc::alloc(&crate::memory::heap::KERNEL_HEAP, layout) };
 
     if ptr.is_null() {
-        crate::drivers::serial::println("ERROR: heap allocation failed");
+        crate::log_test!("ERROR: heap allocation failed");
     } else {
-        crate::drivers::serial::println("Heap allocation: OK");
+        crate::log_boot!("Heap allocation: OK");
 
         unsafe {
             *ptr = 0x42;
         }
 
         if unsafe { *ptr } == 0x42 {
-            crate::drivers::serial::println("Heap write/read: OK");
+            crate::log_vfs!("Heap write/read: OK");
         } else {
-            crate::drivers::serial::println("ERROR: heap write/read failed");
+            crate::log_vfs!("ERROR: heap write/read failed");
         }
     }
 
     let value = alloc::boxed::Box::new(12345u64);
 
     if *value == 12345 {
-        crate::drivers::serial::println("Box allocation: OK");
+        crate::log_boot!("Box allocation: OK");
     } else {
-        crate::drivers::serial::println("ERROR: Box allocation failed");
+        crate::log_test!("ERROR: Box allocation failed");
     }
 
     crate::task::test::process_address_space_test();
@@ -500,50 +500,50 @@ extern "C" fn after_address_space_switch() -> ! {
 
     let exec_runtime_ok = crate::exec::test::test_exec_runtime();
     if exec_runtime_ok {
-        crate::drivers::serial::println("EXEC RUNTIME: ELF thread queued");
+        crate::log_vfs!("EXEC RUNTIME: ELF thread queued");
     } else {
-        crate::drivers::serial::println("EXEC RUNTIME: FAILED, fallback to manual ring3");
+        crate::log_exec!("EXEC RUNTIME: FAILED, fallback to manual ring3");
     }
 
     if crate::exec::vfs::test_hello_exec() {
-        crate::drivers::serial::println("VFS EXEC: /bin/hello queued for Ring3");
+        crate::log_vfs!("VFS EXEC: /bin/hello queued for Ring3");
     } else {
-        crate::drivers::serial::println("VFS EXEC: FAILED");
+        crate::log_vfs!("VFS EXEC: FAILED");
     }
 
     if crate::exec::test::test_init_exec() {
-        crate::drivers::serial::println("VFS EXEC: /bin/init queued for Ring3 (boot path)");
+        crate::log_vfs!("VFS EXEC: /bin/init queued for Ring3 (boot path)");
     } else {
-        crate::drivers::serial::println("VFS EXEC INIT: FAILED");
+        crate::log_vfs!("VFS EXEC INIT: FAILED");
     }
 
     if crate::exec::test::test_badptr_exec() {
-        crate::drivers::serial::println("VFS EXEC: /bin/badptr queued for Ring3");
+        crate::log_vfs!("VFS EXEC: /bin/badptr queued for Ring3");
         wait_for_vfs_complete(&crate::exec::vfs::BADPTR_COMPLETE, "badptr");
     } else {
-        crate::drivers::serial::println("VFS EXEC BADPTR: FAILED");
+        crate::log_vfs!("VFS EXEC BADPTR: FAILED");
     }
 
     if !crate::exec::vfs::test_open_test_exec() {
-        crate::drivers::serial::println("VFS EXEC OPEN TEST: FAILED");
+        crate::log_vfs!("VFS EXEC OPEN TEST: FAILED");
     } else {
         wait_for_vfs_complete(&crate::exec::vfs::OPEN_TEST_COMPLETE, "open_test");
     }
 
     if !crate::exec::vfs::test_read_test_exec() {
-        crate::drivers::serial::println("VFS EXEC READ TEST: FAILED");
+        crate::log_vfs!("VFS EXEC READ TEST: FAILED");
     } else {
         wait_for_vfs_complete(&crate::exec::vfs::READ_TEST_COMPLETE, "read_test");
     }
 
     if !crate::exec::vfs::test_close_test_exec() {
-        crate::drivers::serial::println("VFS EXEC CLOSE TEST: FAILED");
+        crate::log_vfs!("VFS EXEC CLOSE TEST: FAILED");
     } else {
         wait_for_vfs_complete(&crate::exec::vfs::CLOSE_TEST_COMPLETE, "close_test");
     }
 
     if !crate::exec::vfs::test_execve_exec() {
-        crate::drivers::serial::println("VFS EXEC EXECVE TEST: FAILED");
+        crate::log_vfs!("VFS EXEC EXECVE TEST: FAILED");
     } else {
         wait_for_vfs_complete(&crate::exec::vfs::EXECVE_TEST_COMPLETE, "execve_test");
     }
@@ -555,111 +555,111 @@ extern "C" fn after_address_space_switch() -> ! {
 }
 
 pub fn address_space_test() {
-    crate::drivers::serial::println("=== ADDRESS SPACE TEST ===");
+    crate::log_test!("=== ADDRESS SPACE TEST ===");
 
     let mut allocator = crate::memory::physical::FrameAllocator::new();
 
     let Some(address_space) = crate::memory::address_space::AddressSpace::new(&mut allocator)
     else {
-        crate::drivers::serial::println("AddressSpace: FAILED");
+        crate::log_test!("AddressSpace: FAILED");
         return;
     };
 
-    crate::drivers::serial::print("AddressSpace PML4: 0x");
-    crate::drivers::serial::print_u64(address_space.pml4().address);
-    crate::drivers::serial::println("");
+    crate::log_boot_raw!("AddressSpace PML4: 0x");
+    crate::log_boot_raw!("{}", address_space.pml4().address);
+    crate::log_boot!("");
 
-    crate::drivers::serial::println("AddressSpace: OK");
+    crate::log_boot!("AddressSpace: OK");
 }
 
 pub fn user_address_space_test() {
-    crate::drivers::serial::println("=== USER ADDRESS SPACE TEST ===");
+    crate::log_ring3!("=== USER ADDRESS SPACE TEST ===");
 
     let mut allocator = crate::memory::physical::FrameAllocator::new();
 
     let Some(address_space) = crate::memory::address_space::AddressSpace::new_user(&mut allocator)
     else {
-        crate::drivers::serial::println("User AddressSpace: FAILED");
+        crate::log_ring3!("User AddressSpace: FAILED");
         return;
     };
 
-    crate::drivers::serial::print("User PML4: 0x");
-    crate::drivers::serial::print_u64(address_space.pml4().address);
-    crate::drivers::serial::println("");
+    crate::log_ring3_raw!("User PML4: 0x");
+    crate::log_boot_raw!("{}", address_space.pml4().address);
+    crate::log_boot!("");
 
-    crate::drivers::serial::println("User AddressSpace: OK");
+    crate::log_ring3!("User AddressSpace: OK");
 }
 
 pub fn user_page_map_test() {
-    crate::drivers::serial::println("=== USER PAGE MAP TEST ===");
+    crate::log_ring3!("=== USER PAGE MAP TEST ===");
 
     let mut allocator = crate::memory::physical::FrameAllocator::new();
 
     let Some(mut address_space) =
         crate::memory::address_space::AddressSpace::new_user(&mut allocator)
     else {
-        crate::drivers::serial::println("User AddressSpace: FAILED");
+        crate::log_ring3!("User AddressSpace: FAILED");
         return;
     };
 
     let Some(frame) = allocator.alloc_frame() else {
-        crate::drivers::serial::println("User page frame allocation: FAILED");
+        crate::log_ring3!("User page frame allocation: FAILED");
         return;
     };
 
-    crate::drivers::serial::print("User frame: 0x");
-    crate::drivers::serial::print_u64(frame.address);
-    crate::drivers::serial::println("");
+    crate::log_ring3_raw!("User frame: 0x");
+    crate::log_boot_raw!("{}", frame.address);
+    crate::log_boot!("");
 
     let virtual_address = 0x0040_0000;
 
     if address_space.map_page(&mut allocator, virtual_address, frame.address, true, true) {
-        crate::drivers::serial::println("User page mapping: OK");
+        crate::log_ring3!("User page mapping: OK");
     } else {
-        crate::drivers::serial::println("User page mapping: FAILED");
+        crate::log_ring3!("User page mapping: FAILED");
     }
 }
 
 pub fn user_page_unmap_test() {
-    crate::drivers::serial::println("=== USER PAGE UNMAP TEST ===");
+    crate::log_ring3!("=== USER PAGE UNMAP TEST ===");
 
     let mut allocator = crate::memory::physical::FrameAllocator::new();
 
     let Some(mut address_space) =
         crate::memory::address_space::AddressSpace::new_user(&mut allocator)
     else {
-        crate::drivers::serial::println("User AddressSpace: FAILED");
+        crate::log_ring3!("User AddressSpace: FAILED");
         return;
     };
 
     let Some(frame) = allocator.alloc_frame() else {
-        crate::drivers::serial::println("Frame allocation: FAILED");
+        crate::log_test!("Frame allocation: FAILED");
         return;
     };
 
     let virtual_address = 0x0040_0000;
 
     if !address_space.map_page(&mut allocator, virtual_address, frame.address, true, true) {
-        crate::drivers::serial::println("Mapping: FAILED");
+        crate::log_test!("Mapping: FAILED");
         return;
     }
 
-    crate::drivers::serial::println("Mapping: OK");
+    crate::log_boot!("Mapping: OK");
 
     match address_space.translate_page(virtual_address) {
         Some(address) if address == frame.address => {
-            crate::drivers::serial::println("Translation: OK");
+            crate::log_boot!("Translation: OK");
         }
 
         Some(address) => {
-            crate::drivers::serial::print("Translation: WRONG 0x");
-            crate::drivers::serial::print_u64(address);
-            crate::drivers::serial::println("");
+            crate::log_boot_raw!("Translation: WRONG 0x");
+            crate::log_boot_raw!("{}", address);
+            crate::log_boot!("");
             return;
         }
 
         None => {
-            crate::drivers::serial::println("Translation: FAILED");
+            crate::log_test!("Translation: FAILED");
             return;
         }
     }
@@ -668,89 +668,89 @@ pub fn user_page_unmap_test() {
 
     match unmapped {
         Some(unmapped_frame) if unmapped_frame.address == frame.address => {
-            crate::drivers::serial::println("Unmap: OK");
+            crate::log_boot!("Unmap: OK");
         }
 
         _ => {
-            crate::drivers::serial::println("Unmap: FAILED");
+            crate::log_test!("Unmap: FAILED");
             return;
         }
     }
 
     if address_space.translate_page(virtual_address).is_none() {
-        crate::drivers::serial::println("Translation after unmap: OK");
+        crate::log_boot!("Translation after unmap: OK");
     } else {
-        crate::drivers::serial::println("Translation after unmap: FAILED");
+        crate::log_test!("Translation after unmap: FAILED");
     }
 }
 
 pub fn nx_test() {
-    crate::drivers::serial::println("=== NX PAGE TEST ===");
+    crate::log_test!("=== NX PAGE TEST ===");
 
     let mut allocator = crate::memory::physical::FrameAllocator::new();
 
     let Some(mut address_space) =
         crate::memory::address_space::AddressSpace::new_user(&mut allocator)
     else {
-        crate::drivers::serial::println("NX AddressSpace: FAILED");
+        crate::log_test!("NX AddressSpace: FAILED");
         return;
     };
 
     let Some(frame) = allocator.alloc_frame() else {
-        crate::drivers::serial::println("NX frame allocation: FAILED");
+        crate::log_test!("NX frame allocation: FAILED");
         return;
     };
 
     let va = 0x0040_0000;
 
     if !address_space.map_page(&mut allocator, va, frame.address, false, true) {
-        crate::drivers::serial::println("NX mapping: FAILED");
+        crate::log_test!("NX mapping: FAILED");
         return;
     }
 
     match address_space.translate_page(va) {
         Some(address) if address == frame.address => {
-            crate::drivers::serial::println("NX mapping: OK");
+            crate::log_boot!("NX mapping: OK");
         }
 
         _ => {
-            crate::drivers::serial::println("NX mapping translation: FAILED");
+            crate::log_test!("NX mapping translation: FAILED");
         }
     }
 
     if let Some(unmapped) = address_space.unmap_page(&mut allocator, va) {
         if unmapped.address == frame.address {
-            crate::drivers::serial::println("NX cleanup: OK");
+            crate::log_boot!("NX cleanup: OK");
         }
     }
 }
 
 pub fn user_stack_test() {
-    crate::drivers::serial::println("=== USER STACK TEST ===");
+    crate::log_ring3!("=== USER STACK TEST ===");
 
     let mut allocator = FrameAllocator::new();
 
     let Some(mut address_space) = AddressSpace::new_user(&mut allocator) else {
-        crate::drivers::serial::println("USER STACK: AddressSpace FAILED");
+        crate::log_ring3!("USER STACK: AddressSpace FAILED");
         return;
     };
 
     let Some(stack) = UserStack::map(&mut address_space, &mut allocator) else {
-        crate::drivers::serial::println("USER STACK: MAP FAILED");
+        crate::log_ring3!("USER STACK: MAP FAILED");
         return;
     };
 
-    crate::drivers::serial::print("Stack base: 0x");
-    crate::drivers::serial::print_u64(stack.base);
-    crate::drivers::serial::println("");
+    crate::log_boot_raw!("Stack base: 0x");
+    crate::log_boot_raw!("{}", stack.base);
+    crate::log_boot!("");
 
-    crate::drivers::serial::print("Stack top: 0x");
-    crate::drivers::serial::print_u64(stack.top);
-    crate::drivers::serial::println("");
+    crate::log_boot_raw!("Stack top: 0x");
+    crate::log_boot_raw!("{}", stack.top);
+    crate::log_boot!("");
 
-    crate::drivers::serial::print("Stack size: ");
-    crate::drivers::serial::print_u64(stack.size);
-    crate::drivers::serial::println("");
+    crate::log_boot_raw!("Stack size: ");
+    crate::log_boot_raw!("{}", stack.size);
+    crate::log_boot!("");
 
     let mut passed = true;
 
@@ -758,29 +758,29 @@ pub fn user_stack_test() {
         let va = stack.base + (i as u64 * PAGE_SIZE);
 
         if address_space.translate_page(va).is_some() {
-            crate::drivers::serial::print("STACK page ");
-            crate::drivers::serial::print_u64(i as u64);
-            crate::drivers::serial::println(": mapped");
+            crate::log_boot_raw!("STACK page ");
+            crate::log_boot_raw!("{}", i as u64);
+            crate::log_boot!(": mapped");
         } else {
             passed = false;
 
-            crate::drivers::serial::print("STACK page ");
-            crate::drivers::serial::print_u64(i as u64);
-            crate::drivers::serial::println(": FAILED");
+            crate::log_boot_raw!("STACK page ");
+            crate::log_boot_raw!("{}", i as u64);
+            crate::log_test!(": FAILED");
         }
     }
 
     if address_space.translate_page(stack.top).is_none() {
-        crate::drivers::serial::println("STACK top boundary: OK");
+        crate::log_boot!("STACK top boundary: OK");
     } else {
         passed = false;
 
-        crate::drivers::serial::println("STACK top boundary: FAILED");
+        crate::log_test!("STACK top boundary: FAILED");
     }
 
     if passed {
-        crate::drivers::serial::println("USER STACK TEST: PASS");
+        crate::log_ring3!("USER STACK TEST: PASS");
     } else {
-        crate::drivers::serial::println("USER STACK TEST: FAIL");
+        crate::log_ring3!("USER STACK TEST: FAIL");
     }
 }

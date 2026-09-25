@@ -122,7 +122,7 @@ fn validate_user_addrs(
 }
 
 pub fn prepare_ring3_user_thread() -> bool {
-    crate::drivers::serial::println("=== RING 3 USER THREAD TEST ===");
+    crate::log_vfs!("=== RING 3 USER THREAD TEST ===");
 
     let mut allocator = FrameAllocator::new();
 
@@ -130,7 +130,7 @@ pub fn prepare_ring3_user_thread() -> bool {
         match (*crate::task::process_manager()).create_user(&mut allocator, None) {
             Some(pid) => pid,
             None => {
-                crate::drivers::serial::println("RING3: create_user FAILED");
+                crate::log_ring3!("RING3: create_user FAILED");
                 return false;
             }
         }
@@ -138,16 +138,16 @@ pub fn prepare_ring3_user_thread() -> bool {
 
     RING3_PID.store(pid, Ordering::Relaxed);
 
-    crate::drivers::serial::print("User process created: PID=");
-    crate::drivers::serial::print_u64(pid);
-    crate::drivers::serial::println("");
+    crate::log_ring3_raw!("User process created: PID=");
+    crate::log_boot_raw!("{}", pid);
+    crate::log_boot!("");
 
     let (code_phys, data_phys, user_rsp, pml4) = unsafe {
         let manager = crate::task::process_manager();
         let process = match (*manager).get_mut(pid) {
             Some(process) => process,
             None => {
-                crate::drivers::serial::println("RING3: process lookup FAILED");
+                crate::log_ring3!("RING3: process lookup FAILED");
                 return false;
             }
         };
@@ -155,7 +155,7 @@ pub fn prepare_ring3_user_thread() -> bool {
         let space = match process.address_space_mut() {
             Some(space) => space,
             None => {
-                crate::drivers::serial::println("RING3: address space MISSING");
+                crate::log_ring3!("RING3: address space MISSING");
                 return false;
             }
         };
@@ -163,13 +163,13 @@ pub fn prepare_ring3_user_thread() -> bool {
         let code_frame = match allocator.alloc_frame() {
             Some(frame) => frame,
             None => {
-                crate::drivers::serial::println("RING3: code frame FAILED");
+                crate::log_ring3!("RING3: code frame FAILED");
                 return false;
             }
         };
 
         if !space.map_page(&mut allocator, USER_CODE_ADDR, code_frame.address, true, true) {
-            crate::drivers::serial::println("RING3: code map FAILED");
+            crate::log_ring3!("RING3: code map FAILED");
             allocator.free_frame(code_frame);
             return false;
         }
@@ -177,13 +177,13 @@ pub fn prepare_ring3_user_thread() -> bool {
         let data_frame = match allocator.alloc_frame() {
             Some(frame) => frame,
             None => {
-                crate::drivers::serial::println("RING3: data frame FAILED");
+                crate::log_ring3!("RING3: data frame FAILED");
                 return false;
             }
         };
 
         if !space.map_page(&mut allocator, USER_DATA_ADDR, data_frame.address, true, false) {
-            crate::drivers::serial::println("RING3: data map FAILED");
+            crate::log_ring3!("RING3: data map FAILED");
             allocator.free_frame(data_frame);
             return false;
         }
@@ -191,7 +191,7 @@ pub fn prepare_ring3_user_thread() -> bool {
         let stack = match UserStack::map(space, &mut allocator) {
             Some(stack) => stack,
             None => {
-                crate::drivers::serial::println("RING3: user stack FAILED");
+                crate::log_ring3!("RING3: user stack FAILED");
                 return false;
             }
         };
@@ -199,15 +199,15 @@ pub fn prepare_ring3_user_thread() -> bool {
         let user_rsp = (stack.top - 8) & !0xF;
 
         if let Err(reason) = validate_user_addrs(space, USER_CODE_ADDR, user_rsp) {
-            crate::drivers::serial::print("RING3: validation FAILED: ");
-            crate::drivers::serial::println(reason);
+            crate::log_ring3_raw!("RING3: validation FAILED: ");
+            crate::log_boot!("{}", reason);
             return false;
         }
 
         let pml4 = match process.pml4_phys() {
             Some(pml4) => pml4,
             None => {
-                crate::drivers::serial::println("RING3: PML4 missing");
+                crate::log_ring3!("RING3: PML4 missing");
                 return false;
             }
         };
@@ -218,7 +218,7 @@ pub fn prepare_ring3_user_thread() -> bool {
     let code_va = match crate::boot::limine::physical_to_virtual(code_phys) {
         Some(va) => va,
         None => {
-            crate::drivers::serial::println("RING3: code HHDM unavailable");
+            crate::log_ring3!("RING3: code HHDM unavailable");
             return false;
         }
     };
@@ -226,7 +226,7 @@ pub fn prepare_ring3_user_thread() -> bool {
     let data_va = match crate::boot::limine::physical_to_virtual(data_phys) {
         Some(va) => va,
         None => {
-            crate::drivers::serial::println("RING3: data HHDM unavailable");
+            crate::log_ring3!("RING3: data HHDM unavailable");
             return false;
         }
     };
@@ -243,19 +243,19 @@ pub fn prepare_ring3_user_thread() -> bool {
 
     MARKER_PHYS.store(data_phys, Ordering::Relaxed);
 
-    crate::drivers::serial::print("User CR3 loaded: PML4=0x");
-    crate::drivers::serial::print_hex_u64(pml4);
-    crate::drivers::serial::println(" (at first schedule)");
+    crate::log_cr3_raw!("User CR3 loaded: PML4=0x");
+    crate::log_boot_raw!("{:016X}", pml4);
+    crate::log_sched!(" (at first schedule)");
 
     let user_thread = Thread::new_user(RING3_TID, 0, pid, USER_CODE_ADDR, user_rsp);
 
-    crate::drivers::serial::print("User thread created: TID=");
-    crate::drivers::serial::print_u64(RING3_TID);
-    crate::drivers::serial::print(" RIP=0x");
-    crate::drivers::serial::print_hex_u64(USER_CODE_ADDR);
-    crate::drivers::serial::print(" RSP=0x");
-    crate::drivers::serial::print_hex_u64(user_rsp);
-    crate::drivers::serial::println("");
+    crate::log_vfs_raw!("User thread created: TID=");
+    crate::log_boot_raw!("{}", RING3_TID);
+    crate::log_boot_raw!(" RIP=0x");
+    crate::log_boot_raw!("{:016X}", USER_CODE_ADDR);
+    crate::log_boot_raw!(" RSP=0x");
+    crate::log_boot_raw!("{:016X}", user_rsp);
+    crate::log_boot!("");
 
     let monitor = Thread::new(RING3_MONITOR_TID, 0, 0, ring3_monitor);
 
@@ -264,21 +264,21 @@ pub fn prepare_ring3_user_thread() -> bool {
         let manager = crate::task::process_manager();
 
         if !(*scheduler).add_thread(user_thread, 0) {
-            crate::drivers::serial::println("RING3: add user thread FAILED");
+            crate::log_vfs!("RING3: add user thread FAILED");
             return false;
         }
 
         (*manager).add_thread(pid, RING3_TID);
 
         if !(*scheduler).add_thread(monitor, 0) {
-            crate::drivers::serial::println("RING3: add monitor FAILED");
+            crate::log_ring3!("RING3: add monitor FAILED");
             return false;
         }
 
         (*manager).add_thread(0, RING3_MONITOR_TID);
     }
 
-    crate::drivers::serial::println("RING3 threads queued on CPU 0 (user + monitor)");
+    crate::log_vfs!("RING3 threads queued on CPU 0 (user + monitor)");
 
     true
 }
@@ -308,24 +308,24 @@ fn build_wait_child_blob() -> [u8; 30] {
 }
 
 pub fn prepare_wait_blocking_test() -> bool {
-    crate::drivers::serial::println("=== INIT TEST ===");
+    crate::log_test!("=== INIT TEST ===");
     let mut allocator = FrameAllocator::new();
     let parent_pid = unsafe {
         let pm = crate::task::process_manager();
         if let Some(p) = (*pm).get(1) {
             if p.has_user_address_space() && !p.is_terminated() {
                 (*pm).get_mut(1).unwrap().set_parent(None);
-                crate::drivers::serial::println("INIT: reusing existing PID=1");
+                crate::log_boot!("INIT: reusing existing PID=1");
                 1
             } else {
-                crate::drivers::serial::println("INIT: PID=1 unusable");
+                crate::log_boot!("INIT: PID=1 unusable");
                 return false;
             }
         } else {
             match (*pm).create_user_with_pid(1, &mut allocator, None) {
                 Some(pid) => pid,
                 None => {
-                    crate::drivers::serial::println("INIT: parent create FAILED");
+                    crate::log_test!("INIT: parent create FAILED");
                     return false;
                 }
             }
@@ -337,50 +337,50 @@ pub fn prepare_wait_blocking_test() -> bool {
             match (*pm).create_user_with_pid(2, &mut allocator, Some(parent_pid)) {
                 Some(pid) => pid,
                 None => {
-                    crate::drivers::serial::println("INIT: child create FAILED");
+                    crate::log_test!("INIT: child create FAILED");
                     return false;
                 }
             }
         } else {
-            crate::drivers::serial::println("INIT: PID=2 occupied");
+            crate::log_boot!("INIT: PID=2 occupied");
             return false;
         }
     };
-    crate::drivers::serial::print("INIT: PID=");
-    crate::drivers::serial::print_u64(parent_pid);
-    crate::drivers::serial::println(" started");
-    crate::drivers::serial::println("INIT: parent=None");
-    crate::drivers::serial::println("INIT: waiting for child");
-    crate::drivers::serial::print("INIT: parent PID=");
-    crate::drivers::serial::print_u64(parent_pid);
-    crate::drivers::serial::print(" child PID=");
-    crate::drivers::serial::print_u64(child_pid);
-    crate::drivers::serial::println("");
+    crate::log_boot_raw!("INIT: PID=");
+    crate::log_boot_raw!("{}", parent_pid);
+    crate::log_boot!(" started");
+    crate::log_boot!("INIT: parent=None");
+    crate::log_boot!("INIT: waiting for child");
+    crate::log_boot_raw!("INIT: parent PID=");
+    crate::log_boot_raw!("{}", parent_pid);
+    crate::log_boot_raw!(" child PID=");
+    crate::log_boot_raw!("{}", child_pid);
+    crate::log_boot!("");
     let (p_code, p_rsp, p_pml4) = unsafe {
         let pm = crate::task::process_manager();
         let proc = match (*pm).get_mut(parent_pid) {
             Some(p) => p,
             None => {
-                crate::drivers::serial::println("INIT: parent lookup FAIL");
+                crate::log_test!("INIT: parent lookup FAIL");
                 return false;
             }
         };
         let space = match proc.address_space_mut() {
             Some(s) => s,
             None => {
-                crate::drivers::serial::println("INIT: parent AS missing");
+                crate::log_boot!("INIT: parent AS missing");
                 return false;
             }
         };
-        let cf = match allocator.alloc_frame() { Some(f) => f, None => { crate::drivers::serial::println("INIT: parent code frame FAIL"); return false; } };
+        let cf = match allocator.alloc_frame() { Some(f) => f, None => { crate::log_test!("INIT: parent code frame FAIL"); return false; } };
         if !space.map_page(&mut allocator, USER_CODE_ADDR, cf.address, true, true) {
-            crate::drivers::serial::println("INIT: parent code map FAIL");
+            crate::log_test!("INIT: parent code map FAIL");
             return false;
         }
-        let stack = match UserStack::map(space, &mut allocator) { Some(s) => s, None => { crate::drivers::serial::println("INIT: parent stack FAIL"); return false; } };
+        let stack = match UserStack::map(space, &mut allocator) { Some(s) => s, None => { crate::log_test!("INIT: parent stack FAIL"); return false; } };
         let rsp = (stack.top - 8) & !0xF;
         if validate_user_addrs(space, USER_CODE_ADDR, rsp).is_err() {
-            crate::drivers::serial::println("INIT: parent validate FAIL");
+            crate::log_test!("INIT: parent validate FAIL");
             return false;
         }
         let pml4 = proc.pml4_phys().unwrap_or(0);
@@ -391,33 +391,33 @@ pub fn prepare_wait_blocking_test() -> bool {
         let proc = match (*pm).get_mut(child_pid) {
             Some(p) => p,
             None => {
-                crate::drivers::serial::println("INIT: child lookup FAIL");
+                crate::log_test!("INIT: child lookup FAIL");
                 return false;
             }
         };
         let space = match proc.address_space_mut() {
             Some(s) => s,
             None => {
-                crate::drivers::serial::println("INIT: child AS missing");
+                crate::log_boot!("INIT: child AS missing");
                 return false;
             }
         };
-        let cf = match allocator.alloc_frame() { Some(f) => f, None => { crate::drivers::serial::println("INIT: child code frame FAIL"); return false; } };
+        let cf = match allocator.alloc_frame() { Some(f) => f, None => { crate::log_test!("INIT: child code frame FAIL"); return false; } };
         if !space.map_page(&mut allocator, USER_CODE_ADDR, cf.address, true, true) {
-            crate::drivers::serial::println("INIT: child code map FAIL");
+            crate::log_test!("INIT: child code map FAIL");
             return false;
         }
-        let stack = match UserStack::map(space, &mut allocator) { Some(s) => s, None => { crate::drivers::serial::println("INIT: child stack FAIL"); return false; } };
+        let stack = match UserStack::map(space, &mut allocator) { Some(s) => s, None => { crate::log_test!("INIT: child stack FAIL"); return false; } };
         let rsp = (stack.top - 8) & !0xF;
         if validate_user_addrs(space, USER_CODE_ADDR, rsp).is_err() {
-            crate::drivers::serial::println("INIT: child validate FAIL");
+            crate::log_test!("INIT: child validate FAIL");
             return false;
         }
         let pml4 = proc.pml4_phys().unwrap_or(0);
         (cf.address, rsp, pml4)
     };
-    let p_va = match crate::boot::limine::physical_to_virtual(p_code) { Some(v) => v, None => { crate::drivers::serial::println("INIT: parent HHDM FAIL"); return false; } };
-    let c_va = match crate::boot::limine::physical_to_virtual(c_code) { Some(v) => v, None => { crate::drivers::serial::println("INIT: child HHDM FAIL"); return false; } };
+    let p_va = match crate::boot::limine::physical_to_virtual(p_code) { Some(v) => v, None => { crate::log_boot!("INIT: parent HHDM FAIL"); return false; } };
+    let c_va = match crate::boot::limine::physical_to_virtual(c_code) { Some(v) => v, None => { crate::log_boot!("INIT: child HHDM FAIL"); return false; } };
     unsafe {
         core::ptr::write_bytes(p_va as *mut u8, 0, 4096);
         let b = build_init_blob();
@@ -426,32 +426,32 @@ pub fn prepare_wait_blocking_test() -> bool {
         let b = build_wait_child_blob();
         core::ptr::copy_nonoverlapping(b.as_ptr(), c_va as *mut u8, b.len());
     }
-    crate::drivers::serial::print("INIT: parent CR3=0x");
-    crate::drivers::serial::print_hex_u64(p_pml4);
-    crate::drivers::serial::print(" child CR3=0x");
-    crate::drivers::serial::print_hex_u64(c_pml4);
-    crate::drivers::serial::println("");
+    crate::log_cr3_raw!("INIT: parent CR3=0x");
+    crate::log_boot_raw!("{:016X}", p_pml4);
+    crate::log_cr3_raw!(" child CR3=0x");
+    crate::log_boot_raw!("{:016X}", c_pml4);
+    crate::log_boot!("");
     let p_thread = Thread::new_user(WAIT_PARENT_TID, 0, parent_pid, USER_CODE_ADDR, p_rsp);
     let c_thread = Thread::new_user(WAIT_CHILD_TID, 1, child_pid, USER_CODE_ADDR, c_rsp);
     unsafe {
         let pm = crate::task::process_manager();
         if !crate::task::SCHEDULERS[0].add_thread(p_thread, 0) {
-            crate::drivers::serial::println("INIT: parent add_thread FAIL");
+            crate::log_vfs!("INIT: parent add_thread FAIL");
             return false;
         }
         (*pm).add_thread(parent_pid, WAIT_PARENT_TID);
         if !crate::task::SCHEDULERS[1].add_thread(c_thread, 1) {
-            crate::drivers::serial::println("INIT: child add_thread FAIL");
+            crate::log_vfs!("INIT: child add_thread FAIL");
             return false;
         }
         (*pm).add_thread(child_pid, WAIT_CHILD_TID);
     }
-    crate::drivers::serial::print("INIT: parent TID=");
-    crate::drivers::serial::print_u64(WAIT_PARENT_TID);
-    crate::drivers::serial::print(" CPU0 child TID=");
-    crate::drivers::serial::print_u64(WAIT_CHILD_TID);
-    crate::drivers::serial::println(" CPU1");
-    crate::drivers::serial::println("INIT: threads queued (SMP cross-CPU)");
+    crate::log_boot_raw!("INIT: parent TID=");
+    crate::log_boot_raw!("{}", WAIT_PARENT_TID);
+    crate::log_smp_raw!(" CPU0 child TID=");
+    crate::log_boot_raw!("{}", WAIT_CHILD_TID);
+    crate::log_smp!(" CPU1");
+    crate::log_vfs!("INIT: threads queued (SMP cross-CPU)");
     true
 }
 
@@ -472,7 +472,7 @@ extern "C" fn ring3_monitor() -> ! {
         core::arch::asm!("sti", options(nomem, nostack, preserves_flags));
     }
 
-    crate::drivers::serial::println("RING3 monitor started");
+    crate::log_ring3!("RING3 monitor started");
 
     loop {
         match marker_value() {
@@ -482,10 +482,10 @@ extern "C" fn ring3_monitor() -> ! {
                         core::arch::asm!("cli", options(nomem, nostack, preserves_flags));
                     }
 
-                    crate::drivers::serial::println("User code executed (marker observed)");
-                    crate::drivers::serial::println("Kernel verified user execution marker");
-                    crate::drivers::serial::println("Returning/scheduling safely");
-                    crate::drivers::serial::println("RING 3 USER THREAD TEST: PASS");
+                    crate::log_exec!("User code executed (marker observed)");
+                    crate::log_exec!("Kernel verified user execution marker");
+                    crate::log_sched!("Returning/scheduling safely");
+                    crate::log_vfs!("RING 3 USER THREAD TEST: PASS");
 
                     unsafe {
                         core::arch::asm!("sti", options(nomem, nostack, preserves_flags));

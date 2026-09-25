@@ -191,87 +191,87 @@ impl CpuInfo {
 }
 
 pub fn print_features(info: &CpuInfo) {
-    crate::drivers::serial::println("CPUID.1:");
-    crate::drivers::serial::print("  EAX: 0x");
-    crate::drivers::serial::print_hex_u32(info.cpuid1_eax);
-    crate::drivers::serial::println("");
-    crate::drivers::serial::print("  EBX: 0x");
-    crate::drivers::serial::print_hex_u32(info.cpuid1_ebx);
-    crate::drivers::serial::println("");
-    crate::drivers::serial::print("  ECX: 0x");
-    crate::drivers::serial::print_hex_u32(info.features_ecx);
-    crate::drivers::serial::println("");
-    crate::drivers::serial::print("  EDX: 0x");
-    crate::drivers::serial::print_hex_u32(info.features_edx);
-    crate::drivers::serial::println("");
-    crate::drivers::serial::println("");
+    crate::log_smp!("CPUID.1:");
+    crate::log_smp_raw!("  EAX: 0x");
+    crate::log_smp_raw!("{:08X}", info.cpuid1_eax);
+    crate::log_smp!("");
+    crate::log_smp_raw!("  EBX: 0x");
+    crate::log_smp_raw!("{:08X}", info.cpuid1_ebx);
+    crate::log_smp!("");
+    crate::log_smp_raw!("  ECX: 0x");
+    crate::log_smp_raw!("{:08X}", info.features_ecx);
+    crate::log_smp!("");
+    crate::log_smp_raw!("  EDX: 0x");
+    crate::log_smp_raw!("{:08X}", info.features_edx);
+    crate::log_smp!("");
+    crate::log_smp!("");
 
-    crate::drivers::serial::println("CPU Features:");
+    crate::log_smp!("CPU Features:");
 
-    crate::drivers::serial::print("  SSE: ");
-    crate::drivers::serial::println(if info.has_edx(25) { "YES" } else { "NO" });
+    crate::log_smp_raw!("  SSE: ");
+    crate::log_smp!("{}", if info.has_edx(25) { "YES" } else { "NO" });
 
-    crate::drivers::serial::print("  SSE2: ");
-    crate::drivers::serial::println(if info.has_edx(26) { "YES" } else { "NO" });
+    crate::log_smp_raw!("  SSE2: ");
+    crate::log_smp!("{}", if info.has_edx(26) { "YES" } else { "NO" });
 
-    crate::drivers::serial::print("  SSE3: ");
-    crate::drivers::serial::println(if info.has_ecx(0) { "YES" } else { "NO" });
+    crate::log_smp_raw!("  SSE3: ");
+    crate::log_smp!("{}", if info.has_ecx(0) { "YES" } else { "NO" });
 
-    crate::drivers::serial::print("  SSSE3: ");
-    crate::drivers::serial::println(if info.has_ecx(9) { "YES" } else { "NO" });
+    crate::log_smp_raw!("  SSSE3: ");
+    crate::log_smp!("{}", if info.has_ecx(9) { "YES" } else { "NO" });
 
-    crate::drivers::serial::print("  SSE4.1: ");
-    crate::drivers::serial::println(if info.has_ecx(19) { "YES" } else { "NO" });
+    crate::log_smp_raw!("  SSE4.1: ");
+    crate::log_smp!("{}", if info.has_ecx(19) { "YES" } else { "NO" });
 
-    crate::drivers::serial::print("  SSE4.2: ");
-    crate::drivers::serial::println(if info.has_ecx(20) { "YES" } else { "NO" });
+    crate::log_smp_raw!("  SSE4.2: ");
+    crate::log_smp!("{}", if info.has_ecx(20) { "YES" } else { "NO" });
 
-    crate::drivers::serial::print("  APIC: ");
-    crate::drivers::serial::println(if info.apic_supported { "YES" } else { "NO" });
+    crate::log_smp_raw!("  APIC: ");
+    crate::log_smp!("{}", if info.apic_supported { "YES" } else { "NO" });
 
-    crate::drivers::serial::print("  x2APIC: ");
-    crate::drivers::serial::println(if info.x2apic_supported { "YES" } else { "NO" });
+    crate::log_smp_raw!("  x2APIC: ");
+    crate::log_smp!("{}", if info.x2apic_supported { "YES" } else { "NO" });
 
-    crate::drivers::serial::print("  HTT: ");
-    crate::drivers::serial::println(if info.has_edx(28) { "YES" } else { "NO" });
+    crate::log_smp_raw!("  HTT: ");
+    crate::log_smp!("{}", if info.has_edx(28) { "YES" } else { "NO" });
 
-    crate::drivers::serial::print("  AVX: ");
-    crate::drivers::serial::println(if info.avx_supported { "YES" } else { "NO" });
+    crate::log_smp_raw!("  AVX: ");
+    crate::log_smp!("{}", if info.avx_supported { "YES" } else { "NO" });
 
-    crate::drivers::serial::print("  OSXSAVE: ");
-    crate::drivers::serial::println(if info.osxsave_supported { "YES" } else { "NO" });
+    crate::log_smp_raw!("  OSXSAVE: ");
+    crate::log_smp!("{}", if info.osxsave_supported { "YES" } else { "NO" });
 
-    crate::drivers::serial::print("  AVX usable (OS): ");
-    crate::drivers::serial::println(if info.avx_usable { "YES" } else { "NO" });
+    crate::log_smp_raw!("  AVX usable (OS): ");
+    crate::log_smp!("{}", if info.avx_usable { "YES" } else { "NO" });
 
-    crate::drivers::serial::print("  RDRAND: ");
-    crate::drivers::serial::println(if info.rdrand_supported { "YES" } else { "NO" });
+    crate::log_smp_raw!("  RDRAND: ");
+    crate::log_smp!("{}", if info.rdrand_supported { "YES" } else { "NO" });
 
-    crate::drivers::serial::println("");
+    crate::log_smp!("");
 
-    crate::drivers::serial::println("CPU Topology:");
+    crate::log_smp!("CPU Topology:");
 
-    crate::drivers::serial::print("  CPUID max logical (EBX[23:16]): ");
-    crate::drivers::serial::print_u64(info.cpuid_max_logical as u64);
-    crate::drivers::serial::println("");
+    crate::log_smp_raw!("  CPUID max logical (EBX[23:16]): ");
+    crate::log_smp_raw!("{}", info.cpuid_max_logical as u64);
+    crate::log_smp!("");
 
-    crate::drivers::serial::print("  CPUID logical CPUs: ");
-    crate::drivers::serial::print_u64(info.logical_processors as u64);
-    crate::drivers::serial::println("");
+    crate::log_smp_raw!("  CPUID logical CPUs: ");
+    crate::log_smp_raw!("{}", info.logical_processors as u64);
+    crate::log_smp!("");
 
-    crate::drivers::serial::print("  Initial APIC ID: ");
-    crate::drivers::serial::print_u64(info.initial_apic_id as u64);
-    crate::drivers::serial::println("");
+    crate::log_smp_raw!("  Initial APIC ID: ");
+    crate::log_smp_raw!("{}", info.initial_apic_id as u64);
+    crate::log_smp!("");
 
-    crate::drivers::serial::print("  APIC supported: ");
-    crate::drivers::serial::println(if info.apic_supported { "YES" } else { "NO" });
+    crate::log_smp_raw!("  APIC supported: ");
+    crate::log_smp!("{}", if info.apic_supported { "YES" } else { "NO" });
 
-    crate::drivers::serial::print("  LAPIC enabled: ");
-    crate::drivers::serial::println(if info.apic_enabled { "YES" } else { "NO" });
+    crate::log_smp_raw!("  LAPIC enabled: ");
+    crate::log_smp!("{}", if info.apic_enabled { "YES" } else { "NO" });
 
-    crate::drivers::serial::print("  x2APIC supported: ");
-    crate::drivers::serial::println(if info.x2apic_supported { "YES" } else { "NO" });
+    crate::log_smp_raw!("  x2APIC supported: ");
+    crate::log_smp!("{}", if info.x2apic_supported { "YES" } else { "NO" });
 
-    crate::drivers::serial::print("  x2APIC enabled: ");
-    crate::drivers::serial::println(if info.x2apic_enabled { "YES" } else { "NO" });
+    crate::log_smp_raw!("  x2APIC enabled: ");
+    crate::log_smp!("{}", if info.x2apic_enabled { "YES" } else { "NO" });
 }

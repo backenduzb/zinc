@@ -5,5 +5,5 @@ pub fn init() {
     pic::init();
     pit::init();
     
-    crate::drivers::serial::println("Timer driver initalized");
+    crate::log_boot!("Timer driver initalized");
 }

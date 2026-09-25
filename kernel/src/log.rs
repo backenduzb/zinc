@@ -5,7 +5,7 @@ use core::fmt;
 use crate::drivers::serial;
 
 pub const LOG_BOOT: bool = true;
-pub const LOG_TEST: bool = true;
+pub const LOG_TEST: bool = false;
 pub const LOG_USER: bool = true;
 
 pub const LOG_KBD: bool = false;
@@ -18,7 +18,7 @@ pub const LOG_SYSCALL: bool = false;
 pub const LOG_VFS: bool = false;
 pub const LOG_EXEC: bool = false;
 pub const LOG_RING3: bool = false;
-pub const LOG_SMP: bool = true;
+pub const LOG_SMP: bool = false;
 
 #[inline]
 pub fn write(args: fmt::Arguments<'_>) {
@@ -35,10 +35,6 @@ macro_rules! log_if {
     };
 }
 
-// Newline'siz (qator o'rtasi) yozuv uchun. serial::print / print_u64 /
-// print_hex_u64 / print_hex_u32 / putc oilasi ana shunga aylanadi.
-// println -> log_if (newline bilan), print -> log_if_raw (newline'siz).
-// Shunda asl qator tuzilishi 1:1 saqlanadi.
 #[macro_export]
 macro_rules! log_if_raw {
     ($flag:expr, $($arg:tt)*) => {

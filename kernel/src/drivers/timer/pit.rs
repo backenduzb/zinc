@@ -19,8 +19,8 @@ pub fn init() {
         io_wait();
     }
 
-    crate::drivers::serial::print("PIT frequency: ");
-    crate::drivers::serial::print_u64(TIMER_REQUENCY as u64);
-    crate::drivers::serial::println("Hz");
+    crate::log_boot_raw!("PIT frequency: ");
+    crate::log_boot_raw!("{}", TIMER_REQUENCY as u64);
+    crate::log_boot!("Hz");
     
 }

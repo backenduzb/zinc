@@ -23,7 +23,7 @@ pub fn init() {
         core::arch::asm!("sti", options(nomem, nostack, preserves_flags));
     }
 
-    crate::drivers::serial::println("x86_64 architecture registered");
+    crate::log_boot!("x86_64 architecture registered");
 }
 
 fn disable_lapic_for_pic() {
@@ -31,7 +31,7 @@ fn disable_lapic_for_pic() {
         let apic_msr = crate::arch::x86_64::io::rdmsr(0x1B);
         if (apic_msr & (1u64 << 11)) != 0 {
             crate::arch::x86_64::io::wrmsr(0x1B, apic_msr & !(1u64 << 11));
-            crate::drivers::serial::println("LAPIC disabled, using PIC");
+            crate::log_smp!("LAPIC disabled, using PIC");
         }
     }
 }

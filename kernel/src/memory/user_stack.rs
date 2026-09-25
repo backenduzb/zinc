@@ -74,7 +74,7 @@ impl UserStack {
             }
         }
 
-        crate::drivers::serial::println("User stack: mapped");
+        crate::log_ring3!("User stack: mapped");
 
         Some(Self { base, top, size })
     }

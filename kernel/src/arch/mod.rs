@@ -5,25 +5,25 @@ pub fn init() {
 
     let cpu = crate::arch::x86_64::cpu::detect();
     
-    crate::drivers::serial::print("CPU Vendor: ");
+    crate::log_smp_raw!("CPU Vendor: ");
     
     for byte in cpu.vendor {
-        crate::drivers::serial::putc(byte);
+        crate::log_smp_raw!("{}", (byte) as char);
     }
     
-    crate::drivers::serial::println("");
+    crate::log_smp!("");
     
-    crate::drivers::serial::print("CPU Family: ");
-    crate::drivers::serial::print_u64(cpu.family as u64);
-    crate::drivers::serial::println("");
+    crate::log_smp_raw!("CPU Family: ");
+    crate::log_smp_raw!("{}", cpu.family as u64);
+    crate::log_smp!("");
     
-    crate::drivers::serial::print("CPU Model: ");
-    crate::drivers::serial::print_u64(cpu.model as u64);
-    crate::drivers::serial::println("");
+    crate::log_smp_raw!("CPU Model: ");
+    crate::log_smp_raw!("{}", cpu.model as u64);
+    crate::log_smp!("");
     
-    crate::drivers::serial::print("CPU Stepping: ");
-    crate::drivers::serial::print_u64(cpu.stepping as u64);
-    crate::drivers::serial::println("");
+    crate::log_smp_raw!("CPU Stepping: ");
+    crate::log_smp_raw!("{}", cpu.stepping as u64);
+    crate::log_smp!("");
 
     crate::arch::x86_64::cpu::print_features(&cpu);
 }

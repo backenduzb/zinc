@@ -49,42 +49,42 @@ fn fault_diagnostic(vector: u8, code: u64, rip: u64, cs: u64) {
         0
     };
 
-    crate::drivers::serial::print("FAULT vector=");
-    crate::drivers::serial::print_u64(vector as u64);
-    crate::drivers::serial::print(" code=");
-    crate::drivers::serial::print_u64(code);
-    crate::drivers::serial::print(" RIP=0x");
-    crate::drivers::serial::print_hex_u64(rip);
-    crate::drivers::serial::print(" CS=0x");
-    crate::drivers::serial::print_hex_u64(cs);
+    crate::log_boot_raw!("FAULT vector=");
+    crate::log_boot_raw!("{}", vector as u64);
+    crate::log_boot_raw!(" code=");
+    crate::log_boot_raw!("{}", code);
+    crate::log_boot_raw!(" RIP=0x");
+    crate::log_boot_raw!("{:016X}", rip);
+    crate::log_boot_raw!(" CS=0x");
+    crate::log_boot_raw!("{:016X}", cs);
 
     if vector == 14 {
-        crate::drivers::serial::print(" CR2=0x");
-        crate::drivers::serial::print_hex_u64(cr2);
+        crate::log_boot_raw!(" CR2=0x");
+        crate::log_boot_raw!("{:016X}", cr2);
     }
 
-    crate::drivers::serial::print(" CPU=");
+    crate::log_smp_raw!(" CPU=");
     if cpu < 0 {
-        crate::drivers::serial::print("?");
+        crate::log_boot_raw!("?");
     } else {
-        crate::drivers::serial::print_u64(cpu as u64);
+        crate::log_boot_raw!("{}", cpu as u64);
     }
-    crate::drivers::serial::print(" TID=");
-    crate::drivers::serial::print_u64(tid);
-    crate::drivers::serial::print(" CR3=0x");
-    crate::drivers::serial::print_hex_u64(cr3);
-    crate::drivers::serial::println("");
+    crate::log_boot_raw!(" TID=");
+    crate::log_boot_raw!("{}", tid);
+    crate::log_cr3_raw!(" CR3=0x");
+    crate::log_boot_raw!("{:016X}", cr3);
+    crate::log_boot!("");
 }
 #[unsafe(no_mangle)]
 pub extern "C" fn divide_error() -> ! {
-    crate::drivers::serial::println("EXCEPTION: Driver Error (#DE)");
+    crate::log_boot!("EXCEPTION: Driver Error (#DE)");
 
     crate::arch::x86_64::cpu::halt();
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn ud_fault_handler(rip: u64, cs: u64) -> ! {
-    crate::drivers::serial::println("EXCEPTION: Invalid Opcode (#UD)");
+    crate::log_boot!("EXCEPTION: Invalid Opcode (#UD)");
     fault_diagnostic(6, 0, rip, cs);
 
     crate::arch::x86_64::cpu::halt();
@@ -92,9 +92,9 @@ pub extern "C" fn ud_fault_handler(rip: u64, cs: u64) -> ! {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn gp_fault_handler(code: u64, rip: u64, cs: u64) -> ! {
-    crate::drivers::serial::print("EXCEPTION: General Protection Fault (#GP), code=");
-    crate::drivers::serial::print_u64(code);
-    crate::drivers::serial::println("");
+    crate::log_boot_raw!("EXCEPTION: General Protection Fault (#GP), code=");
+    crate::log_boot_raw!("{}", code);
+    crate::log_boot!("");
     fault_diagnostic(13, code, rip, cs);
 
     crate::arch::x86_64::cpu::halt();
@@ -112,11 +112,11 @@ pub extern "C" fn page_fault_handler(code: u64, rip: u64, cs: u64) -> ! {
         );
     }
 
-    crate::drivers::serial::print("EXCEPTION: Page Fault (#PF) at 0x");
-    crate::drivers::serial::print_u64(address);
-    crate::drivers::serial::print(", code=");
-    crate::drivers::serial::print_u64(code);
-    crate::drivers::serial::println("");
+    crate::log_boot_raw!("EXCEPTION: Page Fault (#PF) at 0x");
+    crate::log_boot_raw!("{}", address);
+    crate::log_boot_raw!(", code=");
+    crate::log_boot_raw!("{}", code);
+    crate::log_boot!("");
     fault_diagnostic(14, code, rip, cs);
 
     crate::arch::x86_64::cpu::halt();
@@ -124,9 +124,9 @@ pub extern "C" fn page_fault_handler(code: u64, rip: u64, cs: u64) -> ! {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn double_fault_handler(code: u64, rip: u64, cs: u64) -> ! {
-    crate::drivers::serial::print("EXCEPTION: Double Fault (#DF), code=");
-    crate::drivers::serial::print_u64(code);
-    crate::drivers::serial::println("");
+    crate::log_boot_raw!("EXCEPTION: Double Fault (#DF), code=");
+    crate::log_boot_raw!("{}", code);
+    crate::log_boot!("");
     fault_diagnostic(8, code, rip, cs);
 
     crate::arch::x86_64::cpu::halt();
@@ -139,11 +139,11 @@ pub extern "C" fn timer_handler(
     let tick = TICKS.fetch_add(1, Ordering::Relaxed) + 1;
 
     if tick == 1 {
-        crate::drivers::serial::println("TIMER IRQ: FIRST");
+        crate::log_boot!("TIMER IRQ: FIRST");
     }
 
     if tick == 100 {
-        crate::drivers::serial::println("TIMER IRQ: 100");
+        crate::log_boot!("TIMER IRQ: 100");
     }
 
     crate::drivers::timer::pic::end_of_interrupt();
@@ -181,18 +181,18 @@ fn log_user_kernel_transition(frame: *mut crate::arch::x86_64::context::Interrup
         (cpu_id, rsp0)
     };
 
-    crate::drivers::serial::print("USER->KERNEL INTERRUPT: CPU=");
-    crate::drivers::serial::print_u64(cpu_text);
-    crate::drivers::serial::print(" RIP=0x");
-    crate::drivers::serial::print_hex_u64(rip);
-    crate::drivers::serial::print(" CS=0x");
-    crate::drivers::serial::print_hex_u64(cs);
-    crate::drivers::serial::print(" CR3=0x");
-    crate::drivers::serial::print_hex_u64(cr3);
-    crate::drivers::serial::print(" TSS.RSP0=0x");
-    crate::drivers::serial::print_hex_u64(rsp0);
-    crate::drivers::serial::println("");
-    crate::drivers::serial::println("User -> Kernel interrupt succeeded");
+    crate::log_ring3_raw!("USER->KERNEL INTERRUPT: CPU=");
+    crate::log_boot_raw!("{}", cpu_text);
+    crate::log_boot_raw!(" RIP=0x");
+    crate::log_boot_raw!("{:016X}", rip);
+    crate::log_boot_raw!(" CS=0x");
+    crate::log_boot_raw!("{:016X}", cs);
+    crate::log_cr3_raw!(" CR3=0x");
+    crate::log_boot_raw!("{:016X}", cr3);
+    crate::log_tss_raw!(" TSS.RSP0=0x");
+    crate::log_boot_raw!("{:016X}", rsp0);
+    crate::log_boot!("");
+    crate::log_ring3!("User -> Kernel interrupt succeeded");
 }
 
 #[unsafe(no_mangle)]
@@ -220,13 +220,13 @@ pub extern "C" fn lapic_timer_handler(
     crate::arch::x86_64::lapic::eoi();
 
     if ticks <= 20 {
-        crate::drivers::serial::print("LAPIC TIMER: ");
-        crate::drivers::serial::print_u64(ticks);
-        crate::drivers::serial::println("");
+        crate::log_smp_raw!("LAPIC TIMER: ");
+        crate::log_boot_raw!("{}", ticks);
+        crate::log_boot!("");
     }
 
     if frame.is_null() {
-        crate::drivers::serial::println("LAPIC TIMER: BAD FRAME");
+        crate::log_smp!("LAPIC TIMER: BAD FRAME");
         return (frame as u64, 0);
     }
 
