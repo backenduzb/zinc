@@ -670,6 +670,39 @@ fn handle_read(frame: &mut SyscallFrame) -> (u64, u64) {
 
     let space = unsafe { &*space_ptr };
 
+    if fd == crate::filesystem::fd::STDIN {
+        let is_stdin = unsafe {
+            let pm = crate::task::process_manager();
+
+            match (*pm).get(pid) {
+                Some(process) => process.fd_table().stdin(),
+                None => {
+                    crate::log_syscall!("SYSCALL READ: process not found");
+                    frame.rax = u64::MAX;
+                    return (frame as *mut SyscallFrame as u64, 0);
+                }
+            }
+        };
+
+        if !is_stdin {
+            crate::log_syscall!("SYSCALL READ: bad fd");
+            frame.rax = u64::MAX;
+            return (frame as *mut SyscallFrame as u64, 0);
+        }
+
+        let mut kbuf = [0u8; MAX_WRITE];
+        let count = crate::tty::input::read(&mut kbuf[..len]);
+
+        if !copy_to_user(space, buf, count, &kbuf[..count]) {
+            crate::log_syscall!("SYSCALL READ: copy_to_user failed");
+            frame.rax = u64::MAX;
+            return (frame as *mut SyscallFrame as u64, 0);
+        }
+
+        frame.rax = count as u64;
+        return (frame as *mut SyscallFrame as u64, 0);
+    }
+
     let mut file = unsafe {
         let pm = crate::task::process_manager();
 

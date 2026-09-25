@@ -4,9 +4,9 @@ use core::fmt;
 
 use crate::drivers::serial;
 
-pub const LOG_BOOT: bool = true;
+pub const LOG_BOOT: bool = false;
 pub const LOG_TEST: bool = false;
-pub const LOG_USER: bool = true;
+pub const LOG_USER: bool = false;
 
 pub const LOG_KBD: bool = false;
 

@@ -52,7 +52,7 @@ pub extern "C" fn kmain() -> ! {
         crate::log_vfs!("FILESYSTEM: INIT FAILED");
     }
     crate::log_test!("BEFORE PMM TEST");
-
+    crate::tty::init();
     crate::memory::test::address_space_test();
     crate::memory::test::user_address_space_test();
     crate::memory::test::nx_test();

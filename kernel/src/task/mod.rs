@@ -92,3 +92,27 @@ pub fn join(id: thread::ThreadID) {
         (*scheduler()).join(id);
     }
 }
+
+pub fn scheduler_for_cpu(cpu_id: usize) -> *mut Scheduler {
+    if cpu_id >= MAX_CPUS {
+        panic!("SMP: invalid CPU ID");
+    }
+
+    unsafe {
+        core::ptr::addr_of_mut!(SCHEDULERS[cpu_id])
+    }
+}
+
+pub fn find_scheduler_with_space() -> Option<(usize, *mut Scheduler)> {
+    unsafe {
+        for cpu_id in 0..MAX_CPUS {
+            let scheduler = core::ptr::addr_of_mut!(SCHEDULERS[cpu_id]);
+
+            if (*scheduler).count() < 8 {
+                return Some((cpu_id, scheduler));
+            }
+        }
+    }
+
+    None
+}

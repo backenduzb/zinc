@@ -155,6 +155,10 @@ pub fn scheduler_test() -> ! {
 
         (*scheduler).init_idle(0);
 
+        if !crate::tty::thread::spawn() {
+            crate::log_test!("ERROR: failed to spawn TTY keyboard thread");
+        }
+
         crate::log_smp!("ALPHA -> CPU 0");
         crate::log_smp!("BETA  -> CPU 0");
         crate::log_smp!("SILF  -> CPU 0");
