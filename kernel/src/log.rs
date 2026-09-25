@@ -35,93 +35,197 @@ macro_rules! log_if {
     };
 }
 
+// Newline'siz (qator o'rtasi) yozuv uchun. serial::print / print_u64 /
+// print_hex_u64 / print_hex_u32 / putc oilasi ana shunga aylanadi.
+// println -> log_if (newline bilan), print -> log_if_raw (newline'siz).
+// Shunda asl qator tuzilishi 1:1 saqlanadi.
+#[macro_export]
+macro_rules! log_if_raw {
+    ($flag:expr, $($arg:tt)*) => {
+        if $flag {
+            $crate::log::write(core::format_args!($($arg)*));
+        }
+    };
+}
+
 #[macro_export]
 macro_rules! log_boot {
     ($($arg:tt)*) => {
-        $crate::log_if!($crate::log::LOG_BOOT, $($arg)*);
+        $crate::log_if!($crate::log::LOG_BOOT, $($arg)*)
     };
 }
 
 #[macro_export]
 macro_rules! log_test {
     ($($arg:tt)*) => {
-        $crate::log_if!($crate::log::LOG_TEST, $($arg)*);
+        $crate::log_if!($crate::log::LOG_TEST, $($arg)*)
     };
 }
 
 #[macro_export]
 macro_rules! log_user {
     ($($arg:tt)*) => {
-        $crate::log_if!($crate::log::LOG_USER, $($arg)*);
+        $crate::log_if!($crate::log::LOG_USER, $($arg)*)
     };
 }
 
 #[macro_export]
 macro_rules! log_kbd {
     ($($arg:tt)*) => {
-        $crate::log_if!($crate::log::LOG_KBD, $($arg)*);
+        $crate::log_if!($crate::log::LOG_KBD, $($arg)*)
     };
 }
 
 #[macro_export]
 macro_rules! log_sched {
     ($($arg:tt)*) => {
-        $crate::log_if!($crate::log::LOG_SCHED, $($arg)*);
+        $crate::log_if!($crate::log::LOG_SCHED, $($arg)*)
     };
 }
 
 #[macro_export]
 macro_rules! log_cr3 {
     ($($arg:tt)*) => {
-        $crate::log_if!($crate::log::LOG_CR3, $($arg)*);
+        $crate::log_if!($crate::log::LOG_CR3, $($arg)*)
     };
 }
 
 #[macro_export]
 macro_rules! log_tss {
     ($($arg:tt)*) => {
-        $crate::log_if!($crate::log::LOG_TSS, $($arg)*);
+        $crate::log_if!($crate::log::LOG_TSS, $($arg)*)
     };
 }
 
 #[macro_export]
 macro_rules! log_sleep {
     ($($arg:tt)*) => {
-        $crate::log_if!($crate::log::LOG_SLEEP, $($arg)*);
+        $crate::log_if!($crate::log::LOG_SLEEP, $($arg)*)
     };
 }
 
 #[macro_export]
 macro_rules! log_syscall {
     ($($arg:tt)*) => {
-        $crate::log_if!($crate::log::LOG_SYSCALL, $($arg)*);
+        $crate::log_if!($crate::log::LOG_SYSCALL, $($arg)*)
     };
 }
 
 #[macro_export]
 macro_rules! log_vfs {
     ($($arg:tt)*) => {
-        $crate::log_if!($crate::log::LOG_VFS, $($arg)*);
+        $crate::log_if!($crate::log::LOG_VFS, $($arg)*)
     };
 }
 
 #[macro_export]
 macro_rules! log_exec {
     ($($arg:tt)*) => {
-        $crate::log_if!($crate::log::LOG_EXEC, $($arg)*);
+        $crate::log_if!($crate::log::LOG_EXEC, $($arg)*)
     };
 }
 
 #[macro_export]
 macro_rules! log_ring3 {
     ($($arg:tt)*) => {
-        $crate::log_if!($crate::log::LOG_RING3, $($arg)*);
+        $crate::log_if!($crate::log::LOG_RING3, $($arg)*)
     };
 }
 
 #[macro_export]
 macro_rules! log_smp {
     ($($arg:tt)*) => {
-        $crate::log_if!($crate::log::LOG_SMP, $($arg)*);
+        $crate::log_if!($crate::log::LOG_SMP, $($arg)*)
+    };
+}
+
+#[macro_export]
+macro_rules! log_boot_raw {
+    ($($arg:tt)*) => {
+        $crate::log_if_raw!($crate::log::LOG_BOOT, $($arg)*)
+    };
+}
+
+#[macro_export]
+macro_rules! log_test_raw {
+    ($($arg:tt)*) => {
+        $crate::log_if_raw!($crate::log::LOG_TEST, $($arg)*)
+    };
+}
+
+#[macro_export]
+macro_rules! log_user_raw {
+    ($($arg:tt)*) => {
+        $crate::log_if_raw!($crate::log::LOG_USER, $($arg)*)
+    };
+}
+
+#[macro_export]
+macro_rules! log_kbd_raw {
+    ($($arg:tt)*) => {
+        $crate::log_if_raw!($crate::log::LOG_KBD, $($arg)*)
+    };
+}
+
+#[macro_export]
+macro_rules! log_sched_raw {
+    ($($arg:tt)*) => {
+        $crate::log_if_raw!($crate::log::LOG_SCHED, $($arg)*)
+    };
+}
+
+#[macro_export]
+macro_rules! log_cr3_raw {
+    ($($arg:tt)*) => {
+        $crate::log_if_raw!($crate::log::LOG_CR3, $($arg)*)
+    };
+}
+
+#[macro_export]
+macro_rules! log_tss_raw {
+    ($($arg:tt)*) => {
+        $crate::log_if_raw!($crate::log::LOG_TSS, $($arg)*)
+    };
+}
+
+#[macro_export]
+macro_rules! log_sleep_raw {
+    ($($arg:tt)*) => {
+        $crate::log_if_raw!($crate::log::LOG_SLEEP, $($arg)*)
+    };
+}
+
+#[macro_export]
+macro_rules! log_syscall_raw {
+    ($($arg:tt)*) => {
+        $crate::log_if_raw!($crate::log::LOG_SYSCALL, $($arg)*)
+    };
+}
+
+#[macro_export]
+macro_rules! log_vfs_raw {
+    ($($arg:tt)*) => {
+        $crate::log_if_raw!($crate::log::LOG_VFS, $($arg)*)
+    };
+}
+
+#[macro_export]
+macro_rules! log_exec_raw {
+    ($($arg:tt)*) => {
+        $crate::log_if_raw!($crate::log::LOG_EXEC, $($arg)*)
+    };
+}
+
+#[macro_export]
+macro_rules! log_ring3_raw {
+    ($($arg:tt)*) => {
+        $crate::log_if_raw!($crate::log::LOG_RING3, $($arg)*)
+    };
+}
+
+#[macro_export]
+macro_rules! log_smp_raw {
+    ($($arg:tt)*) => {
+        $crate::log_if_raw!($crate::log::LOG_SMP, $($arg)*)
     };
 }
