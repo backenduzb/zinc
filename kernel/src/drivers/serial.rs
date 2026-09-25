@@ -84,3 +84,21 @@ pub fn print_char(c: char) {
         putc(byte);
     }
 }
+
+use core::fmt;
+
+pub fn print_fmt(args: fmt::Arguments<'_>) {
+    use core::fmt::Write;
+
+    let mut writer = SerialWriter;
+    let _ = writer.write_fmt(args);
+}
+
+struct SerialWriter;
+
+impl fmt::Write for SerialWriter {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        print(s);
+        Ok(())
+    }
+}

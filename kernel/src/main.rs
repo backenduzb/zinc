@@ -14,6 +14,7 @@ mod elf;
 mod syscall;
 mod filesystem;
 mod tty;
+mod log;
 
 extern crate alloc;
 
