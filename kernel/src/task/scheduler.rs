@@ -1410,12 +1410,9 @@ impl Scheduler {
         crate::log_sched!("");
 
         if !process_manager.add_thread(process_id, thread_id) {
-            crate::log_vfs_raw!("CREATE USER THREAD FAIL: process add_thread pid=");
-            crate::log_sched_raw!("{}", process_id);
-            crate::log_sched_raw!(" tid=");
+            crate::log_vfs_raw!("CREATE USER THREAD: process registration FAILED tid=");
             crate::log_sched_raw!("{}", thread_id);
             crate::log_sched!("");
-
             self.remove_thread_by_id(thread_id);
             return None;
         }
@@ -1423,6 +1420,16 @@ impl Scheduler {
         crate::log_vfs_raw!("CREATE USER THREAD: process registration OK tid=");
         crate::log_sched_raw!("{}", thread_id);
         crate::log_sched!("");
+
+        let current_cpu = crate::arch::x86_64::smp::percpu::current_cpu_id();
+
+        if cpu_id != current_cpu {
+            crate::log_smp_raw!("CREATE USER THREAD: RESCHEDULE CPU=");
+            crate::log_sched_raw!("{}", cpu_id as u64);
+            crate::log_sched!("");
+
+            crate::arch::x86_64::lapic::send_reschedule_ipi(cpu_id as u32);
+        }
 
         Some(thread_id)
     }

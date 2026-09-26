@@ -6,7 +6,6 @@ pub fn ticks() -> u64 {
     TICKS.load(Ordering::Relaxed)
 }
 
-
 fn diagnostic_ids() -> (i64, u64, u64) {
     let cr3 = crate::arch::x86_64::paging::read_cr3() & !0xFFF;
 
@@ -176,8 +175,16 @@ fn log_user_kernel_transition(frame: *mut crate::arch::x86_64::context::Interrup
     let (cpu_text, rsp0) = if gs == 0 {
         (9999u64, 0u64)
     } else {
-        let rsp0 = unsafe { (*(gs as *const crate::arch::x86_64::smp::percpu::PerCpu)).tss.get().as_ref().map(|tss| tss.kernel_stack()).unwrap_or(0) };
-        let cpu_id = unsafe { (*(gs as *const crate::arch::x86_64::smp::percpu::PerCpu)).cpu_id as u64 };
+        let rsp0 = unsafe {
+            (*(gs as *const crate::arch::x86_64::smp::percpu::PerCpu))
+                .tss
+                .get()
+                .as_ref()
+                .map(|tss| tss.kernel_stack())
+                .unwrap_or(0)
+        };
+        let cpu_id =
+            unsafe { (*(gs as *const crate::arch::x86_64::smp::percpu::PerCpu)).cpu_id as u64 };
         (cpu_id, rsp0)
     };
 

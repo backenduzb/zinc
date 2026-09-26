@@ -1,5 +1,5 @@
-use core::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use alloc::vec::Vec;
+use core::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 
 use crate::drivers::storage::ide::IdeDevice;
 use crate::exec::elf::{ElfExecutor, ExecError, ExecResult};
@@ -653,10 +653,7 @@ extern "C" fn execve_test_reaper() -> ! {
                     Some(_) => {
                         let pm = crate::task::process_manager();
 
-                        (*pm)
-                            .get(pid)
-                            .map(|p| p.is_terminated())
-                            .unwrap_or(false)
+                        (*pm).get(pid).map(|p| p.is_terminated()).unwrap_or(false)
                             && !(*pm).has_live_threads(pid)
                     }
 
@@ -671,13 +668,9 @@ extern "C" fn execve_test_reaper() -> ! {
 
                 let mut allocator = FrameAllocator::new();
 
-                let ok = unsafe {
-                    (*crate::task::process_manager()).reap(pid, &mut allocator)
-                };
+                let ok = unsafe { (*crate::task::process_manager()).reap(pid, &mut allocator) };
 
-                let gone = unsafe {
-                    (*crate::task::process_manager()).get(pid).is_none()
-                };
+                let gone = unsafe { (*crate::task::process_manager()).get(pid).is_none() };
 
                 if ok && gone {
                     crate::log_vfs!("VFS EXEC: execve_test PROCESS REAP OK");
@@ -703,11 +696,7 @@ pub fn test_execve_exec() -> bool {
 
     let argv: &[&str] = &["exec_test"];
 
-    let res = match exec_path(
-        EXECVE_TEST_PATH,
-        argv,
-        EXECVE_TEST_CPU,
-    ) {
+    let res = match exec_path(EXECVE_TEST_PATH, argv, EXECVE_TEST_CPU) {
         Ok(r) => r,
         Err(e) => {
             crate::log_vfs_raw!("VFS EXEC EXECVE FAILED: ");
@@ -733,6 +722,214 @@ pub fn test_execve_exec() -> bool {
         crate::log_vfs!("{}", "VFS EXEC: execve_test reaper spawn FAILED",);
         return false;
     }
+
+    true
+}
+
+pub fn spawn_exec(
+    path: &[u8],
+    argv: &[&str],
+    parent_pid: u64,
+    cpu_id: usize,
+) -> Result<ExecResult, VfsExecError> {
+    crate::log_vfs_raw!("VFS SPAWN: open ");
+    for &b in path {
+        crate::log_vfs_raw!("{}", b as char);
+    }
+    crate::log_vfs!("");
+
+    if !crate::arch::x86_64::smp::percpu::is_online(cpu_id) {
+        crate::log_vfs!("VFS SPAWN: target CPU offline");
+        return Err(VfsExecError::CpuOffline);
+    }
+
+    let (mut ide, vfs) = open_root_vfs()?;
+    let elf = read_path(&vfs, &mut ide, path)?;
+
+    crate::log_vfs_raw!("VFS SPAWN: ELF bytes=");
+    crate::log_vfs_raw!("{}", elf.len() as u64);
+    crate::log_vfs!(" magic OK");
+
+    let mut allocator = FrameAllocator::new();
+    let pm_ptr = crate::task::process_manager();
+
+    let res = unsafe {
+        ElfExecutor::exec_with_argv_on_cpu_parent(
+            &elf,
+            argv,
+            &mut *pm_ptr,
+            &mut allocator,
+            cpu_id,
+            Some(parent_pid),
+        )
+    }
+    .map_err(VfsExecError::Exec)?;
+
+    crate::log_vfs_raw!("VFS SPAWN: PROCESS CREATED PID=");
+    crate::log_vfs_raw!("{}", res.process_id);
+    crate::log_vfs_raw!(" PPID=");
+    crate::log_vfs_raw!("{}", parent_pid);
+    crate::log_vfs_raw!(" TID=");
+    crate::log_vfs_raw!("{}", res.thread_id);
+    crate::log_vfs_raw!(" entry=0x");
+    crate::log_vfs_raw!("{:016X}", res.entry);
+    crate::log_vfs!("");
+
+    Ok(res)
+}
+
+pub fn test_hello_spawn() -> bool {
+    crate::log_vfs!("=== VFS SPAWN HELLO TEST ===");
+
+    let cpu = if crate::arch::x86_64::smp::percpu::is_online(HELLO_CPU) {
+        HELLO_CPU
+    } else {
+        crate::log_vfs!("VFS SPAWN: target CPU offline");
+        return false;
+    };
+
+    let parent_pid = {
+        let mut allocator = FrameAllocator::new();
+        let pm = crate::task::process_manager();
+
+        unsafe {
+            match (*pm).create_user(&mut allocator, None) {
+                Some(pid) => pid,
+                None => {
+                    crate::log_vfs!("VFS SPAWN: parent creation FAILED");
+                    return false;
+                }
+            }
+        }
+    };
+
+    crate::log_vfs_raw!("VFS SPAWN: PARENT PID=");
+    crate::log_vfs_raw!("{}", parent_pid);
+    crate::log_vfs!("");
+
+    let argv: &[&str] = &["hello"];
+
+    let res = match spawn_exec(HELLO_PATH, argv, parent_pid, cpu) {
+        Ok(r) => r,
+        Err(e) => {
+            crate::log_vfs_raw!("VFS SPAWN FAILED: ");
+            crate::log_vfs!("{}", alloc::format!("{:?}", e).as_str());
+
+            let mut allocator = FrameAllocator::new();
+            unsafe {
+                (*crate::task::process_manager()).remove_process(parent_pid, &mut allocator);
+            }
+
+            return false;
+        }
+    };
+
+    let child_pid = res.process_id;
+
+    crate::log_vfs_raw!("VFS SPAWN: CHILD PID=");
+    crate::log_vfs_raw!("{}", child_pid);
+    crate::log_vfs!("");
+
+    let mut child_terminated = false;
+
+    for i in 0..200 {
+        let status = unsafe {
+            let pm = crate::task::process_manager();
+
+            match (*pm).get(child_pid) {
+                Some(p) => {
+                    let terminated = p.is_terminated();
+                    let live_threads = (*pm).has_live_threads(child_pid);
+
+                    crate::log_vfs_raw!("VFS SPAWN: child status iter=");
+                    crate::log_vfs_raw!("{}", i as u64);
+                    crate::log_vfs_raw!(" terminated=");
+                    crate::log_vfs_raw!("{}", terminated as u64);
+                    crate::log_vfs_raw!(" live_threads=");
+                    crate::log_vfs_raw!("{}", live_threads as u64);
+                    crate::log_vfs!("");
+
+                    terminated && !live_threads
+                }
+                None => {
+                    crate::log_vfs!("VFS SPAWN: child disappeared");
+                    true
+                }
+            }
+        };
+
+        if status {
+            child_terminated = true;
+            break;
+        }
+
+        crate::task::sleep(1);
+    }
+
+    if !child_terminated {
+        crate::log_vfs!("VFS SPAWN: CHILD TERMINATION TIMEOUT");
+
+        let mut allocator = FrameAllocator::new();
+
+        unsafe {
+            if (*crate::task::process_manager()).get(child_pid).is_some() {
+                (*crate::task::process_manager()).remove_process(child_pid, &mut allocator);
+            }
+
+            if (*crate::task::process_manager()).get(parent_pid).is_some() {
+                (*crate::task::process_manager()).remove_process(parent_pid, &mut allocator);
+            }
+        }
+
+        return false;
+    }
+
+    crate::log_vfs_raw!("VFS SPAWN: CHILD TERMINATED PID=");
+    crate::log_vfs_raw!("{}", child_pid);
+    crate::log_vfs!("");
+
+    let mut allocator = FrameAllocator::new();
+
+    let reaped = unsafe { (*crate::task::process_manager()).reap(child_pid, &mut allocator) };
+
+    if !reaped {
+        crate::log_vfs!("VFS SPAWN: CHILD REAP FAILED");
+
+        unsafe {
+            if (*crate::task::process_manager()).get(parent_pid).is_some() {
+                (*crate::task::process_manager()).remove_process(parent_pid, &mut allocator);
+            }
+        }
+
+        return false;
+    }
+
+    let gone = unsafe { (*crate::task::process_manager()).get(child_pid).is_none() };
+
+    if !gone {
+        crate::log_vfs!("VFS SPAWN: CHILD STILL EXISTS");
+
+        unsafe {
+            if (*crate::task::process_manager()).get(parent_pid).is_some() {
+                (*crate::task::process_manager()).remove_process(parent_pid, &mut allocator);
+            }
+        }
+
+        return false;
+    }
+
+    crate::log_vfs!("VFS SPAWN: CHILD REAP OK");
+
+    let parent_removed =
+        unsafe { (*crate::task::process_manager()).remove_process(parent_pid, &mut allocator) };
+
+    if !parent_removed {
+        crate::log_vfs!("VFS SPAWN: PARENT CLEANUP FAILED");
+        return false;
+    }
+
+    crate::log_vfs!("VFS SPAWN: PARENT CLEANUP OK");
+    crate::log_vfs!("VFS SPAWN: TEST PASS");
 
     true
 }

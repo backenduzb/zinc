@@ -517,6 +517,12 @@ extern "C" fn after_address_space_switch() -> ! {
         crate::log_vfs!("VFS EXEC INIT: FAILED");
     }
 
+    if crate::exec::vfs::test_hello_spawn() {
+        crate::log_vfs!("VFS SPAWN: /bin/hello queued");
+    } else {
+        crate::log_vfs!("VFS SPAWN: FAILED");
+    }
+
     if crate::exec::test::test_badptr_exec() {
         crate::log_vfs!("VFS EXEC: /bin/badptr queued for Ring3");
         wait_for_vfs_complete(&crate::exec::vfs::BADPTR_COMPLETE, "badptr");
