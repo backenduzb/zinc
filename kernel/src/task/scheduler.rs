@@ -80,12 +80,12 @@ impl Scheduler {
         if !condition {
             return false;
         }
-    
+
         if let Some(thread) = self.current_mut() {
             thread.set_state(ThreadState::Waiting);
             return true;
         }
-    
+
         false
     }
 
@@ -549,6 +549,90 @@ impl Scheduler {
         unsafe {
             crate::arch::x86_64::context::start_first_thread(stack_top, entry as *const ());
         }
+    }
+
+    fn reschedule_current(&mut self, frame: *mut InterruptFrame) -> (u64, u64) {
+        if self.count == 0 || !self.started {
+            return (frame as u64, 0);
+        }
+
+        self.reap_terminated();
+
+        if let Some(thread) = self.threads[self.current].as_mut() {
+            thread.set_interrupt_rsp(frame as u64);
+        }
+
+        let next = match self.next() {
+            Some(index) => index,
+            None => return (frame as u64, 0),
+        };
+
+        if next == self.current {
+            return (frame as u64, 0);
+        }
+
+        let prev = self.current;
+
+        if let Some(thread) = self.threads[prev].as_mut() {
+            if thread.state() == ThreadState::Running {
+                thread.set_state(ThreadState::Ready);
+            }
+        }
+
+        if let Some(thread) = self.threads[next].as_mut() {
+            thread.set_state(ThreadState::Running);
+        }
+
+        self.current = next;
+        self.switches = self.switches.wrapping_add(1);
+
+        let fresh = match self.threads[next].as_mut() {
+            Some(thread) if thread.is_fresh() => {
+                thread.mark_started();
+                true
+            }
+            _ => false,
+        };
+
+        self.switch_address_space_for(next);
+
+        if fresh {
+            let is_user = self.threads[next]
+                .as_ref()
+                .map(|thread| thread.is_user())
+                .unwrap_or(false);
+
+            if is_user {
+                if let Some(reason) = self.validate_fresh_user(next) {
+                    crate::log_ring3_raw!("RING3 REFUSED: ");
+                    crate::log_sched!("{}", reason);
+
+                    if let Some(thread) = self.threads[next].as_mut() {
+                        thread.set_state(ThreadState::Terminated);
+                    }
+
+                    return (frame as u64, 0);
+                }
+
+                self.log_user_entry(next);
+
+                let rsp = self.threads[next].as_ref().unwrap().interrupt_rsp();
+
+                return (rsp, Self::user_entry_trampoline());
+            }
+
+            let thread = self.threads[next].as_ref().unwrap();
+
+            return (thread.stack_top(), thread.entry());
+        }
+
+        let rsp = self.threads[next].as_ref().unwrap().interrupt_rsp();
+
+        (rsp, 0)
+    }
+
+    pub fn reschedule(&mut self, frame: *mut InterruptFrame) -> (u64, u64) {
+        self.reschedule_current(frame)
     }
 
     pub fn tick(&mut self, frame: *mut InterruptFrame) -> (u64, u64) {

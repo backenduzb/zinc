@@ -157,7 +157,7 @@ pub fn input_pending() -> bool {
 
 pub fn clear_pending() {
     if HEAD.load(Ordering::Acquire) == TAIL.load(Ordering::Acquire) {
-        INPUT_PENDING.store(true, Ordering::Release);
+        INPUT_PENDING.store(false, Ordering::Release);
     }
 }
 
@@ -209,16 +209,23 @@ pub fn init() {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn keyboard_handler(_frame: *mut crate::arch::x86_64::context::InterruptFrame) {
+pub extern "C" fn keyboard_handler(
+    frame: *mut crate::arch::x86_64::context::InterruptFrame,
+) -> (u64, u64) {
     if status() & ST_OBF != 0 {
         let scancode = unsafe { inb(KEYBOARD_DATA) };
-
         push_scancode(scancode);
-
-        if let Some(tid) = crate::tty::keyboard_tid() {
-            crate::task::wake_thread(tid);
-        }
     }
 
     crate::drivers::timer::pic::end_of_interrupt();
+
+    if input_pending() {
+        if let Some(tid) = crate::tty::keyboard_tid() {
+            if crate::task::wake_thread_and_reschedule(tid) {
+                return crate::task::scheduler_reschedule(frame);
+            }
+        }
+    }
+
+    (frame as u64, 0)
 }

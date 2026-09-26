@@ -11,12 +11,14 @@ const REG_ICR_LOW: u64 = 0x300;
 const REG_ICR_HIGH: u64 = 0x310;
 
 pub const LAPIC_SIZE: u64 = 0x1000;
+pub const RESCHEDULE_VECTOR: u8 = 49;
 
 const SVR_ENABLE: u32 = 1 << 8;
 const SPURIOUS_VECTOR: u32 = 0xFF;
 
 const ICR_DELIVERY_INIT: u32 = 0b101 << 8;
 const ICR_DELIVERY_STARTUP: u32 = 0b110 << 8;
+const ICR_DELIVERY_FIXED: u32 = 0b000 << 8;
 
 const ICR_LEVEL_ASSERT: u32 = 1 << 14;
 const ICR_TRIGGER_LEVEL: u32 = 1 << 15;
@@ -28,7 +30,7 @@ pub static LAPIC_TICKS: AtomicU64 = AtomicU64::new(0);
 pub const MAX_AP_CPUS: usize = 16;
 static AP_TICKS: [AtomicU64; MAX_AP_CPUS] = [const { AtomicU64::new(0) }; MAX_AP_CPUS];
 
-pub const TIMER_INITIAL_COUNT: u32 = 10_000_000;
+pub const TIMER_INITIAL_COUNT: u32 = 1_000_000;
 
 static mut BASE: u64 = LAPIC_DEFAULT_BASE;
 
@@ -136,6 +138,21 @@ pub fn send_init_ipi(apic_id: u32) {
     crate::log_smp_raw!("LAPIC: INIT -> APIC ");
     crate::log_smp_raw!("{}", apic_id as u64);
     crate::log_smp!("");
+}
+
+pub fn send_reschedule_ipi(apic_id: u32) {
+    wait_icr_idle();
+
+    unsafe {
+        write(REG_ICR_HIGH, apic_id << 24);
+
+        write(
+            REG_ICR_LOW,
+            ICR_DELIVERY_FIXED | RESCHEDULE_VECTOR as u32,
+        );
+    }
+
+    wait_icr_idle();
 }
 
 pub fn deassert_init() {

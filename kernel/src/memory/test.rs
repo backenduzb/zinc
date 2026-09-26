@@ -311,7 +311,7 @@ extern "C" fn after_address_space_switch() -> ! {
     crate::arch::x86_64::smp::percpu::init_bsp(bsp_apic_id);
 
     crate::arch::x86_64::lapic::timer_init();
-    crate::arch::x86_64::lapic::timer_start(10_000_000);
+    crate::arch::x86_64::lapic::timer_start(crate::arch::x86_64::lapic::TIMER_INITIAL_COUNT);
 
     crate::arch::x86_64::lapic::timer_debug_count();
 

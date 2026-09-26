@@ -121,3 +121,31 @@ pub fn wake_thread(tid: thread::ThreadID) -> bool {
 
     false
 }
+
+pub fn wake_thread_and_reschedule(tid: thread::ThreadID) -> bool {
+    unsafe {
+        for cpu_id in 0..MAX_CPUS {
+            let scheduler = core::ptr::addr_of_mut!(SCHEDULERS[cpu_id]);
+
+            if (*scheduler).wake_thread(tid) {
+                let current_cpu = crate::arch::x86_64::smp::percpu::current_cpu_id();
+
+                if cpu_id != current_cpu {
+                    let apic_id = cpu_id as u32;
+
+                    crate::arch::x86_64::lapic::send_reschedule_ipi(apic_id);
+                }
+
+                return true;
+            }
+        }
+    }
+
+    false
+}
+
+pub fn scheduler_reschedule(
+    frame: *mut crate::arch::x86_64::context::InterruptFrame,
+) -> (u64, u64) {
+    unsafe { (*scheduler()).reschedule(frame) }
+}

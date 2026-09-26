@@ -232,3 +232,16 @@ pub extern "C" fn lapic_timer_handler(
 
     crate::task::scheduler_tick(frame)
 }
+
+#[unsafe(no_mangle)]
+pub extern "C" fn reschedule_handler(
+    frame: *mut crate::arch::x86_64::context::InterruptFrame,
+) -> (u64, u64) {
+    crate::arch::x86_64::lapic::eoi();
+
+    if frame.is_null() {
+        return (frame as u64, 0);
+    }
+
+    crate::task::scheduler_reschedule(frame)
+}

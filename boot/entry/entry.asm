@@ -11,6 +11,7 @@ global double_fault_stub
 global ud_fault_stub
 global syscall_stub
 global keyboard_interrupt_stub
+global reschedule_interrupt_stub
 
 extern kmain
 extern timer_handler
@@ -21,6 +22,7 @@ extern double_fault_handler
 extern ud_fault_handler
 extern syscall_handler
 extern keyboard_handler
+extern reschedule_handler
 
 _start:
     cli
@@ -53,6 +55,11 @@ keyboard_interrupt_stub:
     mov rdi, rsp
     call keyboard_handler
 
+    test rdx, rdx
+    jnz keyboard_fresh_thread
+
+    mov rsp, rax
+
     pop r15
     pop r14
     pop r13
@@ -70,6 +77,12 @@ keyboard_interrupt_stub:
     pop rax
 
     iretq
+
+keyboard_fresh_thread:
+    mov rdi, rax
+    mov rsp, rax
+    cld
+    jmp rdx
 
 timer_interrupt_stub:
     push rax
@@ -170,6 +183,58 @@ lapic_timer_interrupt_stub:
 
 
 lapic_timer_fresh_thread:
+    mov rdi, rax
+    mov rsp, rax
+    cld
+    jmp rdx
+
+reschedule_interrupt_stub:
+    push rax
+    push rbx
+    push rcx
+    push rdx
+    push rsi
+    push rdi
+    push rbp
+    push r8
+    push r9
+    push r10
+    push r11
+    push r12
+    push r13
+    push r14
+    push r15
+
+    cld
+
+    mov rdi, rsp
+    call reschedule_handler
+
+    test rdx, rdx
+    jnz reschedule_fresh_thread
+
+    mov rsp, rax
+
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop r11
+    pop r10
+    pop r9
+    pop r8
+    pop rbp
+    pop rdi
+    pop rsi
+    pop rdx
+    pop rcx
+    pop rbx
+    pop rax
+
+    iretq
+
+
+reschedule_fresh_thread:
     mov rdi, rax
     mov rsp, rax
     cld

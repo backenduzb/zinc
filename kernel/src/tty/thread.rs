@@ -1,4 +1,4 @@
-use crate::{drivers::input::keyboard, task::thread::Thread, tty::KEYBOARD_TID};
+use crate::{task::thread::Thread, tty::KEYBOARD_TID};
 
 pub extern "C" fn keyboard_thread() -> ! {
     unsafe {
