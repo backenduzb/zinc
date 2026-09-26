@@ -108,10 +108,12 @@ where
     result
 }
 
-pub fn poll() {
+pub fn process_pending() {
     while let Some(event) = keyboard::try_read() {
         handle_key(event);
     }
+
+    keyboard::clear_pending();
 }
 
 fn handle_key(event: KeyEvent) {
@@ -152,8 +154,6 @@ fn handle_key(event: KeyEvent) {
 }
 
 pub fn read(out: &mut [u8]) -> usize {
-    poll();
-
     with_input(|input| input.take(out))
 }
 

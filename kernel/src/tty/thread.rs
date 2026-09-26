@@ -1,4 +1,4 @@
-use crate::task::thread::Thread;
+use crate::{drivers::input::keyboard, task::thread::Thread, tty::KEYBOARD_TID};
 
 pub extern "C" fn keyboard_thread() -> ! {
     unsafe {
@@ -8,8 +8,28 @@ pub extern "C" fn keyboard_thread() -> ! {
     crate::log_boot!("TTY keyboard thread started");
 
     loop {
-        super::input::poll();
-        // crate::task::sleep(1);
+        super::input::process_pending();
+
+        unsafe {
+            core::arch::asm!("cli", options(nomem, nostack, preserves_flags));
+        }
+
+        if crate::drivers::input::keyboard::input_pending() {
+            unsafe {
+                core::arch::asm!("sti", options(nomem, nostack, preserves_flags));
+            }
+
+            continue;
+        }
+
+        unsafe {
+            crate::task::scheduler().as_mut().unwrap().wait_current();
+        }
+
+        unsafe {
+            core::arch::asm!("sti", options(nomem, nostack, preserves_flags));
+            core::arch::asm!("hlt", options(nomem, nostack, preserves_flags));
+        }
     }
 }
 
@@ -17,9 +37,7 @@ pub fn spawn() -> bool {
     unsafe {
         let process_manager = crate::task::process_manager();
 
-        let Some((cpu_id, scheduler)) =
-            crate::task::find_scheduler_with_space()
-        else {
+        let Some((cpu_id, scheduler)) = crate::task::find_scheduler_with_space() else {
             crate::log_boot!("TTY: all CPU schedulers are full");
             return false;
         };
@@ -43,6 +61,8 @@ pub fn spawn() -> bool {
             crate::log_boot!("TTY: failed to register keyboard thread");
             return false;
         }
+
+        KEYBOARD_TID = Some(tid);
 
         crate::log_boot_raw!("TTY keyboard thread TID=");
         crate::log_boot_raw!("{}", tid);

@@ -340,6 +340,15 @@ impl Thread {
         self.state = ThreadState::Terminated;
     }
 
+
+    pub fn wait(&mut self) {
+        self.state = ThreadState::Waiting
+    }
+
+    pub fn is_waiting(&self) -> bool {
+        self.state == ThreadState::Waiting
+    }
+    
     pub fn is_terminated(&self) -> bool {
         self.state == ThreadState::Terminated
     }

@@ -1,20 +1,17 @@
 pub mod process;
-pub mod thread;
+pub mod ring3;
 pub mod scheduler;
 pub mod test;
-pub mod ring3;
+pub mod thread;
 
+use process::ProcessManager;
 use scheduler::Scheduler;
 use thread::ThreadState;
-use process::ProcessManager;
 
-use crate::task::thread::ThreadID;
 use crate::arch::x86_64::smp::percpu::MAX_CPUS;
+use crate::task::thread::ThreadID;
 
-pub static mut SCHEDULERS: [Scheduler; MAX_CPUS] = [
-    const { Scheduler::new() };
-    MAX_CPUS
-];
+pub static mut SCHEDULERS: [Scheduler; MAX_CPUS] = [const { Scheduler::new() }; MAX_CPUS];
 
 pub static mut PROCESS_MANAGER: ProcessManager = ProcessManager::new();
 
@@ -26,16 +23,12 @@ pub fn scheduler() -> *mut Scheduler {
         panic!("SMP: invalid CPU ID");
     }
 
-    unsafe {
-        core::ptr::addr_of_mut!(SCHEDULERS[cpu_id])
-    }
+    unsafe { core::ptr::addr_of_mut!(SCHEDULERS[cpu_id]) }
 }
 
 #[inline]
 pub fn process_manager() -> *mut ProcessManager {
-    unsafe {
-        core::ptr::addr_of_mut!(PROCESS_MANAGER)
-    }
+    unsafe { core::ptr::addr_of_mut!(PROCESS_MANAGER) }
 }
 
 pub fn sleep(ticks: u64) {
@@ -61,12 +54,8 @@ pub fn sleep(ticks: u64) {
     }
 }
 
-pub fn scheduler_tick(
-    frame: *mut crate::arch::x86_64::context::InterruptFrame,
-) -> (u64, u64) {
-    unsafe {
-        (*scheduler()).tick(frame)
-    }
+pub fn scheduler_tick(frame: *mut crate::arch::x86_64::context::InterruptFrame) -> (u64, u64) {
+    unsafe { (*scheduler()).tick(frame) }
 }
 
 pub fn exit() -> ! {
@@ -82,9 +71,7 @@ pub fn exit() -> ! {
 }
 
 pub fn kill(id: ThreadID) -> bool {
-    unsafe {
-        (*scheduler()).kill(id)
-    }
+    unsafe { (*scheduler()).kill(id) }
 }
 
 pub fn join(id: thread::ThreadID) {
@@ -98,9 +85,7 @@ pub fn scheduler_for_cpu(cpu_id: usize) -> *mut Scheduler {
         panic!("SMP: invalid CPU ID");
     }
 
-    unsafe {
-        core::ptr::addr_of_mut!(SCHEDULERS[cpu_id])
-    }
+    unsafe { core::ptr::addr_of_mut!(SCHEDULERS[cpu_id]) }
 }
 
 pub fn find_scheduler_with_space() -> Option<(usize, *mut Scheduler)> {
@@ -115,4 +100,24 @@ pub fn find_scheduler_with_space() -> Option<(usize, *mut Scheduler)> {
     }
 
     None
+}
+
+pub fn wait() {
+    unsafe {
+        (*scheduler()).wait_current();
+    }
+}
+
+pub fn wake_thread(tid: thread::ThreadID) -> bool {
+    unsafe {
+        for cpu_id in 0..MAX_CPUS {
+            let scheduler = core::ptr::addr_of_mut!(SCHEDULERS[cpu_id]);
+
+            if (*scheduler).wake_thread(tid) {
+                return true;
+            }
+        }
+    }
+
+    false
 }

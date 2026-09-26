@@ -1,4 +1,4 @@
-use core::sync::atomic::{AtomicU8, Ordering};
+use core::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 
 use crate::arch::x86_64::io::{inb, outb};
 
@@ -32,6 +32,7 @@ pub struct KeyEvent {
     pub pressed: bool,
 }
 
+static INPUT_PENDING: AtomicBool = AtomicBool::new(false);
 static HEAD: AtomicU8 = AtomicU8::new(0);
 static TAIL: AtomicU8 = AtomicU8::new(0);
 
@@ -129,6 +130,7 @@ fn push_scancode(scancode: u8) {
     }
 
     HEAD.store(next, Ordering::Release);
+    INPUT_PENDING.store(true, Ordering::Release);
 }
 
 pub fn try_read() -> Option<KeyEvent> {
@@ -141,10 +143,7 @@ pub fn try_read() -> Option<KeyEvent> {
 
     let scancode = unsafe { BUFFER[tail as usize] };
 
-    TAIL.store(
-        tail.wrapping_add(1),
-        Ordering::Release,
-    );
+    TAIL.store(tail.wrapping_add(1), Ordering::Release);
 
     Some(KeyEvent {
         scancode: scancode & 0x7F,
@@ -152,12 +151,19 @@ pub fn try_read() -> Option<KeyEvent> {
     })
 }
 
+pub fn input_pending() -> bool {
+    INPUT_PENDING.load(Ordering::Acquire)
+}
+
+pub fn clear_pending() {
+    if HEAD.load(Ordering::Acquire) == TAIL.load(Ordering::Acquire) {
+        INPUT_PENDING.store(true, Ordering::Release);
+    }
+}
+
 pub fn init() {
     unsafe {
-        core::arch::asm!(
-            "cli",
-            options(nomem, nostack, preserves_flags)
-        );
+        core::arch::asm!("cli", options(nomem, nostack, preserves_flags));
     }
 
     write_ctl(CMD_DISABLE_P1);
@@ -198,21 +204,20 @@ pub fn init() {
     crate::drivers::timer::pic::unmask_irq(1);
 
     unsafe {
-        core::arch::asm!(
-            "sti",
-            options(nomem, nostack, preserves_flags)
-        );
+        core::arch::asm!("sti", options(nomem, nostack, preserves_flags));
     }
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn keyboard_handler(
-    _frame: *mut crate::arch::x86_64::context::InterruptFrame,
-) {
+pub extern "C" fn keyboard_handler(_frame: *mut crate::arch::x86_64::context::InterruptFrame) {
     if status() & ST_OBF != 0 {
         let scancode = unsafe { inb(KEYBOARD_DATA) };
 
         push_scancode(scancode);
+
+        if let Some(tid) = crate::tty::keyboard_tid() {
+            crate::task::wake_thread(tid);
+        }
     }
 
     crate::drivers::timer::pic::end_of_interrupt();

@@ -32,6 +32,36 @@ impl Scheduler {
         self.count += 1;
     }
 
+    pub const fn new() -> Self {
+        Self {
+            threads: [const { None }; MAX_THREADS],
+            current: 0,
+            count: 0,
+            switches: 0,
+            ticks: 0,
+            started: false,
+        }
+    }
+
+    pub fn wait_current(&mut self) {
+        if let Some(thread) = self.current_mut() {
+            thread.set_state(ThreadState::Waiting);
+        }
+    }
+
+    pub fn wake_thread(&mut self, tid: ThreadID) -> bool {
+        for thread in self.threads.iter_mut().flatten() {
+            if thread.id() == tid {
+                if thread.state() == ThreadState::Waiting {
+                    thread.set_state(ThreadState::Ready);
+                    return true;
+                }
+            }
+        }
+
+        false
+    }
+
     pub fn wait_for_child(&mut self, process_id: crate::task::process::ProcessID) {
         if let Some(thread) = self.threads[self.current].as_mut() {
             thread.set_waiting_for_process(Some(process_id));
@@ -46,15 +76,17 @@ impl Scheduler {
         }
     }
 
-    pub const fn new() -> Self {
-        Self {
-            threads: [const { None }; MAX_THREADS],
-            current: 0,
-            count: 0,
-            switches: 0,
-            ticks: 0,
-            started: false,
+    pub fn wait_current_if(&mut self, condition: bool) -> bool {
+        if !condition {
+            return false;
         }
+    
+        if let Some(thread) = self.current_mut() {
+            thread.set_state(ThreadState::Waiting);
+            return true;
+        }
+    
+        false
     }
 
     pub fn add_thread(&mut self, thread: Thread, cpu_id: usize) -> bool {
@@ -425,7 +457,10 @@ impl Scheduler {
                 }
 
                 crate::log_tss_raw!("TSS.RSP0 configured: CPU=");
-                crate::log_sched_raw!("{}", crate::arch::x86_64::smp::percpu::current_cpu_id() as u64,);
+                crate::log_sched_raw!(
+                    "{}",
+                    crate::arch::x86_64::smp::percpu::current_cpu_id() as u64,
+                );
                 crate::log_tss_raw!(" RSP0=0x");
                 crate::log_sched_raw!("{:016X}", stack_top);
                 crate::log_sched!("");
@@ -682,7 +717,10 @@ impl Scheduler {
         }
 
         crate::log_sched_raw!("SCHED tick CPU=");
-        crate::log_sched_raw!("{}", crate::arch::x86_64::smp::percpu::current_cpu_id() as u64);
+        crate::log_sched_raw!(
+            "{}",
+            crate::arch::x86_64::smp::percpu::current_cpu_id() as u64
+        );
         crate::log_sched_raw!(" current=");
         crate::log_sched_raw!("{}", self.current as u64);
         crate::log_sched_raw!(" next=");
@@ -765,7 +803,10 @@ impl Scheduler {
                 crate::log_ring3_raw!("FRESH USER SWITCH: slot=");
                 crate::log_sched_raw!("{}", next as u64);
                 crate::log_vfs_raw!(" thread=");
-                crate::log_sched_raw!("{}", self.threads[next].as_ref().map(|t| t.id()).unwrap_or(0),);
+                crate::log_sched_raw!(
+                    "{}",
+                    self.threads[next].as_ref().map(|t| t.id()).unwrap_or(0),
+                );
                 crate::log_vfs!(" via start_user_thread_context");
 
                 return (rsp, Self::user_entry_trampoline());
@@ -1043,8 +1084,7 @@ impl Scheduler {
                         let generic = thread.state() == ThreadState::Waiting
                             && thread.waiting_for_process().is_none()
                             && parent_of_terminated == Some(thread.process_id());
-                        if specific || generic
-                        {
+                        if specific || generic {
                             let frame_ptr = thread.interrupt_rsp() as *mut SyscallFrame;
                             if !frame_ptr.is_null() {
                                 unsafe {
