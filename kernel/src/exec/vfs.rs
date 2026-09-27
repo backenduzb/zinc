@@ -61,7 +61,7 @@ pub(crate) static READ_TEST_COMPLETE: AtomicBool = AtomicBool::new(false);
 pub(crate) static CLOSE_TEST_COMPLETE: AtomicBool = AtomicBool::new(false);
 pub(crate) static EXECVE_TEST_COMPLETE: AtomicBool = AtomicBool::new(false);
 
-fn open_root_vfs() -> Result<(IdeDevice, Vfs), VfsExecError> {
+pub(crate) fn open_root_vfs() -> Result<(IdeDevice, Vfs), VfsExecError> {
     let mut ide = IdeDevice::new();
 
     let mut sb_buffer = [0u8; 512];

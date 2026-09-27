@@ -16,11 +16,7 @@ pub struct Vfs {
 }
 
 impl Vfs {
-    pub fn new(
-        inode_table_block: u32,
-        inode_size: u16,
-        superblock: Ext2Superblock,
-    ) -> Self {
+    pub fn new(inode_table_block: u32, inode_size: u16, superblock: Ext2Superblock) -> Self {
         Self {
             inode_table_block,
             inode_size,
@@ -28,11 +24,7 @@ impl Vfs {
         }
     }
 
-    pub fn open(
-        &self,
-        ide: &mut IdeDevice,
-        path: &[u8],
-    ) -> Option<VfsFile> {
+    pub fn open(&self, ide: &mut IdeDevice, path: &[u8]) -> Option<VfsFile> {
         let (inode_number, inode) = lookup_path(
             ide,
             self.inode_table_block,
@@ -49,12 +41,7 @@ impl Vfs {
         })
     }
 
-    pub fn read(
-        &self,
-        ide: &mut IdeDevice,
-        file: &mut VfsFile,
-        buffer: &mut [u8],
-    ) -> usize {
+    pub fn read(&self, ide: &mut IdeDevice, file: &mut VfsFile, buffer: &mut [u8]) -> usize {
         let bytes_read = crate::filesystem::file::read_file(
             ide,
             &file.inode,
@@ -68,6 +55,23 @@ impl Vfs {
         bytes_read
     }
 
-    pub fn close(&self, _file: VfsFile) {
+    pub fn close(&self, _file: VfsFile) {}
+
+    pub fn write(&self, ide: &mut IdeDevice, file: &mut VfsFile, buffer: &[u8]) -> usize {
+        if !file.inode.is_regular_file() {
+            return 0;
+        }
+
+        let bytes_written = crate::filesystem::file::write_file(
+            ide,
+            &file.inode,
+            self.block_size,
+            file.offset,
+            buffer,
+        );
+
+        file.offset += bytes_written as u64;
+
+        bytes_written
     }
 }

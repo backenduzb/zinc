@@ -7,10 +7,7 @@ pub struct Ext2DirEntryHeader {
 }
 
 fn read_u16(buf: &[u8], offset: usize) -> u16 {
-    u16::from_le_bytes([
-        buf[offset],
-        buf[offset + 1],
-    ])
+    u16::from_le_bytes([buf[offset], buf[offset + 1]])
 }
 
 fn read_u32(buf: &[u8], offset: usize) -> u32 {
@@ -52,10 +49,7 @@ pub fn parse_entry(buf: &[u8]) -> Option<Ext2DirEntryHeader> {
     })
 }
 
-pub fn entry_name<'a>(
-    buf: &'a [u8],
-    entry: &Ext2DirEntryHeader,
-) -> Option<&'a [u8]> {
+pub fn entry_name<'a>(buf: &'a [u8], entry: &Ext2DirEntryHeader) -> Option<&'a [u8]> {
     let start = 8;
     let end = start + entry.name_len as usize;
 
@@ -66,11 +60,7 @@ pub fn entry_name<'a>(
     Some(&buf[start..end])
 }
 
-pub fn lookup<'a>(
-    buf: &'a [u8],
-    directory_size: usize,
-    name: &[u8],
-) -> Option<u32> {
+pub fn lookup<'a>(buf: &'a [u8], directory_size: usize, name: &[u8]) -> Option<u32> {
     let mut offset = 0usize;
 
     while offset < directory_size {
@@ -94,4 +84,38 @@ pub fn lookup<'a>(
     }
 
     None
+}
+
+pub fn list_entries<F>(buf: &[u8], directory_size: usize, mut callback: F)
+where
+    F: FnMut(u32, &[u8], u8),
+{
+    let mut offset = 0usize;
+    let limit = core::cmp::min(directory_size, buf.len());
+
+    while offset < limit {
+        if offset + 8 > limit {
+            break;
+        }
+
+        let current = &buf[offset..limit];
+
+        let Some(entry) = parse_entry(current) else {
+            break;
+        };
+
+        if entry.inode != 0 {
+            if let Some(name) = entry_name(current, &entry) {
+                callback(entry.inode, name, entry.file_type);
+            }
+        }
+
+        let rec_len = entry.rec_len as usize;
+
+        if rec_len == 0 || offset + rec_len > limit {
+            break;
+        }
+
+        offset += rec_len;
+    }
 }

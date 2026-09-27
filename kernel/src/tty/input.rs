@@ -1,6 +1,6 @@
 use core::sync::atomic::{AtomicBool, Ordering};
 
-use crate::{drivers::input::keyboard::{self, KeyEvent}, tty::input};
+use crate::drivers::input::keyboard::{self, KeyEvent};
 
 const INPUT_BUFFER_SIZE: usize = 256;
 
@@ -20,8 +20,8 @@ impl InputBuffer {
     }
 
     fn get(&self) -> &[u8] {
-        &self.buffer
-    } 
+        &self.buffer[..self.len]
+    }
 
     fn push(&mut self, byte: u8) {
         if self.len >= INPUT_BUFFER_SIZE - 1 {
@@ -77,12 +77,7 @@ impl SpinLock {
     fn lock(&self) {
         while self
             .locked
-            .compare_exchange(
-                false,
-                true,
-                Ordering::Acquire,
-                Ordering::Relaxed,
-            )
+            .compare_exchange(false, true, Ordering::Acquire, Ordering::Relaxed)
             .is_err()
         {
             core::hint::spin_loop();
@@ -103,9 +98,7 @@ where
 {
     INPUT_LOCK.lock();
 
-    let result = unsafe {
-        f(&mut *core::ptr::addr_of_mut!(INPUT))
-    };
+    let result = unsafe { f(&mut *core::ptr::addr_of_mut!(INPUT)) };
 
     INPUT_LOCK.unlock();
 
@@ -135,14 +128,18 @@ fn handle_key(event: KeyEvent) {
         }
 
         0x1C => {
-            with_input(|input| {
+            let mut line = [0u8; INPUT_BUFFER_SIZE];
+            let len = with_input(|input| {
                 input.finish_line();
+                input.take(&mut line)
             });
-
+        
             crate::drivers::serial::putc(b'\n');
-            with_input(|input| {
-                super::commands::execute(input.get());
-            });
+        
+            if len > 0 {
+                super::commands::execute(&line[..len]);
+            }
+        
             crate::drivers::serial::print("zinc > ");
         }
 
@@ -203,6 +200,18 @@ fn scancode_to_ascii(scancode: u8) -> Option<u8> {
         0x30 => b'b',
         0x31 => b'n',
         0x32 => b'm',
+
+        0x0C => b'-',
+        0x0D => b'=',
+        0x1A => b'[',
+        0x1B => b']',
+        0x27 => b';',
+        0x28 => b'\'',
+        0x29 => b'`',
+        0x2B => b'\\',
+        0x33 => b',',
+        0x34 => b'.',
+        0x35 => b'/',
 
         0x39 => b' ',
 

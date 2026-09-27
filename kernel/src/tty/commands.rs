@@ -1,5 +1,6 @@
 use crate::drivers::serial;
 use crate::task::process_manager;
+use alloc::vec;
 
 const SHELL_CPU: usize = 1;
 
@@ -11,7 +12,7 @@ fn trim_spaces(line: &[u8]) -> &[u8] {
         start += 1;
     }
 
-    while end > start && line[end] == b' ' {
+    while end > start && line[end - 1] == b' ' {
         end -= 1;
     }
 
@@ -54,6 +55,26 @@ pub fn execute(line: &[u8]) {
         exec_command(&line[5..]);
         return;
     }
+
+    if line.starts_with(b"cat ") {
+        cat_command(&line[4..]);
+        return;
+    }
+
+    if line.starts_with(b"ls") {
+        if line.contains(&b' ') {
+            ls_command(trim_spaces(&line[3..]));
+        } else {
+            ls_command(b".");
+        }
+        return;
+    }
+
+    if line.starts_with(b"write ") {
+        write_command(&line[6..]);
+        return;
+    }
+    
     serial::println("command not found!");
 }
 
@@ -75,18 +96,7 @@ fn exec_command(path: &[u8]) {
 
     serial::println_fmt(core::format_args!("exec: {}", path_str));
 
-    let parent_pid = unsafe {
-        let pm = process_manager();
-        let pm = &mut *pm;
-
-        match pm.find_live_child(0) {
-            Some(pid) => pid,
-            None => {
-                serial::println("exec: no shell process");
-                return;
-            }
-        }
-    };
+    let parent_pid = 0;
 
     let argv = [path_str];
 
@@ -96,6 +106,66 @@ fn exec_command(path: &[u8]) {
             serial::println("exec: failed");
         }
     }
+}
+
+fn write_command(args: &[u8]) {
+    let args = trim_spaces(args);
+
+    let separator = match args.iter().position(|&c| c == b' ') {
+        Some(pos) => pos,
+        None => {
+            serial::println("write: usage: write <path> <text>");
+            return;
+        }
+    };
+
+    let path = trim_spaces(&args[..separator]);
+    let text = trim_spaces(&args[separator + 1..]);
+
+    if path.is_empty() {
+        serial::println("write: missing path");
+        return;
+    }
+
+    if text.is_empty() {
+        serial::println("write: missing text");
+        return;
+    }
+
+    let (mut ide, vfs) =
+        match crate::exec::vfs::open_root_vfs() {
+            Ok(value) => value,
+            Err(_) => {
+                serial::println("write: filesystem unavailable");
+                return;
+            }
+        };
+
+    let mut file = match vfs.open(&mut ide, path) {
+        Some(file) => file,
+        None => {
+            serial::println("write: file not found");
+            return;
+        }
+    };
+
+    if !file.inode.is_regular_file() {
+        serial::println("write: not a regular file");
+        vfs.close(file);
+        return;
+    }
+
+    let bytes = vfs.write(
+        &mut ide,
+        &mut file,
+        text,
+    );
+
+    vfs.close(file);
+
+    serial::println_fmt(
+        core::format_args!("write: {} bytes", bytes)
+    );
 }
 
 fn wait_for_child(pid: u64) {
@@ -127,4 +197,80 @@ fn wait_for_child(pid: u64) {
     }
 
     serial::println("exec: wait timeout");
+}
+
+fn cat_command(path: &[u8]) {
+    let path = trim_spaces(path);
+
+    if path.is_empty() {
+        serial::println("cat: missing file");
+        return;
+    }
+
+    let (mut ide, vfs) = match crate::exec::vfs::open_root_vfs() {
+        Ok(value) => value,
+        Err(_) => {
+            serial::println("cat: filesystem unavailable");
+            return;
+        }
+    };
+
+    let mut file = match vfs.open(&mut ide, path) {
+        Some(file) => file,
+        None => {
+            serial::println("cat: file not found");
+            return;
+        }
+    };
+
+    if !file.inode.is_regular_file() {
+        serial::println("cat: not a regular file");
+        vfs.close(file);
+        return;
+    }
+    
+    let size = file.inode.size as usize;
+    let mut data = alloc::vec![0u8; size];
+
+    let bytes_read = vfs.read(&mut ide, &mut file, &mut data);
+
+    serial::write_bytes(&data[..bytes_read]);
+
+    vfs.close(file);
+}
+
+fn ls_command(path: &[u8]) {
+    let path = trim_spaces(path);
+
+    let path = if path.is_empty() { b"/" } else { path };
+
+    let (mut ide, vfs) = match crate::exec::vfs::open_root_vfs() {
+        Ok(value) => value,
+        Err(_) => {
+            serial::println("ls: filesystem unavailable");
+            return;
+        }
+    };
+
+    let mut file = match vfs.open(&mut ide, path) {
+        Some(file) => file,
+        None => {
+            serial::println("ls: directory not found");
+            return;
+        }
+    };
+
+
+    let size = file.inode.size as usize;
+    let mut data = vec![0u8; size];
+
+    let read = vfs.read(&mut ide, &mut file, &mut data);
+
+    crate::filesystem::directory::list_entries(&data, read, |inode, name, file_type| {
+        let name = core::str::from_utf8(name).unwrap_or("?");
+
+        serial::println_fmt(core::format_args!("{}  {}  {}", inode, file_type, name));
+    });
+
+    vfs.close(file);
 }

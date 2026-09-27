@@ -111,3 +111,12 @@ pub unsafe fn inw(port: u16) -> u16 {
 
     value
 }
+
+pub unsafe fn outw(port: u16, value: u16) {
+    core::arch::asm!(
+        "out dx, ax",
+        in("dx") port,
+        in("ax") value,
+        options(nomem, nostack, preserves_flags)
+    );
+}

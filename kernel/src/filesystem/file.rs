@@ -8,12 +8,12 @@ fn read_block(ide: &mut IdeDevice, block: u32, block_size: u32, buffer: &mut [u8
     if block_size == 0 {
         return false;
     }
-    
+
     if block == 0 {
         if buffer.len() < block_size as usize {
             return false;
         }
-    
+
         buffer[..block_size as usize].fill(0);
         return true;
     }
@@ -112,7 +112,6 @@ pub fn read_file(
         return 0;
     }
 
-
     let file_size = inode.size as u64;
 
     if offset >= file_size {
@@ -123,8 +122,6 @@ pub fn read_file(
 
     let requested = core::cmp::min(available, buffer.len() as u64) as usize;
 
-    
-    
     let block_size_u64 = block_size as u64;
 
     let mut total_read = 0usize;
@@ -163,4 +160,153 @@ pub fn read_file(
     }
 
     total_read
+}
+
+fn write_block(ide: &mut IdeDevice, block: u32, block_size: u32, buffer: &[u8]) -> bool {
+    if block == 0 || block_size == 0 {
+        return false;
+    }
+
+    if block_size % 512 != 0 {
+        return false;
+    }
+
+    if buffer.len() < block_size as usize {
+        return false;
+    }
+
+    let sectors_per_block = block_size / 512;
+
+    for sector in 0..sectors_per_block {
+        let offset = sector as usize * 512;
+
+        if ide
+            .write_sector(
+                (block as u64 * sectors_per_block as u64 + sector as u64) as u32,
+                &buffer[offset..offset + 512],
+            )
+            .is_err()
+        {
+            return false;
+        }
+    }
+
+    true
+}
+
+fn data_block_number(
+    ide: &mut IdeDevice,
+    inode: &Ext2Inode,
+    block_index: u32,
+    block_size: u32,
+) -> Option<u32> {
+    if block_index < DIRECT_BLOCKS as u32 {
+        let block = inode.block[block_index as usize];
+
+        if block == 0 {
+            return None;
+        }
+
+        return Some(block);
+    }
+
+    let pointers_per_block = block_size / 4;
+
+    if pointers_per_block == 0 {
+        return None;
+    }
+
+    let indirect_index = block_index - DIRECT_BLOCKS as u32;
+
+    if indirect_index >= pointers_per_block {
+        return None;
+    }
+
+    let indirect_block = inode.block[12];
+
+    if indirect_block == 0 {
+        return None;
+    }
+
+    let mut indirect_data = [0u8; 4096];
+
+    if block_size as usize > indirect_data.len() {
+        return None;
+    }
+
+    if !read_block(ide, indirect_block, block_size, &mut indirect_data) {
+        return None;
+    }
+
+    let offset = indirect_index as usize * 4;
+
+    let block = u32::from_le_bytes([
+        indirect_data[offset],
+        indirect_data[offset + 1],
+        indirect_data[offset + 2],
+        indirect_data[offset + 3],
+    ]);
+
+    if block == 0 { None } else { Some(block) }
+}
+
+pub fn write_file(
+    ide: &mut IdeDevice,
+    inode: &Ext2Inode,
+    block_size: u32,
+    offset: u64,
+    data: &[u8],
+) -> usize {
+    if block_size == 0 || data.is_empty() {
+        return 0;
+    }
+
+    if offset >= inode.size as u64 {
+        return 0;
+    }
+
+    let available = inode.size as u64 - offset;
+
+    let requested = core::cmp::min(available, data.len() as u64) as usize;
+
+    let block_size_u64 = block_size as u64;
+    let mut total_written = 0usize;
+
+    while total_written < requested {
+        let current_offset = offset + total_written as u64;
+
+        let block_index = (current_offset / block_size_u64) as u32;
+
+        let offset_in_block = (current_offset % block_size_u64) as usize;
+
+        let remaining = requested - total_written;
+
+        let bytes = core::cmp::min(block_size as usize - offset_in_block, remaining);
+
+        let block = match data_block_number(ide, inode, block_index, block_size) {
+            Some(block) => block,
+            None => break,
+        };
+
+        let mut block_buffer = [0u8; 4096];
+
+        if block_size as usize > block_buffer.len() {
+            break;
+        }
+
+        if !read_block(ide, block, block_size, &mut block_buffer) {
+            break;
+        }
+
+        block_buffer[offset_in_block..offset_in_block + bytes]
+            .copy_from_slice(&data[total_written..total_written + bytes]);
+
+        if !write_block(ide, block, block_size, &block_buffer) {
+            break;
+        }
+
+        total_written += bytes;
+    }
+
+    total_written
 }
