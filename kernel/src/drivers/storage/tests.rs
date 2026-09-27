@@ -41,8 +41,7 @@ pub fn test_create() {
 pub fn test_wait() {
     crate::log_test!("=== WAIT TEST ===");
 
-    let mut frame_allocator =
-        crate::memory::physical::FrameAllocator::new();
+    let mut frame_allocator = crate::memory::physical::FrameAllocator::new();
 
     let parent_pid;
     let child_pid;
@@ -50,10 +49,7 @@ pub fn test_wait() {
     unsafe {
         let pm = crate::task::process_manager();
 
-        parent_pid = match (*pm).create_user(
-            &mut frame_allocator,
-            None,
-        ) {
+        parent_pid = match (*pm).create_user(&mut frame_allocator, None) {
             Some(pid) => pid,
             None => {
                 crate::log_test!("WAIT TEST: parent create FAILED");
@@ -61,10 +57,7 @@ pub fn test_wait() {
             }
         };
 
-        child_pid = match (*pm).create_user(
-            &mut frame_allocator,
-            Some(parent_pid),
-        ) {
+        child_pid = match (*pm).create_user(&mut frame_allocator, Some(parent_pid)) {
             Some(pid) => pid,
             None => {
                 crate::log_test!("WAIT TEST: child create FAILED");
@@ -108,10 +101,7 @@ pub fn test_wait() {
     let reaped = unsafe {
         let pm = crate::task::process_manager();
 
-        (*pm).reap(
-            child_pid,
-            &mut frame_allocator,
-        )
+        (*pm).reap(child_pid, &mut frame_allocator)
     };
 
     if !reaped {
@@ -596,8 +586,13 @@ pub fn test_ext2() {
         }
     }
 
-    let vfs = crate::filesystem::vfs::Vfs::new(gd.inode_table_block(), 256, sb);
-
+    let vfs = crate::filesystem::vfs::Vfs::new(
+        gd.inode_table_block(),
+        256,
+        sb,
+        gd.inode_bitmap,
+        gd.block_bitmap,
+    );
     let mut file = match vfs.open(&mut ide, b"/bin/hello") {
         Some(file) => {
             crate::log_vfs_raw!("VFS OPEN /bin/hello: inode=");
@@ -715,8 +710,13 @@ pub fn test_vfs_elf() {
         }
     };
 
-    let vfs = crate::filesystem::vfs::Vfs::new(gd.inode_table_block(), 256, sb);
-
+    let vfs = crate::filesystem::vfs::Vfs::new(
+        gd.inode_table_block(),
+        256,
+        sb,
+        gd.inode_bitmap,
+        gd.block_bitmap,
+    );
     let mut file = match vfs.open(&mut ide, b"/bin/hello") {
         Some(file) => file,
 

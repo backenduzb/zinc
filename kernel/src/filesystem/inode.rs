@@ -30,10 +30,7 @@ impl Ext2Inode {
 }
 
 fn read_u16(buf: &[u8], offset: usize) -> u16 {
-    u16::from_le_bytes([
-        buf[offset],
-        buf[offset + 1],
-    ])
+    u16::from_le_bytes([buf[offset], buf[offset + 1]])
 }
 
 fn read_u32(buf: &[u8], offset: usize) -> u32 {
@@ -55,7 +52,6 @@ pub fn parse_inode(buf: &[u8]) -> Option<Ext2Inode> {
     for i in 0..15 {
         block[i] = read_u32(buf, 40 + i * 4);
     }
-
 
     Some(Ext2Inode {
         mode: read_u16(buf, 0x00),
@@ -93,29 +89,21 @@ pub fn read_inode(
 
     let inode_index = inode_number - 1;
 
-    let byte_offset =
-        inode_index as u64 * inode_size as u64;
+    let byte_offset = inode_index as u64 * inode_size as u64;
 
-    let block_offset =
-        byte_offset / block_size as u64;
+    let block_offset = byte_offset / block_size as u64;
 
-    let offset_in_block =
-        byte_offset % block_size as u64;
+    let offset_in_block = byte_offset % block_size as u64;
 
-    let inode_block =
-        inode_table_block as u64 + block_offset;
+    let inode_block = inode_table_block as u64 + block_offset;
 
     let sector_size = 512u64;
 
-    let sector_in_block =
-        offset_in_block / sector_size;
+    let sector_in_block = offset_in_block / sector_size;
 
-    let lba =
-        inode_block * (block_size as u64 / sector_size)
-        + sector_in_block;
+    let lba = inode_block * (block_size as u64 / sector_size) + sector_in_block;
 
-    let offset_in_sector =
-        (offset_in_block % sector_size) as usize;
+    let offset_in_sector = (offset_in_block % sector_size) as usize;
 
     let mut sector = [0u8; 512];
 
@@ -127,7 +115,75 @@ pub fn read_inode(
         return None;
     }
 
-    parse_inode(
-        &sector[offset_in_sector..offset_in_sector + inode_size]
-    )
+    parse_inode(&sector[offset_in_sector..offset_in_sector + inode_size])
+}
+
+pub fn write_inode(
+    ide: &mut IdeDevice,
+    inode_table_block: u32,
+    inode_number: u32,
+    inode_size: u16,
+    block_size: u32,
+    inode: &Ext2Inode,
+) -> bool {
+    if inode_number == 0 || inode_size == 0 || block_size == 0 {
+        return false;
+    }
+
+    if inode_size as u32 > block_size {
+        return false;
+    }
+
+    let inode_index = inode_number - 1;
+
+    let byte_offset = inode_index as u64 * inode_size as u64;
+
+    let block_offset = byte_offset / block_size as u64;
+
+    let offset_in_block = byte_offset % block_size as u64;
+
+    let inode_block = inode_table_block as u64 + block_offset;
+
+    let sector_size = 512u64;
+
+    let sector_in_block = offset_in_block / sector_size;
+
+    let lba = inode_block * (block_size as u64 / sector_size) + sector_in_block;
+
+    let offset_in_sector = (offset_in_block % sector_size) as usize;
+
+    let inode_size = inode_size as usize;
+
+    if offset_in_sector + inode_size > 512 {
+        return false;
+    }
+
+    let mut sector = [0u8; 512];
+
+    if ide.read_sector(lba as u32, &mut sector).is_err() {
+        return false;
+    }
+
+    let dst = &mut sector[offset_in_sector..offset_in_sector + inode_size];
+
+    dst.fill(0);
+
+    dst[0x00..0x02].copy_from_slice(&inode.mode.to_le_bytes());
+    dst[0x02..0x04].copy_from_slice(&inode.uid.to_le_bytes());
+    dst[0x04..0x08].copy_from_slice(&inode.size.to_le_bytes());
+    dst[0x08..0x0C].copy_from_slice(&inode.atime.to_le_bytes());
+    dst[0x0C..0x10].copy_from_slice(&inode.ctime.to_le_bytes());
+    dst[0x10..0x14].copy_from_slice(&inode.mtime.to_le_bytes());
+    dst[0x14..0x18].copy_from_slice(&inode.dtime.to_le_bytes());
+    dst[0x18..0x1A].copy_from_slice(&inode.gid.to_le_bytes());
+    dst[0x1A..0x1C].copy_from_slice(&inode.links_count.to_le_bytes());
+    dst[0x1C..0x20].copy_from_slice(&inode.blocks.to_le_bytes());
+    dst[0x20..0x24].copy_from_slice(&inode.flags.to_le_bytes());
+
+    for i in 0..15 {
+        let offset = 40 + i * 4;
+        dst[offset..offset + 4].copy_from_slice(&inode.block[i].to_le_bytes());
+    }
+
+    ide.write_sector(lba as u32, &sector).is_ok()
 }

@@ -24,6 +24,8 @@ impl FilesystemContext {
             gd.inode_table_block(),
             256,
             sb,
+            gd.inode_bitmap,
+            gd.block_bitmap,
         );
 
         Some(Self { vfs })
@@ -34,18 +36,16 @@ impl FilesystemContext {
         self.vfs.open(&mut ide, path)
     }
 
-    pub fn read(
-        &self,
-        file: &mut VfsFile,
-        buffer: &mut [u8],
-    ) -> usize {
+    pub fn create(&self, parent_path: &[u8], name: &[u8]) -> Result<u32, &'static str> {
         let mut ide = IdeDevice::new();
 
-        self.vfs.read(
-            &mut ide,
-            file,
-            buffer,
-        )
+        self.vfs.create(&mut ide, parent_path, name)
+    }
+
+    pub fn read(&self, file: &mut VfsFile, buffer: &mut [u8]) -> usize {
+        let mut ide = IdeDevice::new();
+
+        self.vfs.read(&mut ide, file, buffer)
     }
 
     pub fn close(&self, file: VfsFile) {
@@ -81,9 +81,7 @@ pub fn filesystem() -> *const FilesystemContext {
                     .unwrap_or(core::ptr::null())
             }
 
-            None => {
-                core::ptr::null()
-            }
+            None => core::ptr::null(),
         }
     }
 }

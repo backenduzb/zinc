@@ -1,4 +1,4 @@
-use crate::drivers::serial;
+use crate::drivers::serial::{self, println};
 use crate::task::process_manager;
 use alloc::vec;
 
@@ -70,11 +70,16 @@ pub fn execute(line: &[u8]) {
         return;
     }
 
+    if line.starts_with(b"touch ") {
+        touch_command(&line[6..]);
+        return;
+    }
+
     if line.starts_with(b"write ") {
         write_command(&line[6..]);
         return;
     }
-    
+
     serial::println("command not found!");
 }
 
@@ -132,14 +137,13 @@ fn write_command(args: &[u8]) {
         return;
     }
 
-    let (mut ide, vfs) =
-        match crate::exec::vfs::open_root_vfs() {
-            Ok(value) => value,
-            Err(_) => {
-                serial::println("write: filesystem unavailable");
-                return;
-            }
-        };
+    let (mut ide, vfs) = match crate::exec::vfs::open_root_vfs() {
+        Ok(value) => value,
+        Err(_) => {
+            serial::println("write: filesystem unavailable");
+            return;
+        }
+    };
 
     let mut file = match vfs.open(&mut ide, path) {
         Some(file) => file,
@@ -155,17 +159,11 @@ fn write_command(args: &[u8]) {
         return;
     }
 
-    let bytes = vfs.write(
-        &mut ide,
-        &mut file,
-        text,
-    );
+    let bytes = vfs.write(&mut ide, &mut file, text);
 
     vfs.close(file);
 
-    serial::println_fmt(
-        core::format_args!("write: {} bytes", bytes)
-    );
+    serial::println_fmt(core::format_args!("write: {} bytes", bytes));
 }
 
 fn wait_for_child(pid: u64) {
@@ -228,13 +226,14 @@ fn cat_command(path: &[u8]) {
         vfs.close(file);
         return;
     }
-    
+
     let size = file.inode.size as usize;
     let mut data = alloc::vec![0u8; size];
 
     let bytes_read = vfs.read(&mut ide, &mut file, &mut data);
 
     serial::write_bytes(&data[..bytes_read]);
+    println("");
 
     vfs.close(file);
 }
@@ -260,7 +259,6 @@ fn ls_command(path: &[u8]) {
         }
     };
 
-
     let size = file.inode.size as usize;
     let mut data = vec![0u8; size];
 
@@ -273,4 +271,52 @@ fn ls_command(path: &[u8]) {
     });
 
     vfs.close(file);
+}
+
+fn touch_command(path: &[u8]) {
+    let path = trim_spaces(path);
+
+    if path.is_empty() {
+        serial::println("touch: missing file");
+        return;
+    }
+
+    let slash = match path.iter().rposition(|&c| c == b'/') {
+        Some(pos) => pos,
+        None => {
+            serial::println("touch: invalid path");
+            return;
+        }
+    };
+
+    let parent = if slash == 0 { b"/" } else { &path[..slash] };
+
+    let name = &path[slash + 1..];
+
+    if name.is_empty() {
+        serial::println("touch: invalid filename");
+        return;
+    }
+
+    let (mut ide, vfs) = match crate::exec::vfs::open_root_vfs() {
+        Ok(value) => value,
+        Err(_) => {
+            serial::println("touch: filesystem unavailable");
+            return;
+        }
+    };
+
+    match vfs.create(&mut ide, parent, name) {
+        Ok(inode) => {
+            serial::println_fmt(core::format_args!(
+                "touch: created {} inode={}",
+                core::str::from_utf8(path).unwrap_or("?"),
+                inode
+            ));
+        }
+
+        Err(error) => {
+            serial::println_fmt(core::format_args!("touch: {}", error));
+        }
+    }
 }

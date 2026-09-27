@@ -78,7 +78,16 @@ pub(crate) fn open_root_vfs() -> Result<(IdeDevice, Vfs), VfsExecError> {
     let gd = crate::filesystem::ext2::parse_group_descriptor(&gd_buffer)
         .ok_or(VfsExecError::GroupDescriptor)?;
 
-    Ok((ide, Vfs::new(gd.inode_table_block(), 256, sb)))
+    Ok((
+        ide,
+        Vfs::new(
+            gd.inode_table_block(),
+            256,
+            sb,
+            gd.inode_bitmap,
+            gd.block_bitmap,
+        )
+    ))
 }
 
 fn read_path(

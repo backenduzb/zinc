@@ -9,6 +9,8 @@ pub struct Ext2Superblock {
     pub free_inodes_count: u32,
     pub first_data_block: u32,
     pub log_block_size: u32,
+    pub first_inode: u32,
+    pub inodes_per_group: u32,
     pub magic: u16,
 }
 
@@ -52,7 +54,7 @@ fn read_u32(buf: &[u8], offset: usize) -> u32 {
 }
 
 pub fn parse_superblock(buf: &[u8]) -> Option<Ext2Superblock> {
-    if buf.len() < 0x3A {
+    if buf.len() < 0x58 {
         return None;
     }
 
@@ -64,6 +66,11 @@ pub fn parse_superblock(buf: &[u8]) -> Option<Ext2Superblock> {
         free_inodes_count: read_u32(buf, 0x10),
         first_data_block: read_u32(buf, 0x14),
         log_block_size: read_u32(buf, 0x18),
+
+        first_inode: read_u32(buf, 0x54),
+
+        inodes_per_group: read_u32(buf, 0x28),
+
         magic: read_u16(buf, 0x38),
     };
 

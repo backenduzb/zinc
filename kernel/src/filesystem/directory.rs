@@ -119,3 +119,73 @@ where
         offset += rec_len;
     }
 }
+
+pub fn add_entry(
+    buf: &mut [u8],
+    directory_size: usize,
+    inode: u32,
+    name: &[u8],
+    file_type: u8,
+) -> bool {
+    if inode == 0 || name.is_empty() || name.len() > 255 {
+        return false;
+    }
+
+    let needed = (8 + name.len() + 3) & !3;
+
+    if needed > directory_size || directory_size > buf.len() {
+        return false;
+    }
+
+    let mut offset = 0usize;
+
+    while offset < directory_size {
+        let current = &buf[offset..directory_size];
+
+        let Some(entry) = parse_entry(current) else {
+            return false;
+        };
+
+        let rec_len = entry.rec_len as usize;
+
+        if rec_len == 0 || offset + rec_len > directory_size {
+            return false;
+        }
+
+        let minimal_current = (8 + entry.name_len as usize + 3) & !3;
+
+        let slack = rec_len.saturating_sub(minimal_current);
+
+        if slack >= needed {
+            let new_offset = offset + minimal_current;
+
+            buf[offset + 4..offset + 6].copy_from_slice(&(minimal_current as u16).to_le_bytes());
+
+            let new_rec_len = rec_len - minimal_current;
+
+            buf[new_offset..new_offset + 4].copy_from_slice(&inode.to_le_bytes());
+
+            buf[new_offset + 4..new_offset + 6]
+                .copy_from_slice(&(new_rec_len as u16).to_le_bytes());
+
+            buf[new_offset + 6] = name.len() as u8;
+            buf[new_offset + 7] = file_type;
+
+            let name_start = new_offset + 8;
+            let name_end = name_start + name.len();
+
+            buf[name_start..name_end].copy_from_slice(name);
+
+            let end = new_offset + new_rec_len;
+            if name_end < end {
+                buf[name_end..end].fill(0);
+            }
+
+            return true;
+        }
+
+        offset += rec_len;
+    }
+
+    false
+}

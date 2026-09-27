@@ -250,43 +250,183 @@ fn data_block_number(
     if block == 0 { None } else { Some(block) }
 }
 
+fn find_free_block(
+    ide: &mut IdeDevice,
+    block_bitmap_block: u32,
+    block_size: u32,
+    blocks_count: u32,
+    first_data_block: u32,
+) -> Option<u32> {
+    if block_size == 0 || block_size % 512 != 0 {
+        return None;
+    }
+
+    let sectors_per_block = block_size / 512;
+
+    if sectors_per_block == 0 {
+        return None;
+    }
+
+    let bitmap_bytes = block_size as usize;
+
+    let mut bitmap = [0u8; 4096];
+
+    if bitmap_bytes > bitmap.len() {
+        return None;
+    }
+
+    for sector in 0..sectors_per_block {
+        let lba = block_bitmap_block * sectors_per_block + sector;
+
+        let offset = sector as usize * 512;
+
+        if ide
+            .read_sector(lba, &mut bitmap[offset..offset + 512])
+            .is_err()
+        {
+            return None;
+        }
+    }
+
+    let first = first_data_block;
+
+    for block in first..blocks_count {
+        let bit = block;
+
+        let byte_index = (bit / 8) as usize;
+        let bit_index = bit % 8;
+
+        if byte_index >= bitmap_bytes {
+            break;
+        }
+
+        let mask = 1u8 << bit_index;
+
+        if bitmap[byte_index] & mask == 0 {
+            bitmap[byte_index] |= mask;
+
+            for sector in 0..sectors_per_block {
+                let lba = block_bitmap_block * sectors_per_block + sector;
+
+                let offset = sector as usize * 512;
+
+                if ide
+                    .write_sector(lba, &bitmap[offset..offset + 512])
+                    .is_err()
+                {
+                    return None;
+                }
+            }
+
+            return Some(block);
+        }
+    }
+
+    None
+}
+
+fn zero_block(ide: &mut IdeDevice, block: u32, block_size: u32) -> bool {
+    let mut buffer = [0u8; 4096];
+
+    if block_size as usize > buffer.len() {
+        return false;
+    }
+
+    buffer[..block_size as usize].fill(0);
+
+    write_block(ide, block, block_size, &buffer)
+}
+
 pub fn write_file(
     ide: &mut IdeDevice,
-    inode: &Ext2Inode,
+    inode: &mut Ext2Inode,
     block_size: u32,
     offset: u64,
     data: &[u8],
+    block_bitmap_block: u32,
+    blocks_count: u32,
+    first_data_block: u32,
+    _free_blocks_count: u32,
 ) -> usize {
     if block_size == 0 || data.is_empty() {
         return 0;
     }
 
-    if offset >= inode.size as u64 {
+    if block_size % 512 != 0 {
         return 0;
     }
 
-    let available = inode.size as u64 - offset;
+    if block_size as usize > 4096 {
+        return 0;
+    }
 
-    let requested = core::cmp::min(available, data.len() as u64) as usize;
+    if offset > inode.size as u64 {
+        return 0;
+    }
+
+    let end_offset = match offset.checked_add(data.len() as u64) {
+        Some(value) => value,
+        None => return 0,
+    };
 
     let block_size_u64 = block_size as u64;
+
+    let first_block = (offset / block_size_u64) as u32;
+
+    let last_block = ((end_offset.saturating_sub(1)) / block_size_u64) as u32;
+
+    if last_block >= DIRECT_BLOCKS as u32 {
+        return 0;
+    }
+    /*
+     * Hozircha faqat 12 ta direct block.
+     */
+
+    for block_index in first_block..=last_block {
+        if inode.block[block_index as usize] != 0 {
+            continue;
+        }
+
+        let new_block = match find_free_block(
+            ide,
+            block_bitmap_block,
+            block_size,
+            blocks_count,
+            first_data_block,
+        ) {
+            Some(block) => block,
+            None => return 0,
+        };
+
+        if !zero_block(ide, new_block, block_size) {
+            return 0;
+        }
+
+        inode.block[block_index as usize] = new_block;
+    }
+
     let mut total_written = 0usize;
 
-    while total_written < requested {
+    while total_written < data.len() {
         let current_offset = offset + total_written as u64;
 
         let block_index = (current_offset / block_size_u64) as u32;
 
         let offset_in_block = (current_offset % block_size_u64) as usize;
 
-        let remaining = requested - total_written;
+        if block_index >= DIRECT_BLOCKS as u32 {
+            break;
+        }
+
+        let block = inode.block[block_index as usize];
+
+        if block == 0 {
+            break;
+        }
+
+        let remaining = data.len() - total_written;
 
         let bytes = core::cmp::min(block_size as usize - offset_in_block, remaining);
-
-        let block = match data_block_number(ide, inode, block_index, block_size) {
-            Some(block) => block,
-            None => break,
-        };
 
         let mut block_buffer = [0u8; 4096];
 
@@ -306,6 +446,17 @@ pub fn write_file(
         }
 
         total_written += bytes;
+    }
+
+    if total_written > 0 {
+        let new_end = offset + total_written as u64;
+
+        if new_end > inode.size as u64 {
+            inode.size = new_end as u32;
+        }
+        let required_blocks = ((inode.size as u64 + block_size_u64 - 1) / block_size_u64) as u32;
+
+        inode.blocks = required_blocks * (block_size / 512);
     }
 
     total_written

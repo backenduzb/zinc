@@ -32,9 +32,12 @@ impl InputBuffer {
         self.len += 1;
     }
 
-    fn backspace(&mut self) {
+    fn backspace(&mut self) -> bool {
         if self.len > 0 {
             self.len -= 1;
+            true
+        } else {
+            false
         }
     }
 
@@ -120,26 +123,27 @@ fn handle_key(event: KeyEvent) {
 
     match event.scancode {
         0x0E => {
-            with_input(|input| {
-                input.backspace();
-            });
+            let deleted = with_input(|input| input.backspace());
 
-            crate::drivers::serial::write_bytes(&[8, b' ', 8]);
+            if deleted {
+                crate::drivers::serial::write_bytes(&[8, b' ', 8]);
+            }
         }
 
         0x1C => {
             let mut line = [0u8; INPUT_BUFFER_SIZE];
+
             let len = with_input(|input| {
                 input.finish_line();
                 input.take(&mut line)
             });
-        
+
             crate::drivers::serial::putc(b'\n');
-        
+
             if len > 0 {
                 super::commands::execute(&line[..len]);
             }
-        
+
             crate::drivers::serial::print("zinc > ");
         }
 
