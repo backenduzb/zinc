@@ -13,22 +13,22 @@ fn build_test_elf(payload: &[u8]) -> [u8; 8192] {
     let mut elf = [0u8; 8192];
 
     elf[0..4].copy_from_slice(&[0x7F, b'E', b'L', b'F']);
-    elf[4] = 2; // ELFCLASS64
-    elf[5] = 1; // little endian
-    elf[6] = 1; // version
+    elf[4] = 2; 
+    elf[5] = 1; 
+    elf[6] = 1; 
 
-    elf[16..18].copy_from_slice(&2u16.to_le_bytes()); // ET_EXEC
-    elf[18..20].copy_from_slice(&62u16.to_le_bytes()); // x86_64
-    elf[20..24].copy_from_slice(&1u32.to_le_bytes()); // EV_CURRENT
+    elf[16..18].copy_from_slice(&2u16.to_le_bytes()); 
+    elf[18..20].copy_from_slice(&62u16.to_le_bytes()); 
+    elf[20..24].copy_from_slice(&1u32.to_le_bytes()); 
     elf[24..32].copy_from_slice(&TEST_ENTRY.to_le_bytes());
 
-    elf[32..40].copy_from_slice(&64u64.to_le_bytes()); // phoff
-    elf[52..54].copy_from_slice(&64u16.to_le_bytes()); // ehsize
-    elf[54..56].copy_from_slice(&56u16.to_le_bytes()); // phentsize
-    elf[56..58].copy_from_slice(&1u16.to_le_bytes()); // phnum
+    elf[32..40].copy_from_slice(&64u64.to_le_bytes()); 
+    elf[52..54].copy_from_slice(&64u16.to_le_bytes()); 
+    elf[54..56].copy_from_slice(&56u16.to_le_bytes()); 
+    elf[56..58].copy_from_slice(&1u16.to_le_bytes()); 
 
     let ph = 64usize;
-    elf[ph..ph + 4].copy_from_slice(&1u32.to_le_bytes()); // PT_LOAD
+    elf[ph..ph + 4].copy_from_slice(&1u32.to_le_bytes()); 
     elf[ph + 4..ph + 8].copy_from_slice(&(PF_R | PF_X).to_le_bytes());
     elf[ph + 8..ph + 16].copy_from_slice(&TEST_OFFSET.to_le_bytes());
     elf[ph + 16..ph + 24].copy_from_slice(&TEST_ENTRY.to_le_bytes());
@@ -841,6 +841,8 @@ pub fn test_process_reap() {
 
 pub fn test_init_exec() -> bool {
     crate::log_vfs!("=== VFS EXEC INIT TEST ===");
+
+    crate::exec::vfs::INIT_COMPLETE.store(false, core::sync::atomic::Ordering::Release);
 
     let cpu = if crate::arch::x86_64::smp::percpu::is_online(INIT_CPU) {
         INIT_CPU

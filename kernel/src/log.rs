@@ -15,7 +15,7 @@ pub const LOG_CR3: bool = false;
 pub const LOG_TSS: bool = false;
 pub const LOG_SLEEP: bool = false;
 pub const LOG_SYSCALL: bool = false;
-pub const LOG_VFS: bool = true;
+pub const LOG_VFS: bool = false;
 pub const LOG_EXEC: bool = false;
 pub const LOG_RING3: bool = false;
 pub const LOG_SMP: bool = false;
@@ -29,8 +29,7 @@ pub fn write(args: fmt::Arguments<'_>) {
 macro_rules! log_if {
     ($flag:expr, $($arg:tt)*) => {
         if $flag {
-            $crate::log::write(core::format_args!($($arg)*));
-            $crate::drivers::serial::println("");
+            $crate::drivers::serial::println_fmt(core::format_args!($($arg)*));
         }
     };
 }

@@ -111,7 +111,7 @@ pub fn virtual_memory_test() -> ! {
 
             loop {
                 unsafe {
-                    core::arch::asm!("hlt");
+                    core::arch::asm!("hlt")
                 }
             }
         }
@@ -171,8 +171,6 @@ pub fn virtual_memory_test() -> ! {
 
 use core::sync::atomic::{AtomicBool, Ordering};
 
-/// Dump CPU3 scheduler slot occupancy for diagnosing "scheduler full".
-/// Prints slot / TID / PID / ThreadState / cpu_id per occupied slot.
 fn log_cpu3_slots(reason: &str) {
     crate::log_smp_raw!("CPU3 SLOTS (");
     crate::log_boot_raw!("{}", reason);
@@ -213,21 +211,8 @@ fn log_cpu3_slots(reason: &str) {
     }
 }
 
-/// Wait until the CPU3 test's reaper signals completion.
-///
-/// The reaper sets its flag only after the full lifecycle finished:
-/// process terminated -> ProcessManager::reap() -> AddressSpace
-/// destroyed -> process removed -> completion=true -> task::exit().
-///
-/// Intentionally spin-based with NO hlt/sleep here. This runs on the
-/// BSP before its scheduler starts, so `crate::task::sleep` is a no-op
-/// and a missed hlt wakeup would deadlock boot. APs run on their own
-/// vCPUs, so a bounded pause-spin cannot deadlock them. Bounded +
-/// fail-open: on timeout dumps CPU3 slots and returns so boot always
-/// continues. Only atomics are polled (no cross-CPU struct walks).
 fn wait_for_vfs_complete(flag: &AtomicBool, name: &str) {
-    crate::log_vfs_raw!("VFS EXEC WAIT: ");
-    crate::log_boot!("{}", name);
+    crate::log_vfs!("VFS EXEC WAIT: {}", name);
 
     const INNER_SPINS: u64 = 2048;
     const HEARTBEAT_OUTER: u64 = 20000;
@@ -243,11 +228,7 @@ fn wait_for_vfs_complete(flag: &AtomicBool, name: &str) {
             break true;
         }
         if outer % HEARTBEAT_OUTER == 0 {
-            crate::log_vfs_raw!("VFS EXEC WAIT ALIVE: ");
-            crate::log_boot_raw!("{}", name);
-            crate::log_sched_raw!(" ticks=");
-            crate::log_boot_raw!("{}", crate::arch::x86_64::lapic::ticks());
-            crate::log_boot!("");
+            crate::log_vfs!("VFS EXEC WAIT ALIVE: {}", name);
         }
         if outer >= TIMEOUT_OUTER {
             break false;
@@ -255,11 +236,9 @@ fn wait_for_vfs_complete(flag: &AtomicBool, name: &str) {
     };
 
     if done {
-        crate::log_vfs_raw!("VFS EXEC WAIT DONE: ");
-        crate::log_boot!("{}", name);
+        crate::log_vfs!("VFS EXEC WAIT DONE: {}", name);
     } else {
-        crate::log_vfs_raw!("VFS EXEC WAIT TIMEOUT: ");
-        crate::log_boot!("{}", name);
+        crate::log_vfs!("VFS EXEC WAIT TIMEOUT: {}", name);
         log_cpu3_slots(name);
     }
 }
@@ -511,11 +490,15 @@ extern "C" fn after_address_space_switch() -> ! {
         crate::log_vfs!("VFS EXEC: FAILED");
     }
 
+    wait_for_vfs_complete(&crate::exec::vfs::HELLO_COMPLETE, "hello");
+
     if crate::exec::test::test_init_exec() {
         crate::log_vfs!("VFS EXEC: /bin/init queued for Ring3 (boot path)");
     } else {
         crate::log_vfs!("VFS EXEC INIT: FAILED");
     }
+
+    wait_for_vfs_complete(&crate::exec::vfs::INIT_COMPLETE, "init");
 
     if crate::exec::vfs::test_hello_spawn() {
         crate::log_vfs!("VFS SPAWN: /bin/hello queued");

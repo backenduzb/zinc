@@ -54,6 +54,8 @@ pub(crate) static REAP_CLOSE_TEST_PID: AtomicU64 = AtomicU64::new(0);
 pub(crate) static REAP_EXECVE_TEST_PID: AtomicU64 = AtomicU64::new(0);
 
 pub(crate) static BADPTR_COMPLETE: AtomicBool = AtomicBool::new(false);
+pub(crate) static HELLO_COMPLETE: AtomicBool = AtomicBool::new(false);
+pub(crate) static INIT_COMPLETE: AtomicBool = AtomicBool::new(false);
 pub(crate) static OPEN_TEST_COMPLETE: AtomicBool = AtomicBool::new(false);
 pub(crate) static READ_TEST_COMPLETE: AtomicBool = AtomicBool::new(false);
 pub(crate) static CLOSE_TEST_COMPLETE: AtomicBool = AtomicBool::new(false);
@@ -193,6 +195,9 @@ extern "C" fn hello_reaper() -> ! {
                 let gone = unsafe { (*crate::task::process_manager()).get(pid).is_none() };
                 if ok && gone {
                     crate::log_vfs!("VFS EXEC: PROCESS REAP OK");
+
+                    HELLO_COMPLETE.store(true, Ordering::Release);
+
                     crate::task::exit();
                 } else {
                     crate::log_vfs!("VFS EXEC: reap FAILED");
@@ -288,6 +293,9 @@ pub fn spawn_reaper(
 
 pub fn test_hello_exec() -> bool {
     crate::log_vfs!("=== VFS EXEC HELLO TEST ===");
+
+    HELLO_COMPLETE.store(false, Ordering::Release);
+    REAP_PID.store(0, Ordering::Relaxed);
 
     let argv: &[&str] = &["hello"];
     let res = match exec_path(HELLO_PATH, argv, HELLO_CPU) {
@@ -391,6 +399,9 @@ pub extern "C" fn init_reaper() -> ! {
 
                 if ok && gone {
                     crate::log_vfs!("VFS EXEC: init PROCESS REAP OK");
+
+                    INIT_COMPLETE.store(true, Ordering::Release);
+
                     crate::task::exit();
                 } else {
                     crate::log_vfs!("VFS EXEC: init reap FAILED");
@@ -863,7 +874,9 @@ pub fn test_hello_spawn() -> bool {
             break;
         }
 
-        crate::task::sleep(1);
+        for _ in 0..50_000 {
+            core::hint::spin_loop();
+        }
     }
 
     if !child_terminated {

@@ -5,7 +5,8 @@ pub extern "C" fn keyboard_thread() -> ! {
         core::arch::asm!("sti");
     }
 
-    crate::log_boot!("TTY keyboard thread started");
+    crate::drivers::serial::println("");
+    super::show_prompt();
 
     loop {
         super::input::process_pending();
@@ -38,7 +39,6 @@ pub fn spawn() -> bool {
         let process_manager = crate::task::process_manager();
 
         let Some((cpu_id, scheduler)) = crate::task::find_scheduler_with_space() else {
-            crate::log_boot!("TTY: all CPU schedulers are full");
             return false;
         };
 

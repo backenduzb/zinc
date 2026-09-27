@@ -162,6 +162,10 @@ impl Scheduler {
         self.count
     }
 
+    pub fn is_started(&self) -> bool {
+        self.started
+    }
+
     pub fn thread(&self, index: usize) -> Option<&Thread> {
         self.threads.get(index).and_then(|thread| thread.as_ref())
     }

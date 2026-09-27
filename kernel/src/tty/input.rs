@@ -1,6 +1,6 @@
 use core::sync::atomic::{AtomicBool, Ordering};
 
-use crate::drivers::input::keyboard::{self, KeyEvent};
+use crate::{drivers::input::keyboard::{self, KeyEvent}, tty::input};
 
 const INPUT_BUFFER_SIZE: usize = 256;
 
@@ -18,6 +18,10 @@ impl InputBuffer {
             ready: false,
         }
     }
+
+    fn get(&self) -> &[u8] {
+        &self.buffer
+    } 
 
     fn push(&mut self, byte: u8) {
         if self.len >= INPUT_BUFFER_SIZE - 1 {
@@ -127,9 +131,7 @@ fn handle_key(event: KeyEvent) {
                 input.backspace();
             });
 
-            crate::drivers::serial::putc(8);
-            crate::drivers::serial::putc(b' ');
-            crate::drivers::serial::putc(8);
+            crate::drivers::serial::write_bytes(&[8, b' ', 8]);
         }
 
         0x1C => {
@@ -138,6 +140,9 @@ fn handle_key(event: KeyEvent) {
             });
 
             crate::drivers::serial::putc(b'\n');
+            with_input(|input| {
+                super::commands::execute(input.get());
+            });
             crate::drivers::serial::print("zinc > ");
         }
 

@@ -72,18 +72,6 @@ fn handle_execve(frame: &mut SyscallFrame) -> (u64, u64) {
 
     crate::log_syscall!("SYSCALL: EXECVE");
 
-    crate::log_exec_raw!("EXECVE: path_ptr=0x");
-    crate::log_syscall_raw!("{:016X}", path_ptr);
-    crate::log_syscall!("");
-
-    crate::log_exec_raw!("EXECVE: argv_ptr=0x");
-    crate::log_syscall_raw!("{:016X}", argv_ptr);
-    crate::log_syscall!("");
-
-    crate::log_exec_raw!("EXECVE: envp_ptr=0x");
-    crate::log_syscall_raw!("{:016X}", envp_ptr);
-    crate::log_syscall!("");
-
     if path_ptr == 0 {
         crate::log_exec!("EXECVE: invalid path pointer");
         frame.rax = u64::MAX;
@@ -133,11 +121,7 @@ fn handle_execve(frame: &mut SyscallFrame) -> (u64, u64) {
         return (frame as *mut SyscallFrame as u64, 0);
     }
 
-    crate::log_exec_raw!("EXECVE: path=");
-    for &b in &path_buf[..path_len] {
-        crate::log_syscall_raw!("{}", (b) as char);
-    }
-    crate::log_syscall!("");
+    crate::log_exec!("EXECVE: path ok");
 
     if argv_ptr == 0 {
         crate::log_exec!("EXECVE: argv=NULL");
@@ -203,9 +187,7 @@ fn handle_execve(frame: &mut SyscallFrame) -> (u64, u64) {
         return (frame as *mut SyscallFrame as u64, 0);
     }
 
-    crate::log_exec_raw!("EXECVE: argc=");
-    crate::log_syscall_raw!("{}", argv_owned.len() as u64);
-    crate::log_syscall!("");
+    crate::log_exec!("EXECVE: argc ok");
 
     let argv_refs: Vec<&str> = argv_owned.iter().map(|arg| arg.as_str()).collect();
 
@@ -258,13 +240,7 @@ fn handle_execve(frame: &mut SyscallFrame) -> (u64, u64) {
 
     let old_cr3 = crate::arch::x86_64::paging::read_cr3() & !0xFFF;
 
-    crate::log_exec_raw!("EXECVE: PID=");
-    crate::log_syscall_raw!("{}", pid);
-    crate::log_syscall_raw!(" path=");
-    for &b in &path_buf[..path_len] {
-        crate::log_syscall_raw!("{}", (b) as char);
-    }
-    crate::log_syscall!("");
+    crate::log_exec!("EXECVE: image replacing");
 
     let new_pml4 = unsafe {
         let pm = crate::task::process_manager();
@@ -279,12 +255,7 @@ fn handle_execve(frame: &mut SyscallFrame) -> (u64, u64) {
         }
     };
 
-    crate::log_cr3_raw!("EXECVE: old CR3=0x");
-    crate::log_syscall_raw!("{:016X}", old_cr3);
-    crate::log_syscall!("");
-    crate::log_cr3_raw!("EXECVE: new CR3=0x");
-    crate::log_syscall_raw!("{:016X}", new_pml4);
-    crate::log_syscall!("");
+    crate::log_syscall!("EXECVE: CR3 switch");
 
     unsafe {
         crate::arch::x86_64::paging::load_cr3(new_pml4);
@@ -311,13 +282,7 @@ fn handle_execve(frame: &mut SyscallFrame) -> (u64, u64) {
         }
     };
 
-    crate::log_exec_raw!("EXECVE: image replaced PID=");
-    crate::log_syscall_raw!("{}", pid);
-    crate::log_syscall_raw!(" entry=0x");
-    crate::log_syscall_raw!("{:016X}", entry);
-    crate::log_syscall_raw!(" RSP=0x");
-    crate::log_syscall_raw!("{:016X}", user_rsp);
-    crate::log_syscall!("");
+    crate::log_exec!("EXECVE: image replaced");
 
     let trampoline = crate::arch::x86_64::context::start_user_thread_context as usize as u64;
     (new_rsp, trampoline)
@@ -328,11 +293,7 @@ fn handle_write(frame: &mut SyscallFrame) -> (u64, u64) {
     let buf = frame.rsi;
     let len = frame.rdx;
 
-    crate::log_syscall_raw!("SYSCALL: WRITE fd=");
-    crate::log_syscall_raw!("{}", fd);
-    crate::log_syscall_raw!(" len=");
-    crate::log_syscall_raw!("{}", len);
-    crate::log_syscall!("");
+    crate::log_syscall!("SYSCALL: WRITE fd={} len={}", fd, len);
 
     let fd_ok = unsafe {
         let sched = crate::task::scheduler();
@@ -409,10 +370,11 @@ fn handle_write(frame: &mut SyscallFrame) -> (u64, u64) {
         return (frame as *mut SyscallFrame as u64, 0);
     }
 
-    crate::log_ring3_raw!("USER OUTPUT: ");
-    for &b in &kbuf[..ulen] {
-        crate::log_syscall_raw!("{}", (b) as char);
-    }
+    // USER OUTPUT atomik chiqishi shart: bitta write_bytes() bitta lock.
+    // Oldingi variant (prefix raw + write + suffix alohida locklarda)
+    // SMP da qatorni o'rtasidan bo'lib yuborardi ("CLHello", "RiCLOSE").
+    crate::log_syscall!("SYSCALL: WRITE user output");
+    crate::drivers::serial::write_bytes(&kbuf[..ulen]);
 
     frame.rax = len;
     (frame as *mut SyscallFrame as u64, 0)
@@ -435,13 +397,7 @@ pub extern "C" fn syscall_handler(frame: *mut SyscallFrame) -> (u64, u64) {
 
     let tid = unsafe { (*crate::task::scheduler()).current_id() };
 
-    crate::log_syscall_raw!("SYSCALL: CPU=");
-    crate::log_syscall_raw!("{}", cpu as u64);
-    crate::log_syscall_raw!(" TID=");
-    crate::log_syscall_raw!("{}", tid.unwrap_or(0));
-    crate::log_syscall_raw!(" nr=");
-    crate::log_syscall_raw!("{}", frame.rax);
-    crate::log_syscall!("");
+    crate::log_syscall!("SYSCALL: cpu={} tid={} nr={}", cpu as u64, tid.unwrap_or(0), frame.rax);
 
     match frame.rax {
         SYS_YIELD => {
@@ -453,9 +409,7 @@ pub extern "C" fn syscall_handler(frame: *mut SyscallFrame) -> (u64, u64) {
         }
 
         SYS_EXIT => {
-            crate::log_syscall_raw!("SYSCALL: EXIT code=");
-            crate::log_syscall_raw!("{}", frame.rdi);
-            crate::log_syscall!("");
+            crate::log_syscall!("SYSCALL: EXIT code={}", frame.rdi);
 
             unsafe { (*crate::task::scheduler()).syscall_exit(frame as *mut SyscallFrame) }
         }
@@ -557,13 +511,7 @@ fn handle_open(frame: &mut SyscallFrame) -> (u64, u64) {
         return (frame as *mut SyscallFrame as u64, 0);
     }
 
-    crate::log_vfs_raw!("OPEN path: ");
-
-    for &byte in &path_buffer[..path_len] {
-        crate::log_syscall_raw!("{}", (byte) as char);
-    }
-
-    crate::log_syscall!("");
+    crate::log_syscall!("SYSCALL: OPEN len ok");
 
     let fs_ptr = crate::filesystem::context::filesystem();
 
@@ -607,9 +555,7 @@ fn handle_open(frame: &mut SyscallFrame) -> (u64, u64) {
         }
     };
 
-    crate::log_vfs_raw!("OPEN fd: ");
-    crate::log_syscall_raw!("{}", fd as u64);
-    crate::log_syscall!("");
+    crate::log_syscall!("SYSCALL: OPEN fd={} ok", fd);
 
     frame.rax = fd as u64;
 
@@ -621,11 +567,7 @@ fn handle_read(frame: &mut SyscallFrame) -> (u64, u64) {
     let buf = frame.rsi;
     let len = frame.rdx as usize;
 
-    crate::log_syscall_raw!("SYSCALL: READ fd=");
-    crate::log_syscall_raw!("{}", fd as u64);
-    crate::log_syscall_raw!(" len=");
-    crate::log_syscall_raw!("{}", len as u64);
-    crate::log_syscall!("");
+    crate::log_syscall!("SYSCALL: READ fd={} len={}", fd, len);
 
     if len == 0 {
         frame.rax = 0;
@@ -766,9 +708,7 @@ fn handle_read(frame: &mut SyscallFrame) -> (u64, u64) {
         }
     }
 
-    crate::log_vfs_raw!("READ bytes=");
-    crate::log_syscall_raw!("{}", bytes_read as u64);
-    crate::log_syscall!("");
+    crate::log_syscall!("SYSCALL: READ bytes={}", bytes_read);
 
     frame.rax = bytes_read as u64;
 
@@ -820,9 +760,7 @@ fn copy_to_user(space: &AddressSpace, user_ptr: u64, len: usize, input: &[u8]) -
 fn handle_close(frame: &mut SyscallFrame) -> (u64, u64) {
     let fd = frame.rdi as usize;
 
-    crate::log_syscall_raw!("SYSCALL: CLOSE fd=");
-    crate::log_syscall_raw!("{}", fd as u64);
-    crate::log_syscall!("");
+    crate::log_syscall!("SYSCALL: CLOSE fd={}", fd);
 
     if fd < 3 {
         crate::log_syscall!("SYSCALL CLOSE: cannot close stdio");
@@ -855,9 +793,7 @@ fn handle_close(frame: &mut SyscallFrame) -> (u64, u64) {
 
     match result {
         Some(_) => {
-            crate::log_vfs_raw!("CLOSE: fd=");
-            crate::log_syscall_raw!("{}", fd as u64);
-            crate::log_vfs!(" closed");
+            crate::log_syscall!("SYSCALL: CLOSE fd={} ok", fd);
 
             frame.rax = 0;
         }
@@ -915,9 +851,7 @@ fn handle_wait(frame: &mut SyscallFrame) -> (u64, u64) {
         }
     };
 
-    crate::log_syscall_raw!("SYS_WAIT: parent PID=");
-    crate::log_syscall_raw!("{}", parent_pid);
-    crate::log_syscall!("");
+    crate::log_syscall!("SYS_WAIT: parent PID={}", parent_pid);
     let terminated_child = unsafe {
         let pm = crate::task::process_manager();
 
@@ -925,12 +859,7 @@ fn handle_wait(frame: &mut SyscallFrame) -> (u64, u64) {
     };
 
     if let Some(child_pid) = terminated_child {
-        crate::log_syscall_raw!("SYS_WAIT: terminated child=");
-        crate::log_syscall_raw!("{}", child_pid);
-        crate::log_syscall!("");
-        crate::log_syscall_raw!("WAIT: terminated child PID=");
-        crate::log_syscall_raw!("{}", child_pid);
-        crate::log_syscall!("");
+        crate::log_syscall!("SYS_WAIT: terminated child={}", child_pid);
 
         let mut frame_allocator =
             crate::memory::physical::FrameAllocator::new();
@@ -942,9 +871,7 @@ fn handle_wait(frame: &mut SyscallFrame) -> (u64, u64) {
         };
 
         if reaped {
-            crate::log_exec_raw!("WAIT: reaped PID=");
-            crate::log_syscall_raw!("{}", child_pid);
-            crate::log_syscall!("");
+            crate::log_syscall!("WAIT: reaped PID={}", child_pid);
 
             frame.rax = child_pid;
 
@@ -967,9 +894,7 @@ fn handle_wait(frame: &mut SyscallFrame) -> (u64, u64) {
         None => {
             crate::log_syscall!("SYS_WAIT: no child");
             if parent_pid == 1 {
-                crate::log_syscall_raw!("WAIT: blocking PID=");
-                crate::log_syscall_raw!("{}", parent_pid);
-                crate::log_syscall!("");
+                crate::log_syscall!("WAIT: blocking PID={}", parent_pid);
                 unsafe {
                     let scheduler = crate::task::scheduler();
                     (*scheduler).wait_for_any_child();
@@ -986,21 +911,11 @@ fn handle_wait(frame: &mut SyscallFrame) -> (u64, u64) {
         }
     };
 
-    crate::log_syscall_raw!("SYS_WAIT: live child=");
-    crate::log_syscall_raw!("{}", child_pid);
-    crate::log_syscall!("");
-    crate::log_syscall_raw!("WAIT: blocking on child PID=");
-    crate::log_syscall_raw!("{}", child_pid);
-    crate::log_syscall!("");
+    crate::log_syscall!("SYS_WAIT: live child={}", child_pid);
+    crate::log_syscall!("WAIT: blocking on child PID={}", child_pid);
     {
         let tid = unsafe { (*crate::task::scheduler()).current_id().unwrap_or(0) };
-        crate::log_syscall_raw!("WAIT: blocking parent PID=");
-        crate::log_syscall_raw!("{}", parent_pid);
-        crate::log_syscall_raw!(" child PID=");
-        crate::log_syscall_raw!("{}", child_pid);
-        crate::log_syscall_raw!(" TID=");
-        crate::log_syscall_raw!("{}", tid);
-        crate::log_syscall!("");
+        crate::log_syscall!("WAIT: parent={} child={} tid={}", parent_pid, child_pid, tid);
     }
 
     unsafe {

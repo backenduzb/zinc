@@ -33,7 +33,13 @@ pub fn process_manager() -> *mut ProcessManager {
 
 pub fn sleep(ticks: u64) {
     unsafe {
-        (*scheduler()).sleep_current(ticks);
+        let sched = scheduler();
+
+        if (*sched).count() == 0 || !(*sched).is_started() {
+            return;
+        }
+
+        (*sched).sleep_current(ticks);
     }
 
     loop {
