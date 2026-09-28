@@ -1,6 +1,5 @@
 pub mod input;
 pub mod thread;
-pub mod commands;
 
 use crate::task::thread::ThreadID;
 
