@@ -141,7 +141,7 @@ fn handle_key(event: KeyEvent) {
             crate::drivers::serial::putc(b'\n');
 
             if len > 0 {
-                super::commands::execute(&line[..len]);
+                crate::shell::execute(&line[..len]);
             }
 
             crate::drivers::serial::print("zinc > ");
