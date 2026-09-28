@@ -58,3 +58,28 @@ pub fn parse(line: &[u8]) -> ParseCommand<'_> {
 
    result
 }
+
+pub fn trim_spaces(line: &[u8]) -> &[u8] {
+    let mut start = 0;
+    let mut end = line.len();
+
+    while start < end && line[start] == b' ' {
+        start += 1;
+    }
+
+    while end > start && line[end - 1] == b' ' {
+        end -= 1;
+    }
+
+    &line[start..end]
+}
+
+pub fn trim_newline(line: &[u8]) -> &[u8] {
+    let mut end = line.len();
+
+    while end > 0 && (line[end - 1] == b'\n' || line[end - 1] == b'\r') {
+        end -= 1;
+    }
+
+    &line[..end]
+}

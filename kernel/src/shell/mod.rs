@@ -5,13 +5,11 @@ pub mod commands;
 use parser::parse;
 use state::ShellState;
 
-
 pub struct Shell {
     state: ShellState,
 }
 
 static mut SHELL: Option<Shell> = None;
-
 
 impl Shell {
     pub const fn new() -> Self {
@@ -27,27 +25,7 @@ impl Shell {
             return;
         }
 
-        match command.command() {
-            Some(b"pwd") => {
-                crate::drivers::serial::write_bytes(self.state.cwd());
-                crate::drivers::serial::println("");
-            }
-
-            Some(b"echo") => {
-                for i in 1..command.argc {
-                    if i > 1 {
-                        crate::drivers::serial::putc(b' ');
-                    }
-
-                    crate::drivers::serial::write_bytes(command.argv[i]);
-                }
-                crate::drivers::serial::println("");
-            }
-
-            _ => {
-                crate::drivers::serial::println("command not found");
-            }
-        }
+        commands::execute(&mut self.state, command);
     }
 }
 
