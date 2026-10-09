@@ -405,7 +405,6 @@ impl AddressSpace {
                             continue;
                         }
                         if pd.entries[pd_idx].is_huge() {
-                            // 2 MiB huge page
                             let leaf = pd.entries[pd_idx].address();
                             frame_allocator.free_frame(PhysFrame::new(leaf));
                             pd.entries[pd_idx].clear();

@@ -38,7 +38,6 @@ struct MadtHeader {
 
 static mut LAPIC_PHYS_ADDR: u64 = 0;
 
-/// MADT dan topilgan LAPIC physical base. 0 bo'lsa hali topilmagan.
 pub fn lapic_phys() -> u64 {
     unsafe { LAPIC_PHYS_ADDR }
 }
@@ -255,7 +254,6 @@ pub fn init() {
     
         let rsdt_virt = phys_to_virt(rsdt_address as u64);
     
-        // RSDT checksum
         let ok = sdt_checksum_ok(rsdt_virt);
     
         crate::log_smp_raw!("SMP: RSDT checksum: ");
@@ -266,7 +264,6 @@ pub fn init() {
             return;
         }
     
-        // RSDT header
         let rsdt_header =
             unsafe { read_unaligned(rsdt_virt as *const SdtHeader) };
     
@@ -287,7 +284,6 @@ pub fn init() {
         crate::log_smp_raw!("{}", entries as u64);
         crate::log_smp!("");
     
-        // Search MADT (APIC)
         let mut madt_phys: u64 = 0;
     
         for i in 0..entries {
@@ -391,7 +387,6 @@ pub fn init() {
                 break;
             }
     
-            // Processor Local APIC
             if entry_type == 0 && entry_len == 8 {
                 let processor_id =
                     unsafe {
@@ -446,7 +441,6 @@ pub fn init() {
                 }
             }
     
-            // Processor Local x2APIC
             else if entry_type == 9 && entry_len == 16 {
                 let processor_uid =
                     unsafe {

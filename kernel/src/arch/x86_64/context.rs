@@ -158,7 +158,7 @@ start_user_thread_context:
 );
 
 unsafe extern "C" {
-    pub fn start_thread_context(frame: *const InterruptFrame) -> !;
+    pub fn _start_thread_context(frame: *const InterruptFrame) -> !;
     pub fn start_first_thread(stack_top: u64, entry: *const ()) -> !;
     pub fn start_user_thread_context(frame: *const UserInterruptFrame) -> !;
 }

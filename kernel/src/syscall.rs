@@ -370,9 +370,6 @@ fn handle_write(frame: &mut SyscallFrame) -> (u64, u64) {
         return (frame as *mut SyscallFrame as u64, 0);
     }
 
-    // USER OUTPUT atomik chiqishi shart: bitta write_bytes() bitta lock.
-    // Oldingi variant (prefix raw + write + suffix alohida locklarda)
-    // SMP da qatorni o'rtasidan bo'lib yuborardi ("CLHello", "RiCLOSE").
     crate::log_syscall!("SYSCALL: WRITE user output");
     crate::drivers::serial::write_bytes(&kbuf[..ulen]);
 
