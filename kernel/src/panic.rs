@@ -1,3 +1,5 @@
+#![cfg_attr(not(test), no_std)]
+
 use core::fmt::Write;
 use core::panic::PanicInfo;
 
@@ -10,6 +12,7 @@ impl Write for SerialWriter {
     }
 }
 
+#[cfg(not(test))]
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
     crate::log_boot_raw!("KERNEL PANIC: ");

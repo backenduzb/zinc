@@ -63,7 +63,7 @@ iso: $(KERNEL)
 
 	limine/bin/limine bios-install $(ISO) --force
 
-run: iso
+run: iso install-splash
 	qemu-system-x86_64 \
 		-cdrom $(ISO) \
 		-drive file=disk.img,format=raw,if=ide \

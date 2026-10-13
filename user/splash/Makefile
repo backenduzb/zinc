@@ -1,18 +1,21 @@
 
-ASM := nasm
-LD := /usr/bin/ld
-OUT := splash.elf
+CARGO := cargo +nightly
+TARGET := x86_64-unknown-none
+OUT := target/$(TARGET)/release/zinc-splash
+ELF := splash.elf
 
-.PHONY: all clean
+.PHONY: all clean inspect
 
-all: $(OUT)
+all: $(ELF)
 
-splash.o: splash.asm
-	$(ASM) -f elf64 $< -o $@
+$(ELF): Cargo.toml linker.ld .cargo/config.toml $(wildcard src/*.rs)
+	$(CARGO) build -Z build-std=core --release
+	cp $(OUT) $(ELF)
 
-
-$(OUT): splash.o linker.ld
-	$(LD) -nostdlib -static -z max-page-size=0x1000 -T linker.ld -o $@ splash.o
+inspect: $(ELF)
+	readelf -h -l $(ELF)
+	nm -n $(ELF) | head -30
 
 clean:
-	rm -f splash.o $(OUT)
+	$(CARGO) clean
+	rm -f $(ELF)

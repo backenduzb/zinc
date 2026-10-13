@@ -1,4 +1,4 @@
-use super::super::parser::{trim_spaces, ParseCommand};
+use super::super::parser::{ParseCommand, trim_spaces};
 use super::super::state::ShellState;
 
 use crate::drivers::serial;
@@ -14,30 +14,44 @@ fn resolve_path<'a>(
 }
 
 pub fn write(command: &ParseCommand, state: &ShellState) {
-    if command.argc < 2 {
+    if command.argc < 3 {
         serial::println("write: usage: write <path> <text>");
         return;
     }
 
-    let args = trim_spaces(command.argv[1]);
-
-    let separator = match args.iter().position(|&c| c == b' ') {
-        Some(pos) => pos,
-        None => {
-            serial::println("write: usage: write <path> <text>");
-            return;
-        }
-    };
-
-    let path = trim_spaces(&args[..separator]);
-    let text = trim_spaces(&args[separator + 1..]);
+    let path = trim_spaces(command.argv[1]);
 
     if path.is_empty() {
         serial::println("write: missing path");
         return;
     }
 
-    if text.is_empty() {
+    let mut text = [0u8; 1024];
+    let mut text_len = 0;
+
+    for i in 2..command.argc {
+        let arg = command.argv[i];
+
+        if text_len > 0 {
+            if text_len >= text.len() {
+                serial::println("write: text too long");
+                return;
+            }
+
+            text[text_len] = b' ';
+            text_len += 1;
+        }
+
+        if text_len + arg.len() > text.len() {
+            serial::println("write: text too long");
+            return;
+        }
+
+        text[text_len..text_len + arg.len()].copy_from_slice(arg);
+        text_len += arg.len();
+    }
+
+    if text_len == 0 {
         serial::println("write: missing text");
         return;
     }
@@ -74,7 +88,7 @@ pub fn write(command: &ParseCommand, state: &ShellState) {
         return;
     }
 
-    let bytes = vfs.write(&mut ide, &mut file, text);
+    let bytes = vfs.write(&mut ide, &mut file, &text[..text_len]);
 
     vfs.close(file);
 
@@ -183,17 +197,11 @@ pub fn ls(command: &ParseCommand, state: &ShellState) {
 
     let read = vfs.read(&mut ide, &mut file, &mut data);
 
-    crate::filesystem::directory::list_entries(
-        &data,
-        read,
-        |inode, name, file_type| {
-            let name = core::str::from_utf8(name).unwrap_or("?");
+    crate::filesystem::directory::list_entries(&data, read, |inode, name, file_type| {
+        let name = core::str::from_utf8(name).unwrap_or("?");
 
-            serial::println_fmt(
-                core::format_args!("{}  {}  {}", inode, file_type, name)
-            );
-        },
-    );
+        serial::println_fmt(core::format_args!("{}  {}  {}", inode, file_type, name));
+    });
 
     vfs.close(file);
 }
@@ -229,11 +237,7 @@ pub fn touch(command: &ParseCommand, state: &ShellState) {
         }
     };
 
-    let parent = if slash == 0 {
-        b"/"
-    } else {
-        &path[..slash]
-    };
+    let parent = if slash == 0 { b"/" } else { &path[..slash] };
 
     let name = &path[slash + 1..];
 
@@ -252,19 +256,15 @@ pub fn touch(command: &ParseCommand, state: &ShellState) {
 
     match vfs.create(&mut ide, parent, name) {
         Ok(inode) => {
-            serial::println_fmt(
-                core::format_args!(
-                    "touch: created {} inode={}",
-                    core::str::from_utf8(path).unwrap_or("?"),
-                    inode
-                ),
-            );
+            serial::println_fmt(core::format_args!(
+                "touch: created {} inode={}",
+                core::str::from_utf8(path).unwrap_or("?"),
+                inode
+            ));
         }
 
         Err(error) => {
-            serial::println_fmt(
-                core::format_args!("touch: {}", error)
-            );
+            serial::println_fmt(core::format_args!("touch: {}", error));
         }
     }
 }

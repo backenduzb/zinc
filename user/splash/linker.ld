@@ -13,19 +13,24 @@ SECTIONS
 
     .text : ALIGN(0x1000)
     {
-        *(.text.entry)
+        KEEP(*(.text.entry))
         *(.text*)
+    } :text
+
+    .rodata : ALIGN(0x1000)
+    {
         *(.rodata*)
     } :text
 
     . = ALIGN(0x1000);
 
-    .data : ALIGN(0x1000)
+    .data :
     {
         *(.data*)
+        *(.got*)
     } :data
 
-    .bss : ALIGN(0x1000)
+    .bss :
     {
         *(COMMON)
         *(.bss*)

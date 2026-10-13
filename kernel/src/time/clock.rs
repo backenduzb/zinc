@@ -1,4 +1,6 @@
-const TICK_FREQUENCY: u64 = 100;
+pub const TICK_FREQUENCY: u64 =
+    crate::drivers::timer::pit::PIT_BASE_FREQUENCY as u64
+        / crate::drivers::timer::pit::PIT_DIVISOR as u64;
 
 pub fn init() {
     crate::log_boot!("Clock initalized");
@@ -14,7 +16,18 @@ pub fn ticks() -> u64 {
 
 #[inline]
 pub fn uptime_ms() -> u64 {
-    ticks() * 1000 / TICK_FREQUENCY
+    let divisor = crate::drivers::timer::pit::PIT_DIVISOR as u64;
+    let base = crate::drivers::timer::pit::PIT_BASE_FREQUENCY as u64;
+    loop {
+        let before = ticks();
+        let count = crate::drivers::timer::pit::counter();
+        let after = ticks();
+        if before == after {
+            let elapsed = divisor.saturating_sub(count as u64).min(divisor);
+            let total = before.saturating_mul(divisor).saturating_add(elapsed);
+            return total.saturating_mul(1000) / base;
+        }
+    }
 }
 
 #[inline]

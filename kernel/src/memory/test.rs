@@ -327,9 +327,7 @@ extern "C" fn after_address_space_switch() -> ! {
 
     crate::log_boot!("Kernel heap initialized");
 
-    if crate::drivers::display::late_init() {
-        crate::graphics::self_test();
-    } else {
+    if !crate::drivers::display::late_init() {
         crate::log_boot!("Graphics backend unavailable");
     }
     crate::log_boot_raw!("Heap remaining: ");
@@ -547,17 +545,6 @@ extern "C" fn after_address_space_switch() -> ! {
 
     crate::task::ring3::prepare_ring3_user_thread();
     crate::task::ring3::prepare_wait_blocking_test();
-
-    if crate::task::ring3::prepare_gfx_syscall_test() {
-        wait_for_vfs_complete(&crate::task::ring3::GFX_COMPLETE, "gfx");
-        if crate::task::ring3::GFX_PASSED.load(Ordering::Acquire) {
-            crate::log_vfs!("GFX RING3 WAIT: PASS observed");
-        } else {
-            crate::log_test!("GFX RING3 WAIT: FAIL observed");
-        }
-    } else {
-        crate::log_test!("GFX RING3 WAIT: skipped");
-    }
 
     if !crate::exec::vfs::test_splash_exec() {
         crate::log_vfs!("VFS EXEC SPLASH: FAILED");

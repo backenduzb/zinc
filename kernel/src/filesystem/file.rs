@@ -48,6 +48,7 @@ fn read_block(ide: &mut IdeDevice, block: u32, block_size: u32, buffer: &mut [u8
     true
 }
 
+
 fn read_data_block(
     ide: &mut IdeDevice,
     inode: &Ext2Inode,
@@ -55,10 +56,17 @@ fn read_data_block(
     block_size: u32,
     buffer: &mut [u8],
 ) -> bool {
-    if block_index < DIRECT_BLOCKS as u32 {
-        let block = inode.block[block_index as usize];
+    if block_size == 0 || block_size as usize > buffer.len() {
+        return false;
+    }
 
-        return read_block(ide, block, block_size, buffer);
+    if block_index < DIRECT_BLOCKS as u32 {
+        return read_block(
+            ide,
+            inode.block[block_index as usize],
+            block_size,
+            buffer,
+        );
     }
 
     let pointers_per_block = block_size / 4;
@@ -67,39 +75,98 @@ fn read_data_block(
         return false;
     }
 
-    let indirect_index = block_index - DIRECT_BLOCKS as u32;
+    let mut index = block_index - DIRECT_BLOCKS as u32;
+    let mut pointer_data = [0u8; 4096];
 
-    if indirect_index >= pointers_per_block {
+    if index < pointers_per_block {
+        let indirect_block = inode.block[12];
+
+        if indirect_block == 0 {
+            buffer[..block_size as usize].fill(0);
+            return true;
+        }
+
+        if !read_block(
+            ide,
+            indirect_block,
+            block_size,
+            &mut pointer_data,
+        ) {
+            return false;
+        }
+
+        let offset = index as usize * 4;
+        let data_block = u32::from_le_bytes([
+            pointer_data[offset],
+            pointer_data[offset + 1],
+            pointer_data[offset + 2],
+            pointer_data[offset + 3],
+        ]);
+
+        return read_block(ide, data_block, block_size, buffer);
+    }
+
+    index -= pointers_per_block;
+
+    let double_indirect_capacity =
+        pointers_per_block * pointers_per_block;
+
+    if index >= double_indirect_capacity {
         return false;
     }
 
-    let indirect_block = inode.block[12];
+    let double_indirect_block = inode.block[13];
+
+    if double_indirect_block == 0 {
+        buffer[..block_size as usize].fill(0);
+        return true;
+    }
+
+    if !read_block(
+        ide,
+        double_indirect_block,
+        block_size,
+        &mut pointer_data,
+    ) {
+        return false;
+    }
+
+    let first_index = index / pointers_per_block;
+    let second_index = index % pointers_per_block;
+
+    let first_offset = first_index as usize * 4;
+    let indirect_block = u32::from_le_bytes([
+        pointer_data[first_offset],
+        pointer_data[first_offset + 1],
+        pointer_data[first_offset + 2],
+        pointer_data[first_offset + 3],
+    ]);
 
     if indirect_block == 0 {
+        buffer[..block_size as usize].fill(0);
+        return true;
+    }
+
+    if !read_block(
+        ide,
+        indirect_block,
+        block_size,
+        &mut pointer_data,
+    ) {
         return false;
     }
 
-    let mut indirect_data = [0u8; 4096];
-
-    if block_size as usize > indirect_data.len() {
-        return false;
-    }
-
-    if !read_block(ide, indirect_block, block_size, &mut indirect_data) {
-        return false;
-    }
-
-    let offset = indirect_index as usize * 4;
-
+    let second_offset = second_index as usize * 4;
     let data_block = u32::from_le_bytes([
-        indirect_data[offset],
-        indirect_data[offset + 1],
-        indirect_data[offset + 2],
-        indirect_data[offset + 3],
+        pointer_data[second_offset],
+        pointer_data[second_offset + 1],
+        pointer_data[second_offset + 2],
+        pointer_data[second_offset + 3],
     ]);
 
     read_block(ide, data_block, block_size, buffer)
 }
+
 
 pub fn read_file(
     ide: &mut IdeDevice,

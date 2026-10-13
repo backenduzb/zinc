@@ -22,6 +22,7 @@ pub const SYS_WRITE: u64 = 3;
 pub const SYS_OPEN: u64 = 4;
 pub const SYS_READ: u64 = 5;
 pub const SYS_CLOSE: u64 = 6;
+pub const SYS_CLOCK_UPTIME: u64 = 12;
 const MAX_PATH: usize = 256;
 
 const USER_MAX: u64 = 0x0000_8000_0000_0000;
@@ -664,7 +665,10 @@ pub extern "C" fn syscall_handler(frame: *mut SyscallFrame) -> (u64, u64) {
 
         SYS_GFX_BLIT => handle_gfx_blit(frame),
 
-
+        SYS_CLOCK_UPTIME => {
+            frame.rax = crate::time::clock::uptime_ms();
+            (frame as *mut SyscallFrame as u64, 0)
+        }
         _ => {
             frame.rax = u64::MAX;
 

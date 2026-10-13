@@ -161,8 +161,6 @@ pub fn init(fb: &Framebuffer) {
         crate::log_boot!("ERROR: framebuffer address is null");
         return;
     }
-
-    draw_test(&info);
 }
 
 pub fn boot_phys_range() -> Option<(u64, u64)> {
@@ -502,68 +500,4 @@ pub fn write_row(y: u64, x: u64, pixels: &[u32]) -> bool {
 
     unlock(saved);
     result
-}
-
-pub fn read_pixel(x: u64, y: u64) -> Option<u32> {
-    let saved = lock();
-    let result = unsafe {
-        let state = &raw const STATE;
-        if !(*state).ready {
-            None
-        } else if x >= (*state).width || y >= (*state).height {
-            None
-        } else {
-            match (
-                y.checked_mul((*state).pitch),
-                x.checked_mul(4),
-                frame_size(&*state),
-            ) {
-                (Some(row_base), Some(column), Some(size)) => {
-                    match (row_base.checked_add(column), size.checked_sub(4)) {
-                        (Some(offset), Some(last)) if offset <= last && offset + 4 <= size => {
-                            let target = ((*state).virt_base + offset) as *const u32;
-                            Some(core::ptr::read_volatile(target))
-                        }
-                        _ => None,
-                    }
-                }
-                _ => None,
-            }
-        }
-    };
-    unlock(saved);
-    result
-}
-
-fn draw_test(fb: &FramebufferInfo) {
-    fill(fb, 0x00000000);
-    draw_line(fb, 0xFFFFFFFF);
-}
-
-fn fill(fb: &FramebufferInfo, color: u32) {
-    for y in 0..fb.height {
-        for x in 0..fb.width {
-            put_pixel(fb, x, y, color);
-        }
-    }
-}
-
-fn draw_line(fb: &FramebufferInfo, color: u32) {
-    for x in 0..fb.width {
-        put_pixel(fb, x, 10, color);
-    }
-}
-
-#[inline]
-fn put_pixel(fb: &FramebufferInfo, x: u64, y: u64, color: u32) {
-    if x >= fb.width || y >= fb.height {
-        return;
-    }
-
-    let offset = y * fb.pitch + x * 4;
-
-    unsafe {
-        let pixel = fb.address.add(offset as usize) as *mut u32;
-        pixel.write_volatile(color);
-    }
 }
