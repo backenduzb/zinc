@@ -20,6 +20,13 @@ asmbuild: $(ASM_WORKSPACE)
 	
 cbuild: $(C_WORKSPACE)
 	make -C $(C_WORKSPACE)
+
+user-splash:
+	make -C user/splash
+
+install-splash: user-splash
+	debugfs -w -R "rm /bin/splash" disk.img || true
+	debugfs -w -R "write user/splash/splash.elf /bin/splash" disk.img
 		
 kernel:
 	cargo build \

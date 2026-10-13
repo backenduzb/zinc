@@ -455,6 +455,325 @@ pub fn prepare_wait_blocking_test() -> bool {
     true
 }
 
+pub const GFX_CODE_ADDR: u64 = 0x400000;
+pub const GFX_DATA_ADDR: u64 = 0x500000;
+pub const GFX_RECT_OFF: u64 = 64;
+pub const GFX_BLIT_OFF: u64 = 96;
+pub const GFX_PIX_OFF: u64 = 128;
+pub const GFX_MARK_OFF: u64 = 160;
+pub const GFX_MARK_PASS: u64 = 0x4746585F50415353;
+pub const GFX_MARK_FAIL: u64 = 0x4746585F4641494C;
+pub const GFX_CLEAR_COLOR: u32 = 0x00336699;
+
+pub static GFX_MARKER_PHYS: AtomicU64 = AtomicU64::new(0);
+pub static GFX_COMPLETE: AtomicBool = AtomicBool::new(false);
+pub static GFX_PASSED: AtomicBool = AtomicBool::new(false);
+
+fn gfx_mov_rax_u32(out: &mut alloc::vec::Vec<u8>, value: u32) {
+    out.extend_from_slice(&[0x48, 0xC7, 0xC0]);
+    out.extend_from_slice(&value.to_le_bytes());
+}
+
+fn gfx_mov_rdi_u32(out: &mut alloc::vec::Vec<u8>, value: u32) {
+    out.extend_from_slice(&[0x48, 0xC7, 0xC7]);
+    out.extend_from_slice(&value.to_le_bytes());
+}
+
+fn gfx_mov_rsi_u32(out: &mut alloc::vec::Vec<u8>, value: u32) {
+    out.extend_from_slice(&[0x48, 0xC7, 0xC6]);
+    out.extend_from_slice(&value.to_le_bytes());
+}
+
+fn gfx_mov_rdx_u32(out: &mut alloc::vec::Vec<u8>, value: u32) {
+    out.extend_from_slice(&[0x48, 0xC7, 0xC2]);
+    out.extend_from_slice(&value.to_le_bytes());
+}
+
+fn gfx_mov_eax_u32(out: &mut alloc::vec::Vec<u8>, value: u32) {
+    out.extend_from_slice(&[0xB8]);
+    out.extend_from_slice(&value.to_le_bytes());
+}
+
+fn gfx_movabs_rax(out: &mut alloc::vec::Vec<u8>, value: u64) {
+    out.extend_from_slice(&[0x48, 0xB8]);
+    out.extend_from_slice(&value.to_le_bytes());
+}
+
+fn gfx_movabs_rbx(out: &mut alloc::vec::Vec<u8>, value: u64) {
+    out.extend_from_slice(&[0x48, 0xBB]);
+    out.extend_from_slice(&value.to_le_bytes());
+}
+
+fn gfx_syscall_checked(out: &mut alloc::vec::Vec<u8>, fixups: &mut alloc::vec::Vec<usize>) {
+    out.extend_from_slice(&[0xCD, 0x80, 0x48, 0x83, 0xF8, 0x00, 0x75, 0x00]);
+    fixups.push(out.len() - 1);
+}
+
+fn gfx_emit_exit(out: &mut alloc::vec::Vec<u8>) {
+    gfx_mov_eax_u32(out, 1);
+    out.extend_from_slice(&[0x31, 0xFF, 0xCD, 0x80, 0xEB, 0xFE]);
+}
+
+fn build_gfx_blob() -> alloc::vec::Vec<u8> {
+    let mut blob: alloc::vec::Vec<u8> = alloc::vec::Vec::new();
+    let mut fixups: alloc::vec::Vec<usize> = alloc::vec::Vec::new();
+    gfx_mov_rax_u32(&mut blob, 8);
+    gfx_mov_rdi_u32(&mut blob, GFX_DATA_ADDR as u32);
+    gfx_mov_rsi_u32(&mut blob, 40);
+    gfx_syscall_checked(&mut blob, &mut fixups);
+    gfx_mov_eax_u32(&mut blob, 9);
+    gfx_mov_rdi_u32(&mut blob, GFX_CLEAR_COLOR);
+    gfx_syscall_checked(&mut blob, &mut fixups);
+    gfx_mov_eax_u32(&mut blob, 10);
+    gfx_mov_rdi_u32(&mut blob, (GFX_DATA_ADDR + GFX_RECT_OFF) as u32);
+    gfx_mov_rsi_u32(&mut blob, 20);
+    gfx_syscall_checked(&mut blob, &mut fixups);
+    gfx_mov_eax_u32(&mut blob, 11);
+    gfx_mov_rdi_u32(&mut blob, (GFX_DATA_ADDR + GFX_BLIT_OFF) as u32);
+    gfx_mov_rsi_u32(&mut blob, 16);
+    gfx_mov_rdx_u32(&mut blob, (GFX_DATA_ADDR + GFX_PIX_OFF) as u32);
+    gfx_syscall_checked(&mut blob, &mut fixups);
+    gfx_movabs_rax(&mut blob, GFX_MARK_PASS);
+    gfx_movabs_rbx(&mut blob, GFX_DATA_ADDR + GFX_MARK_OFF);
+    blob.extend_from_slice(&[0x48, 0x89, 0x03]);
+    gfx_emit_exit(&mut blob);
+    let fail_pos = blob.len();
+    gfx_movabs_rax(&mut blob, GFX_MARK_FAIL);
+    gfx_movabs_rbx(&mut blob, GFX_DATA_ADDR + GFX_MARK_OFF);
+    blob.extend_from_slice(&[0x48, 0x89, 0x03]);
+    gfx_emit_exit(&mut blob);
+    for pos in fixups {
+        let disp = fail_pos as i64 - (pos as i64 + 1);
+        if disp < -128 || disp > 127 {
+            return alloc::vec::Vec::new();
+        }
+        blob[pos] = disp as i8 as u8;
+    }
+    blob
+}
+
+fn gfx_marker_value() -> Option<u64> {
+    let phys = GFX_MARKER_PHYS.load(Ordering::Relaxed);
+    if phys == 0 {
+        return None;
+    }
+    let va = crate::boot::limine::physical_to_virtual(phys)?;
+    Some(unsafe { core::ptr::read_volatile((va + GFX_MARK_OFF) as *const u64) })
+}
+
+extern "C" fn gfx_monitor() -> ! {
+    unsafe {
+        core::arch::asm!("sti", options(nomem, nostack, preserves_flags));
+    }
+    crate::log_ring3!("GFX monitor started");
+    let mut waited = 0u32;
+    loop {
+        match gfx_marker_value() {
+            Some(value) if value == GFX_MARK_PASS => {
+                crate::log_vfs!("GFX RING3 TEST: PASS");
+                GFX_PASSED.store(true, Ordering::Release);
+                GFX_COMPLETE.store(true, Ordering::Release);
+                crate::task::exit();
+            }
+            Some(value) if value == GFX_MARK_FAIL => {
+                crate::log_test!("GFX RING3 TEST: guest reported FAIL");
+                GFX_PASSED.store(false, Ordering::Release);
+                GFX_COMPLETE.store(true, Ordering::Release);
+                crate::task::exit();
+            }
+            _ => {}
+        }
+        if waited >= 200 {
+            crate::log_test!("GFX RING3 TEST: TIMEOUT");
+            GFX_PASSED.store(false, Ordering::Release);
+            GFX_COMPLETE.store(true, Ordering::Release);
+            crate::task::exit();
+        }
+        waited += 1;
+        crate::task::sleep(5);
+    }
+}
+
+fn gfx_pick_cpu() -> Option<usize> {
+    unsafe {
+        for cpu in 1..crate::arch::x86_64::smp::percpu::MAX_CPUS {
+            if !crate::arch::x86_64::smp::percpu::is_online(cpu) {
+                continue;
+            }
+            if crate::task::SCHEDULERS[cpu].count() < 6 {
+                return Some(cpu);
+            }
+        }
+    }
+    None
+}
+
+pub fn prepare_gfx_syscall_test() -> bool {
+    crate::log_vfs!("=== GFX RING3 TEST ===");
+    GFX_COMPLETE.store(false, Ordering::Release);
+    GFX_PASSED.store(false, Ordering::Release);
+    let blob = build_gfx_blob();
+    if blob.is_empty() || blob.len() > 4096 {
+        crate::log_test!("GFX TEST: blob build FAILED");
+        return false;
+    }
+    let cpu = match gfx_pick_cpu() {
+        Some(cpu) => cpu,
+        None => {
+            crate::log_test!("GFX TEST: no CPU slot");
+            return false;
+        }
+    };
+    let mut allocator = FrameAllocator::new();
+    let pid = unsafe {
+        match (*crate::task::process_manager()).create_user(&mut allocator, None) {
+            Some(pid) => pid,
+            None => {
+                crate::log_test!("GFX TEST: create_user FAILED");
+                return false;
+            }
+        }
+    };
+    let (code_phys, data_phys, user_rsp) = unsafe {
+        let manager = crate::task::process_manager();
+        let process = match (*manager).get_mut(pid) {
+            Some(process) => process,
+            None => {
+                crate::log_test!("GFX TEST: process lookup FAILED");
+                return false;
+            }
+        };
+        let space = match process.address_space_mut() {
+            Some(space) => space,
+            None => {
+                crate::log_test!("GFX TEST: address space MISSING");
+                return false;
+            }
+        };
+        let code_frame = match allocator.alloc_frame() {
+            Some(frame) => frame,
+            None => {
+                crate::log_test!("GFX TEST: code frame FAILED");
+                return false;
+            }
+        };
+        if !space.map_page(
+            &mut allocator,
+            GFX_CODE_ADDR,
+            code_frame.address,
+            true,
+            true,
+        ) {
+            crate::log_test!("GFX TEST: code map FAILED");
+            allocator.free_frame(code_frame);
+            return false;
+        }
+        let data_frame = match allocator.alloc_frame() {
+            Some(frame) => frame,
+            None => {
+                crate::log_test!("GFX TEST: data frame FAILED");
+                return false;
+            }
+        };
+        if !space.map_page(
+            &mut allocator,
+            GFX_DATA_ADDR,
+            data_frame.address,
+            true,
+            false,
+        ) {
+            crate::log_test!("GFX TEST: data map FAILED");
+            allocator.free_frame(data_frame);
+            return false;
+        }
+        let stack = match UserStack::map(space, &mut allocator) {
+            Some(stack) => stack,
+            None => {
+                crate::log_test!("GFX TEST: user stack FAILED");
+                return false;
+            }
+        };
+        let user_rsp = (stack.top - 8) & !0xF;
+        if validate_user_addrs(space, GFX_CODE_ADDR, user_rsp).is_err() {
+            crate::log_test!("GFX TEST: validation FAILED");
+            return false;
+        }
+        (code_frame.address, data_frame.address, user_rsp)
+    };
+    let code_va = match crate::boot::limine::physical_to_virtual(code_phys) {
+        Some(va) => va,
+        None => {
+            crate::log_test!("GFX TEST: code HHDM unavailable");
+            return false;
+        }
+    };
+    let data_va = match crate::boot::limine::physical_to_virtual(data_phys) {
+        Some(va) => va,
+        None => {
+            crate::log_test!("GFX TEST: data HHDM unavailable");
+            return false;
+        }
+    };
+    unsafe {
+        core::ptr::write_bytes(code_va as *mut u8, 0, 4096);
+        core::ptr::copy_nonoverlapping(blob.as_ptr(), code_va as *mut u8, blob.len());
+        core::ptr::write_bytes(data_va as *mut u8, 0, 4096);
+        let rect = crate::graphics::abi::GfxRect {
+            x: 16,
+            y: 16,
+            w: 64,
+            h: 48,
+            color: 0x0000FF00,
+        };
+        let rect_bytes = rect.to_bytes();
+        core::ptr::copy_nonoverlapping(
+            rect_bytes.as_ptr(),
+            (data_va + GFX_RECT_OFF) as *mut u8,
+            rect_bytes.len(),
+        );
+        let header = crate::graphics::abi::GfxBlit {
+            x: 100,
+            y: 100,
+            w: 2,
+            h: 2,
+        };
+        let header_bytes = header.to_bytes();
+        core::ptr::copy_nonoverlapping(
+            header_bytes.as_ptr(),
+            (data_va + GFX_BLIT_OFF) as *mut u8,
+            header_bytes.len(),
+        );
+        let pixels: [u32; 4] = [0x00FF0000, 0x0000FF00, 0x000000FF, 0x00FFFFFF];
+        for (index, pixel) in pixels.iter().enumerate() {
+            let target = (data_va + GFX_PIX_OFF + (index as u64) * 4) as *mut u32;
+            core::ptr::write_volatile(target, *pixel);
+        }
+    }
+    GFX_MARKER_PHYS.store(data_phys, Ordering::Relaxed);
+    let user_tid = unsafe { (*crate::task::process_manager()).allocate_thread_id() };
+    let monitor_tid = unsafe { (*crate::task::process_manager()).allocate_thread_id() };
+    let user_thread = Thread::new_user(user_tid, cpu, pid, GFX_CODE_ADDR, user_rsp);
+    let monitor = Thread::new(monitor_tid, cpu, 0, gfx_monitor);
+    unsafe {
+        if !crate::task::SCHEDULERS[cpu].add_thread(user_thread, cpu) {
+            crate::log_test!("GFX TEST: add user thread FAILED");
+            return false;
+        }
+        (*crate::task::process_manager()).add_thread(pid, user_tid);
+        if !crate::task::SCHEDULERS[cpu].add_thread(monitor, cpu) {
+            crate::log_test!("GFX TEST: add monitor FAILED");
+            return false;
+        }
+        (*crate::task::process_manager()).add_thread(0, monitor_tid);
+    }
+    crate::log_boot_raw!("GFX TEST: queued PID=");
+    crate::log_boot_raw!("{}", pid);
+    crate::log_boot_raw!(" CPU=");
+    crate::log_boot_raw!("{}", cpu as u64);
+    crate::log_boot!("");
+    true
+}
+
 fn marker_value() -> Option<u64> {
     let phys = MARKER_PHYS.load(Ordering::Relaxed);
 

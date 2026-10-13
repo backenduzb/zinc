@@ -28,6 +28,9 @@ pub const EXECVE_TEST_CPU: usize = 3;
 pub const CLOSE_TEST_PATH: &[u8] = b"/bin/close_test";
 pub const CLOSE_TEST_CPU: usize = 3;
 
+pub const SPLASH_PATH: &[u8] = b"/bin/splash";
+pub const SPLASH_CPU: usize = 1;
+
 const MAX_EXEC_BYTES: usize = 1024 * 1024;
 
 #[derive(Debug)]
@@ -52,6 +55,7 @@ pub(crate) static REAP_OPEN_TEST_PID: AtomicU64 = AtomicU64::new(0);
 pub(crate) static REAP_READ_TEST_PID: AtomicU64 = AtomicU64::new(0);
 pub(crate) static REAP_CLOSE_TEST_PID: AtomicU64 = AtomicU64::new(0);
 pub(crate) static REAP_EXECVE_TEST_PID: AtomicU64 = AtomicU64::new(0);
+pub(crate) static REAP_SPLASH_PID: AtomicU64 = AtomicU64::new(0);
 
 pub(crate) static BADPTR_COMPLETE: AtomicBool = AtomicBool::new(false);
 pub(crate) static HELLO_COMPLETE: AtomicBool = AtomicBool::new(false);
@@ -60,6 +64,7 @@ pub(crate) static OPEN_TEST_COMPLETE: AtomicBool = AtomicBool::new(false);
 pub(crate) static READ_TEST_COMPLETE: AtomicBool = AtomicBool::new(false);
 pub(crate) static CLOSE_TEST_COMPLETE: AtomicBool = AtomicBool::new(false);
 pub(crate) static EXECVE_TEST_COMPLETE: AtomicBool = AtomicBool::new(false);
+pub static SPLASH_COMPLETE: AtomicBool = AtomicBool::new(false);
 
 pub(crate) fn open_root_vfs() -> Result<(IdeDevice, Vfs), VfsExecError> {
     let mut ide = IdeDevice::new();
@@ -653,6 +658,95 @@ pub fn test_close_test_exec() -> bool {
     }
 
     crate::log_vfs!("VFS EXEC: /bin/close_test queued for Ring3");
+
+    true
+}
+
+extern "C" fn splash_reaper() -> ! {
+    unsafe {
+        core::arch::asm!("sti", options(nomem, nostack, preserves_flags));
+    }
+
+    crate::log_vfs!("VFS EXEC: splash reaper started");
+
+    loop {
+        let pid = REAP_SPLASH_PID.load(Ordering::Relaxed);
+
+        if pid != 0 {
+            let ready = unsafe {
+                match (*crate::task::process_manager()).get(pid) {
+                    Some(_) => {
+                        let pm = crate::task::process_manager();
+
+                        (*pm).get(pid).map(|p| p.is_terminated()).unwrap_or(false)
+                            && !(*pm).has_live_threads(pid)
+                    }
+
+                    None => false,
+                }
+            };
+
+            if ready {
+                crate::log_vfs_raw!("VFS EXEC: splash PID=");
+                crate::log_vfs_raw!("{}", pid);
+                crate::log_exec!(" exited, reaping...");
+
+                let mut allocator = FrameAllocator::new();
+
+                let ok = unsafe { (*crate::task::process_manager()).reap(pid, &mut allocator) };
+
+                let gone = unsafe { (*crate::task::process_manager()).get(pid).is_none() };
+
+                if ok && gone {
+                    crate::log_vfs!("VFS EXEC: splash PROCESS REAP OK");
+
+                    SPLASH_COMPLETE.store(true, Ordering::Release);
+
+                    REAP_SPLASH_PID.store(0, Ordering::Relaxed);
+
+                    crate::task::exit();
+                } else {
+                    crate::log_vfs!("VFS EXEC: splash reap FAILED");
+                }
+            }
+        }
+
+        crate::task::sleep(5);
+    }
+}
+
+pub fn test_splash_exec() -> bool {
+    crate::log_vfs!("=== VFS EXEC SPLASH TEST ===");
+
+    SPLASH_COMPLETE.store(false, Ordering::Release);
+    REAP_SPLASH_PID.store(0, Ordering::Relaxed);
+
+    let cpu = if crate::arch::x86_64::smp::percpu::is_online(SPLASH_CPU) {
+        SPLASH_CPU
+    } else {
+        HELLO_CPU
+    };
+
+    let argv: &[&str] = &["splash"];
+
+    let res = match exec_path(SPLASH_PATH, argv, cpu) {
+        Ok(r) => r,
+
+        Err(e) => {
+            crate::log_vfs_raw!("VFS EXEC SPLASH FAILED: ");
+            crate::log_vfs!("{}", alloc::format!("{:?}", e).as_str());
+            return false;
+        }
+    };
+
+    crate::log_vfs!("VFS EXEC SPLASH: ELF LOAD OK");
+
+    if !spawn_reaper(res.process_id, cpu, splash_reaper, &REAP_SPLASH_PID) {
+        crate::log_vfs!("VFS EXEC SPLASH: reaper spawn FAILED");
+        return false;
+    }
+
+    crate::log_vfs!("VFS EXEC: /bin/splash queued for Ring3");
 
     true
 }

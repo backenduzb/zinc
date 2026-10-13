@@ -164,16 +164,6 @@ pub extern "C" fn ap_main() -> ! {
         crate::log_smp_raw!("{}", cpu_id as u64);
         crate::log_smp!("");
 
-        /*
-         * Thread::new(
-         *     thread_id,
-         *     cpu_id,
-         *     process_id,
-         *     entry
-         * )
-         *
-         * All AP test threads belong to kernel process PID 0.
-         */
         let (thread, name, thread_id) = match cpu_id {
             1 => (
                 Thread::new(
@@ -233,32 +223,13 @@ pub extern "C" fn ap_main() -> ! {
             crate::log_test_raw!("ERROR: failed to add ");
             crate::log_smp!("{}", name);
 
-            /*
-             * Do not start an empty/broken AP scheduler.
-             */
+
             loop {
                 unsafe {
                     core::arch::asm!("hlt");
                 }
             }
         }
-
-        
-        // let registered = unsafe {
-        //     (*crate::task::process_manager())
-        //         .add_thread(0, thread_id)
-        // };
-
-        // if !registered {
-        //     crate::drivers::serial::print("ERROR: failed to register ");
-        //     crate::drivers::serial::println(name);
-
-        //     loop {
-        //         unsafe {
-        //             core::arch::asm!("hlt");
-        //         }
-        //     }
-        // }
 
         
         crate::log_smp_raw!("{}", name);

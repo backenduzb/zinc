@@ -14,10 +14,10 @@ pub const LOG_SCHED: bool = false;
 pub const LOG_CR3: bool = false;
 pub const LOG_TSS: bool = false;
 pub const LOG_SLEEP: bool = false;
-pub const LOG_SYSCALL: bool = false;
-pub const LOG_VFS: bool = false;
-pub const LOG_EXEC: bool = false;
-pub const LOG_RING3: bool = false;
+pub const LOG_SYSCALL: bool = true;
+pub const LOG_VFS: bool = true;
+pub const LOG_EXEC: bool = true;
+pub const LOG_RING3: bool = true;
 pub const LOG_SMP: bool = false;
 
 #[inline]

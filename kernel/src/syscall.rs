@@ -9,6 +9,10 @@ use alloc::string::String;
 use alloc::vec::Vec;
 
 pub const SYS_WAIT: u64 = 7;
+pub const SYS_GFX_INFO: u64 = 8;
+pub const SYS_GFX_CLEAR: u64 = 9;
+pub const SYS_GFX_RECT: u64 = 10;
+pub const SYS_GFX_BLIT: u64 = 11;
 pub const MAX_ARGC: usize = 16;
 pub const MAX_ARG_LEN: usize = 256;
 pub const SYS_YIELD: u64 = 0;
@@ -377,6 +381,235 @@ fn handle_write(frame: &mut SyscallFrame) -> (u64, u64) {
     (frame as *mut SyscallFrame as u64, 0)
 }
 
+fn current_user_space() -> Option<*const AddressSpace> {
+    unsafe {
+        let sched = crate::task::scheduler();
+        let pid = (*sched).current().map(|t| t.process_id())?;
+        let pm = crate::task::process_manager();
+        (*pm)
+            .get(pid)
+            .and_then(|p| p.address_space())
+            .map(|s| s as *const AddressSpace)
+    }
+}
+
+fn handle_gfx_info(frame: &mut SyscallFrame) -> (u64, u64) {
+    let out = frame.rdi;
+    let size = frame.rsi as usize;
+    crate::log_syscall!("SYSCALL: GFX_INFO");
+    if size != crate::graphics::abi::GFX_INFO_SIZE {
+        frame.rax = u64::MAX;
+        return (frame as *mut SyscallFrame as u64, 0);
+    }
+    let info = match crate::graphics::info() {
+        Some(value) => value,
+        None => {
+            frame.rax = u64::MAX;
+            return (frame as *mut SyscallFrame as u64, 0);
+        }
+    };
+    let space_ptr = match current_user_space() {
+        Some(space) => space,
+        None => {
+            frame.rax = u64::MAX;
+            return (frame as *mut SyscallFrame as u64, 0);
+        }
+    };
+    let space = unsafe { &*space_ptr };
+    let bytes = info.to_bytes();
+    if !copy_to_user(space, out, bytes.len(), &bytes) {
+        crate::log_syscall!("SYSCALL GFX_INFO: copy_to_user failed");
+        frame.rax = u64::MAX;
+        return (frame as *mut SyscallFrame as u64, 0);
+    }
+    frame.rax = 0;
+    (frame as *mut SyscallFrame as u64, 0)
+}
+
+fn handle_gfx_clear(frame: &mut SyscallFrame) -> (u64, u64) {
+    let color = frame.rdi as u32;
+    crate::log_syscall!("SYSCALL: GFX_CLEAR");
+    if crate::graphics::clear(color) {
+        frame.rax = 0;
+    } else {
+        frame.rax = u64::MAX;
+    }
+    (frame as *mut SyscallFrame as u64, 0)
+}
+
+fn handle_gfx_rect(frame: &mut SyscallFrame) -> (u64, u64) {
+    let ptr = frame.rdi;
+    let size = frame.rsi as usize;
+    crate::log_syscall!("SYSCALL: GFX_RECT");
+    if size != crate::graphics::abi::GFX_RECT_SIZE {
+        frame.rax = u64::MAX;
+        return (frame as *mut SyscallFrame as u64, 0);
+    }
+    let space_ptr = match current_user_space() {
+        Some(space) => space,
+        None => {
+            frame.rax = u64::MAX;
+            return (frame as *mut SyscallFrame as u64, 0);
+        }
+    };
+    let space = unsafe { &*space_ptr };
+    let mut raw = [0u8; crate::graphics::abi::GFX_RECT_SIZE];
+    if !copy_from_user(space, ptr, raw.len(), &mut raw) {
+        crate::log_syscall!("SYSCALL GFX_RECT: copy_from_user failed");
+        frame.rax = u64::MAX;
+        return (frame as *mut SyscallFrame as u64, 0);
+    }
+    let rect = match crate::graphics::abi::GfxRect::from_bytes(&raw) {
+        Some(value) => value,
+        None => {
+            frame.rax = u64::MAX;
+            return (frame as *mut SyscallFrame as u64, 0);
+        }
+    };
+    if rect.w == 0 || rect.h == 0 {
+        frame.rax = u64::MAX;
+        return (frame as *mut SyscallFrame as u64, 0);
+    }
+    if rect.w > crate::graphics::abi::GFX_MAX_DIMENSION
+        || rect.h > crate::graphics::abi::GFX_MAX_DIMENSION
+    {
+        frame.rax = u64::MAX;
+        return (frame as *mut SyscallFrame as u64, 0);
+    }
+    if crate::graphics::fill_rect(rect.x, rect.y, rect.w, rect.h, rect.color) {
+        frame.rax = 0;
+    } else {
+        frame.rax = u64::MAX;
+    }
+    (frame as *mut SyscallFrame as u64, 0)
+}
+
+fn handle_gfx_blit(frame: &mut SyscallFrame) -> (u64, u64) {
+    let header_ptr = frame.rdi;
+    let header_size = frame.rsi as usize;
+    let pixels_ptr = frame.rdx;
+    crate::log_syscall!("SYSCALL: GFX_BLIT");
+    if header_size != crate::graphics::abi::GFX_BLIT_SIZE {
+        frame.rax = u64::MAX;
+        return (frame as *mut SyscallFrame as u64, 0);
+    }
+    let space_ptr = match current_user_space() {
+        Some(space) => space,
+        None => {
+            frame.rax = u64::MAX;
+            return (frame as *mut SyscallFrame as u64, 0);
+        }
+    };
+    let space = unsafe { &*space_ptr };
+    let mut header_raw = [0u8; crate::graphics::abi::GFX_BLIT_SIZE];
+    if !copy_from_user(space, header_ptr, header_raw.len(), &mut header_raw) {
+        crate::log_syscall!("SYSCALL GFX_BLIT: header copy failed");
+        frame.rax = u64::MAX;
+        return (frame as *mut SyscallFrame as u64, 0);
+    }
+    let header = match crate::graphics::abi::GfxBlit::from_bytes(&header_raw) {
+        Some(value) => value,
+        None => {
+            frame.rax = u64::MAX;
+            return (frame as *mut SyscallFrame as u64, 0);
+        }
+    };
+    let w = header.w as u64;
+    let h = header.h as u64;
+    if w == 0 || h == 0 {
+        frame.rax = u64::MAX;
+        return (frame as *mut SyscallFrame as u64, 0);
+    }
+    if header.w > crate::graphics::abi::GFX_MAX_DIMENSION
+        || header.h > crate::graphics::abi::GFX_MAX_DIMENSION
+    {
+        frame.rax = u64::MAX;
+        return (frame as *mut SyscallFrame as u64, 0);
+    }
+    let row_len = match w.checked_mul(4) {
+        Some(value) => value,
+        None => {
+            frame.rax = u64::MAX;
+            return (frame as *mut SyscallFrame as u64, 0);
+        }
+    };
+    let total = match row_len.checked_mul(h) {
+        Some(value) => value,
+        None => {
+            frame.rax = u64::MAX;
+            return (frame as *mut SyscallFrame as u64, 0);
+        }
+    };
+    if total > crate::graphics::abi::GFX_MAX_BLIT_BYTES as u64 {
+        frame.rax = u64::MAX;
+        return (frame as *mut SyscallFrame as u64, 0);
+    }
+    if !is_user_range(pixels_ptr, total) {
+        crate::log_syscall!("SYSCALL GFX_BLIT: bad user range");
+        frame.rax = u64::MAX;
+        return (frame as *mut SyscallFrame as u64, 0);
+    }
+    let mut row_bytes: Vec<u8> = Vec::new();
+    if row_bytes.try_reserve(row_len as usize).is_err() {
+        frame.rax = u64::MAX;
+        return (frame as *mut SyscallFrame as u64, 0);
+    }
+    row_bytes.resize(row_len as usize, 0);
+    let mut row_pixels: Vec<u32> = Vec::new();
+    if row_pixels.try_reserve(w as usize).is_err() {
+        frame.rax = u64::MAX;
+        return (frame as *mut SyscallFrame as u64, 0);
+    }
+    let mut row = 0u64;
+    while row < h {
+        let row_offset = match row.checked_mul(row_len) {
+            Some(value) => value,
+            None => {
+                frame.rax = u64::MAX;
+                return (frame as *mut SyscallFrame as u64, 0);
+            }
+        };
+        let src = match pixels_ptr.checked_add(row_offset) {
+            Some(value) => value,
+            None => {
+                frame.rax = u64::MAX;
+                return (frame as *mut SyscallFrame as u64, 0);
+            }
+        };
+        if !copy_from_user(space, src, row_len as usize, &mut row_bytes) {
+            crate::log_syscall!("SYSCALL GFX_BLIT: row copy failed");
+            frame.rax = u64::MAX;
+            return (frame as *mut SyscallFrame as u64, 0);
+        }
+        row_pixels.clear();
+        let mut offset = 0usize;
+        while offset < row_bytes.len() {
+            let mut word = [0u8; 4];
+            word.copy_from_slice(&row_bytes[offset..offset + 4]);
+            row_pixels.push(u32::from_le_bytes(word));
+            offset += 4;
+        }
+        let target_y = match (header.y as u64).checked_add(row) {
+            Some(value) => value,
+            None => {
+                frame.rax = u64::MAX;
+                return (frame as *mut SyscallFrame as u64, 0);
+            }
+        };
+        if target_y > u32::MAX as u64 {
+            frame.rax = u64::MAX;
+            return (frame as *mut SyscallFrame as u64, 0);
+        }
+        if !crate::graphics::blit_row(target_y as u32, header.x, &row_pixels) {
+            frame.rax = u64::MAX;
+            return (frame as *mut SyscallFrame as u64, 0);
+        }
+        row += 1;
+    }
+    frame.rax = 0;
+    (frame as *mut SyscallFrame as u64, 0)
+}
+
 #[unsafe(no_mangle)]
 pub extern "C" fn syscall_handler(frame: *mut SyscallFrame) -> (u64, u64) {
     if frame.is_null() {
@@ -422,6 +655,14 @@ pub extern "C" fn syscall_handler(frame: *mut SyscallFrame) -> (u64, u64) {
         SYS_WAIT => handle_wait(frame),
         
         SYS_EXECVE => handle_execve(frame),
+
+        SYS_GFX_INFO => handle_gfx_info(frame),
+
+        SYS_GFX_CLEAR => handle_gfx_clear(frame),
+
+        SYS_GFX_RECT => handle_gfx_rect(frame),
+
+        SYS_GFX_BLIT => handle_gfx_blit(frame),
 
 
         _ => {
