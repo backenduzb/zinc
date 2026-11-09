@@ -2,6 +2,7 @@ target
 build
 limine
 *.log
+.zed
 
 */__pycache__
 **/**/__pycache__
